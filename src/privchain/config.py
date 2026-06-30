@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class _Strict(BaseModel):
@@ -182,3 +182,67 @@ def load_baseline_config(path: str | Path) -> BaselineConfig:
         The validated :class:`BaselineConfig`.
     """
     return BaselineConfig.model_validate(load_yaml(path))
+
+
+# ── Federated configuration (Phase 2) ────────────────────────────────────────
+
+# Capability-vector order used project-wide.
+CAPABILITY_MODALITIES: tuple[str, str, str] = ("audio", "video", "text")
+
+
+class ModalityPattern(_Strict):
+    """A client modality-access pattern and its share of the population."""
+
+    name: str
+    capability: list[int]  # one-hot-ish [audio, video, text], values in {0, 1}
+    fraction: float = Field(gt=0.0, le=1.0)
+
+    @field_validator("capability")
+    @classmethod
+    def _check_capability(cls, value: list[int]) -> list[int]:
+        """Validate the capability vector has length 3, is binary, and non-empty."""
+        if len(value) != len(CAPABILITY_MODALITIES):
+            raise ValueError(f"capability must have length {len(CAPABILITY_MODALITIES)}")
+        if any(v not in (0, 1) for v in value):
+            raise ValueError("capability entries must be 0 or 1")
+        if sum(value) == 0:
+            raise ValueError("a client must have at least one modality")
+        return value
+
+
+class FederationConfig(_Strict):
+    """Federated-population schema (Phase 2)."""
+
+    num_clients: int = Field(gt=0)
+    num_rounds: int = Field(gt=0)
+    clients_per_round: int = Field(gt=0)
+    local_epochs: int = Field(gt=0)
+    modality_patterns: list[ModalityPattern]
+
+
+class AggregationConfig(_Strict):
+    """Aggregation-strategy schema (Phase 2 baseline; extended in Phase 4)."""
+
+    strategy: Literal["fedavg"] = "fedavg"
+    reputation_weighting: bool = False
+    federated_distillation: bool = False
+
+
+class FederatedConfig(_Strict):
+    """Top-level schema for ``configs/federated.yaml``."""
+
+    seed: int
+    federation: FederationConfig
+    aggregation: AggregationConfig
+
+
+def load_federated_config(path: str | Path) -> FederatedConfig:
+    """Load and validate ``configs/federated.yaml``.
+
+    Args:
+        path: Path to the federated config file.
+
+    Returns:
+        The validated :class:`FederatedConfig`.
+    """
+    return FederatedConfig.model_validate(load_yaml(path))

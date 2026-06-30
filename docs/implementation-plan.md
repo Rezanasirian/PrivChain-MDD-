@@ -104,10 +104,10 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 2 — Simulating Heterogeneous Federated Clients with Flower (1 week)
 **Goal:** Build H2 without privacy and without blockchain — federation basics first.
-- [ ] Split DAIC-WOZ across N simulated clients with heterogeneous modality-access patterns (per the text: some have all three modalities, some only audio+text, some audio only, one specialized clinic has all three)
-- [ ] Implement standard FedAvg with Flower as the first baseline (no missing-modality handling — to demonstrate the problem H2 solves)
-- [ ] Observe and document the accuracy degradation of plain FedAvg when clients have limited modalities (this observation itself is useful for Chapter 4)
-- **Definition of Done:** Simulated federated training with Flower runs across ≥3 heterogeneous clients with metrics logged.
+- [x] Split data across N simulated clients with heterogeneous modality-access patterns (population mix in `configs/federated.yaml`: full / audio+text / audio-only / text-only). `src/privchain/federated/partition.py`.
+- [x] Implement standard FedAvg (no missing-modality handling — absent modalities zero-imputed) with two backends: an offline in-house simulator and a Flower `NumPyClient` adapter. `src/privchain/federated/{simulation,client,aggregation,flower_app}.py`.
+- [x] Per-round global metrics logged to `experiments/phase2/<run-id>/metrics.jsonl` for the degradation analysis (Chapter 4). _(On mock noise the numbers are meaningless; the comparison becomes meaningful on real DAIC-WOZ.)_
+- **Definition of Done:** Simulated federated training across ≥3 heterogeneous clients with metrics logged. ✅ **Met** — `scripts/run_federated.py` runs 8 clients across 4 modality patterns; 43 tests pass. The **Flower backend is built but not run offline** (`flwr` not installed; see ADR-0003) — the in-house simulator produces the Phase 2 results.
 
 ### Phase 3 — Adaptive Per-Modality DP Mechanism with Opacus (H1) (1–2 weeks)
 **Goal:** The first core novelty of the thesis.

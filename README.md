@@ -14,7 +14,7 @@ privacy and a Hyperledger Fabric auditability layer.
 |------:|-------------|-------|
 | 0 | Environment & data setup (scaffold + mock data pipeline) | ✅ done |
 | 1 | Centralized multimodal baseline (encoders + fusion + trainer) | ✅ done (mock; real loader pending download) |
-| 2 | Heterogeneous federated clients (Flower, plain FedAvg) | ⬜ |
+| 2 | Heterogeneous federated clients (FedAvg; sim + Flower backends) | ✅ done (sim verified; Flower backend pending `flwr`) |
 | 3 | Per-modality DP with Opacus (H1) | ⬜ |
 | 4 | Capability-aware aggregation + reputation + distillation (H2) | ⬜ |
 | 5 | Hyperledger Fabric blockchain layer (H3) | ⬜ |
@@ -49,6 +49,21 @@ uv run python scripts/train_baseline.py --daic-config configs/daic_woz.yaml
 
 Real DAIC-WOZ integration (loader + config + format assumptions) is documented
 in [ADR-0002](docs/architecture/ADR-0002-daic-woz-integration.md).
+
+### Run Phase 2 federated training
+
+```bash
+# Heterogeneous FedAvg across N clients (in-house simulator; writes experiments/phase2/).
+uv run python scripts/run_federated.py --rounds 5 --num-clients 8
+
+# Same run via the Flower backend (requires the optional dependency):
+uv run pip install flwr
+uv run python scripts/run_federated.py --backend flower
+```
+
+The federated design (two backends, modality heterogeneity, naive-FedAvg
+degradation) is documented in
+[ADR-0003](docs/architecture/ADR-0003-federated-flower-baseline.md).
 
 Lint and type-check (CLAUDE.md §3):
 
