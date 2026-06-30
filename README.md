@@ -15,7 +15,7 @@ privacy and a Hyperledger Fabric auditability layer.
 | 0 | Environment & data setup (scaffold + mock data pipeline) | ✅ done |
 | 1 | Centralized multimodal baseline (encoders + fusion + trainer) | ✅ done (mock; real loader pending download) |
 | 2 | Heterogeneous federated clients (FedAvg; sim + Flower backends) | ✅ done (sim verified; Flower backend pending `flwr`) |
-| 3 | Per-modality DP with Opacus (H1) | ⬜ |
+| 3 | Per-modality adaptive DP (H1): allocator + RDP accountant + DP-SGD | ✅ done (sim verified; Opacus bridge pending `opacus`) |
 | 4 | Capability-aware aggregation + reputation + distillation (H2) | ⬜ |
 | 5 | Hyperledger Fabric blockchain layer (H3) | ⬜ |
 | 6 | Attacker models for privacy evaluation (H5) | ⬜ |
