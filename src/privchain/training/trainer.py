@@ -2,7 +2,9 @@
 
 Trains :class:`~privchain.fusion.baseline_model.MultimodalDepressionModel` with a
 binary cross-entropy objective plus an optional (normalized) PHQ-8 regression
-term, evaluating F1/ROC-AUC each epoch and logging to an experiment run dir.
+term, evaluating F1/ROC-AUC each epoch and logging to an experiment run dir. The
+loss/eval logic is shared with the federated clients via
+:mod:`privchain.training.objective`.
 """
 
 from __future__ import annotations
@@ -12,13 +14,12 @@ from typing import Any
 
 import numpy as np
 import torch
-from torch import nn
 from torch.utils.data import DataLoader
 
-from privchain.data.mock_daic_woz import Batch, Sample
-from privchain.eval.metrics import binary_classification_metrics
+from privchain.data.mock_daic_woz import Sample
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.training.experiment import JsonlMetricLogger
+from privchain.training.objective import DepressionObjective, evaluate_model, move_batch_to_device
 
 
 class CentralizedTrainer:
@@ -48,22 +49,7 @@ class CentralizedTrainer:
         self.optimizer = torch.optim.Adam(
             self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
-        self.bce = nn.BCEWithLogitsLoss()
-        self.mse = nn.MSELoss()
-        self.phq8_max = float(phq8_max)
-        self.phq_loss_weight = phq_loss_weight
-
-    def _to_device(self, batch: Batch) -> Batch:
-        """Move every tensor in a batch to the configured device."""
-        return {key: value.to(self.device) for key, value in batch.items()}  # type: ignore[return-value]
-
-    def _compute_loss(self, outputs: dict[str, torch.Tensor], batch: Batch) -> torch.Tensor:
-        """Combine the classification BCE and optional PHQ-8 regression MSE."""
-        loss = self.bce(outputs["logit"], batch["label"].float())
-        if "phq_pred" in outputs and self.phq_loss_weight > 0:
-            target = batch["phq8_score"].float() / self.phq8_max
-            loss = loss + self.phq_loss_weight * self.mse(outputs["phq_pred"], target)
-        return loss
+        self.objective = DepressionObjective(phq8_max, phq_loss_weight)
 
     def train_epoch(self, loader: DataLoader[Sample]) -> float:
         """Run one training epoch.
@@ -78,17 +64,16 @@ class CentralizedTrainer:
         total = 0.0
         count = 0
         for raw_batch in loader:
-            batch = self._to_device(raw_batch)
+            batch = move_batch_to_device(raw_batch, self.device)
             self.optimizer.zero_grad()
             outputs = self.model(batch)
-            loss = self._compute_loss(outputs, batch)
+            loss = self.objective(outputs, batch)
             loss.backward()
             self.optimizer.step()
             total += float(loss.item())
             count += 1
         return total / max(count, 1)
 
-    @torch.no_grad()
     def evaluate(self, loader: DataLoader[Sample]) -> dict[str, float]:
         """Evaluate the model, returning classification metrics + mean loss.
 
@@ -98,25 +83,7 @@ class CentralizedTrainer:
         Returns:
             Metric mapping including ``f1``, ``roc_auc``, ``accuracy``, ``loss``.
         """
-        self.model.eval()
-        all_scores: list[np.ndarray] = []
-        all_labels: list[np.ndarray] = []
-        total_loss = 0.0
-        count = 0
-        for raw_batch in loader:
-            batch = self._to_device(raw_batch)
-            outputs = self.model(batch)
-            total_loss += float(self._compute_loss(outputs, batch).item())
-            count += 1
-            probs = torch.sigmoid(outputs["logit"]).cpu().numpy()
-            all_scores.append(probs)
-            all_labels.append(batch["label"].cpu().numpy())
-
-        scores = np.concatenate(all_scores)
-        labels = np.concatenate(all_labels)
-        metrics = binary_classification_metrics(scores, labels)
-        metrics["loss"] = total_loss / max(count, 1)
-        return metrics
+        return evaluate_model(self.model, loader, self.objective, self.device)
 
     def fit(
         self,
