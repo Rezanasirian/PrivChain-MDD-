@@ -1,0 +1,48 @@
+# ─── Sensitive data (NEVER commit — see CLAUDE.md §7) ───────────────────────
+# Real DAIC-WOZ data must never enter the repo. Only mock data is allowed,
+# and even that is regenerated on demand rather than committed.
+data/*
+!data/.gitkeep
+!data/README.md
+
+# Raw media / tabular extensions, wherever they appear
+*.wav
+*.mp4
+*.avi
+*.mov
+*.csv
+
+# ─── Secrets ────────────────────────────────────────────────────────────────
+.env
+*.pem
+*.key
+*.crt
+fabric-keys/
+
+# ─── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ─── Experiment outputs (regenerated; not source of truth) ──────────────────
+experiments/*
+!experiments/.gitkeep
+
+# ─── Notebooks scratch ──────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ─── Editors / OS ───────────────────────────────────────────────────────────
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

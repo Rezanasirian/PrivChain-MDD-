@@ -1,0 +1,64 @@
+# Baseline / centralized configuration (Phases 0–1).
+# No hyperparameter may be hardcoded in source — everything lives here.
+
+# Global reproducibility seed (seeds torch, numpy, random). See CLAUDE.md §3.
+seed: 42
+
+# ── Mock DAIC-WOZ data (Phase 0) ─────────────────────────────────────────────
+# Synthetic stand-in for the access-controlled DAIC-WOZ dataset so the full
+# pipeline can be exercised without real data. Shapes mirror the real modalities.
+data:
+  num_sessions: 32          # number of synthetic interview sessions
+  root: data/mock           # where `generate_mock_data.py` writes mock files
+
+  # PHQ-8 depression score range and binary cutoff (DAIC-WOZ convention: >= 10).
+  phq8_max: 24
+  depression_cutoff: 10
+
+  audio:
+    # Log-mel acoustic features: (num_frames, n_mels) per session.
+    n_mels: 40
+    min_frames: 80
+    max_frames: 200
+  video:
+    # Facial features (e.g., OpenFace landmarks/AUs): (num_frames, n_features).
+    n_features: 49
+    min_frames: 40
+    max_frames: 100
+  text:
+    # Transcript token embeddings: (num_tokens, embed_dim) per session.
+    embed_dim: 64
+    min_tokens: 20
+    max_tokens: 60
+
+# ── Model (Phase 1: centralized multimodal baseline) ─────────────────────────
+# Per-modality input dims are NOT set here — they are derived from the `data`
+# section above (audio.n_mels / video.n_features / text.embed_dim), so the same
+# model config works for mock and real DAIC-WOZ features.
+model:
+  encoder:
+    type: gru            # mean | gru (lightweight per-modality sequence encoder)
+    hidden_dim: 64
+    out_dim: 64
+    bidirectional: true
+    dropout: 0.1
+  fusion:
+    type: concat         # concatenate per-modality embeddings
+    hidden_dim: 128
+    dropout: 0.1
+  head:
+    hidden_dim: 64
+    dropout: 0.1
+  use_phq_regression: true   # auxiliary PHQ-8 score regression alongside the binary head
+  phq_loss_weight: 0.1       # weight of the (normalized) PHQ-8 MSE term
+
+# ── Training (Phase 1: centralized, no federation, no privacy) ───────────────
+train:
+  batch_size: 8
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  val_fraction: 0.25
+  num_workers: 0
+  output_dir: experiments
+  run_name: phase1_centralized_baseline

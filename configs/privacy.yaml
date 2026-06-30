@@ -1,0 +1,26 @@
+# Per-modality differential-privacy configuration (Phase 3, objective H1).
+# Placeholders for now; consumed once the Opacus per-modality DP wrapper lands.
+#
+# Core thesis claim (Chapter 1): re-identification risk is audio > video > text,
+# so the higher-risk modality gets a SMALLER epsilon (stronger privacy / more
+# noise). This ordering is a hypothesis to be validated with attacker models in
+# Phase 6 — do NOT treat these numbers as final.
+
+seed: 42
+
+privacy:
+  delta: 1.0e-5             # target (epsilon, delta)-DP failure probability
+  accountant: rdp          # Renyi DP accountant (alternative: gdp)
+  max_grad_norm: 1.0       # per-sample gradient clipping bound
+
+  # Base privacy budget and assumed re-identification risk per modality.
+  per_modality:
+    audio:
+      epsilon: 2.0         # highest risk -> tightest budget
+      reidentification_risk: 0.9
+    video:
+      epsilon: 4.0
+      reidentification_risk: 0.6
+    text:
+      epsilon: 8.0         # lowest risk -> loosest budget
+      reidentification_risk: 0.3

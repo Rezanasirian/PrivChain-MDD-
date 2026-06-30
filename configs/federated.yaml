@@ -1,0 +1,31 @@
+# Federated-learning configuration (Phases 2 & 4).
+# Placeholders for now; consumed once Flower orchestration lands.
+
+seed: 42
+
+federation:
+  num_clients: 10            # assumption (see ADR-0001): >= 10 simulated clients
+  num_rounds: 20
+  clients_per_round: 10
+  local_epochs: 1
+
+  # Heterogeneous modality-access patterns across the client population.
+  # one-hot capability vector order: [audio, video, text]
+  modality_patterns:
+    - name: full              # specialized clinic — all three modalities
+      capability: [1, 1, 1]
+      fraction: 0.4
+    - name: audio_text
+      capability: [1, 0, 1]
+      fraction: 0.3
+    - name: audio_only
+      capability: [1, 0, 0]
+      fraction: 0.2
+    - name: text_only
+      capability: [0, 0, 1]
+      fraction: 0.1
+
+aggregation:
+  strategy: fedavg            # Phase 2 baseline; replaced by capability-aware in Phase 4
+  reputation_weighting: false # enabled in Phase 4
+  federated_distillation: false
