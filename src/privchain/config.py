@@ -246,3 +246,68 @@ def load_federated_config(path: str | Path) -> FederatedConfig:
         The validated :class:`FederatedConfig`.
     """
     return FederatedConfig.model_validate(load_yaml(path))
+
+
+# ── Privacy configuration (Phase 3, objective H1) ────────────────────────────
+
+
+class ModalityPrivacy(_Strict):
+    """Per-modality base budget and re-identification risk."""
+
+    epsilon: float = Field(gt=0.0)
+    reidentification_risk: float = Field(ge=0.0, le=1.0)
+
+
+class AllocationConfig(_Strict):
+    """How per-modality target budgets are derived."""
+
+    mode: Literal["explicit", "inverse_risk"] = "explicit"
+    total_epsilon: float = Field(default=14.0, gt=0.0)
+    risk_sharpness: float = Field(default=1.0, ge=0.0)  # gamma
+
+
+class PrivacySweepConfig(_Strict):
+    """Accuracy-vs-epsilon sweep settings (Phase 3 Definition of Done)."""
+
+    target_epsilons: list[float]
+    epochs: int = Field(default=3, gt=0)
+
+    @field_validator("target_epsilons")
+    @classmethod
+    def _positive_nonempty(cls, value: list[float]) -> list[float]:
+        """Require a non-empty list of positive epsilon values."""
+        if not value:
+            raise ValueError("target_epsilons must be non-empty")
+        if any(v <= 0 for v in value):
+            raise ValueError("target_epsilons must all be positive")
+        return value
+
+
+class PrivacySettings(_Strict):
+    """The ``privacy`` block of ``configs/privacy.yaml``."""
+
+    delta: float = Field(gt=0.0, lt=1.0)
+    accountant: Literal["rdp"] = "rdp"
+    max_grad_norm: float = Field(gt=0.0)
+    allocation: AllocationConfig
+    per_modality: dict[str, ModalityPrivacy]
+    sweep: PrivacySweepConfig
+
+
+class PrivacyConfig(_Strict):
+    """Top-level schema for ``configs/privacy.yaml``."""
+
+    seed: int
+    privacy: PrivacySettings
+
+
+def load_privacy_config(path: str | Path) -> PrivacyConfig:
+    """Load and validate ``configs/privacy.yaml``.
+
+    Args:
+        path: Path to the privacy config file.
+
+    Returns:
+        The validated :class:`PrivacyConfig`.
+    """
+    return PrivacyConfig.model_validate(load_yaml(path))
