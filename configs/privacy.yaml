@@ -11,7 +11,14 @@ seed: 42
 privacy:
   delta: 1.0e-5             # target (epsilon, delta)-DP failure probability
   accountant: rdp          # Renyi DP accountant (alternative: gdp)
-  max_grad_norm: 1.0       # per-sample gradient clipping bound
+  max_grad_norm: 1.0       # per-sample gradient clipping bound C
+
+  # How per-modality target budgets epsilon_m are derived.
+  allocation:
+    mode: explicit         # explicit: use per_modality.epsilon directly
+                           # inverse_risk: epsilon_m = total * r_m^-gamma / sum_k r_k^-gamma
+    total_epsilon: 14.0    # used only when mode = inverse_risk
+    risk_sharpness: 1.0    # gamma; 0 = uniform, larger = more risk-sensitive
 
   # Base privacy budget and assumed re-identification risk per modality.
   per_modality:
@@ -24,3 +31,9 @@ privacy:
     text:
       epsilon: 8.0         # lowest risk -> loosest budget
       reidentification_risk: 0.3
+
+  # Accuracy-vs-epsilon sweep (Phase 3 DoD): each value sets a uniform
+  # per-modality target epsilon, trains DP-SGD, and records accuracy.
+  sweep:
+    target_epsilons: [0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+    epochs: 3
