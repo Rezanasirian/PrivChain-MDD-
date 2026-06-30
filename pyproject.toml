@@ -1,0 +1,80 @@
+[project]
+name = "privchain-mdd"
+version = "0.0.0"
+description = "Depression Detection via Multimodal Federated Learning, Per-Modality Differential Privacy, and Blockchain Auditability (PrivChain-MDD)"
+authors = [{ name = "Reza Nasirian", email = "rezanasirian18@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary — University of Tehran thesis project" }
+
+# Core dependencies needed from Phase 0 onward (kept light so the mock-data
+# smoke test installs quickly). Heavy, phase-specific ML libraries live in the
+# optional-dependency groups below and are pulled in only when that phase starts.
+dependencies = [
+    "numpy>=1.26",
+    "torch>=2.2",
+    "pyyaml>=6.0",
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+# Phase 1 — multimodal encoders
+audio = ["librosa>=0.10"]
+nlp = ["transformers>=4.40"]
+ml = ["scikit-learn>=1.4"]
+# Phase 3 — per-modality differential privacy
+privacy = ["opacus>=1.4"]
+# Phase 2/4 — federated orchestration
+federated = ["flwr>=1.8"]
+# Developer tooling (lint, types, tests, hooks)
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/privchain"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pep8-naming, pyupgrade, bugbear, docstrings
+select = ["E", "F", "I", "N", "UP", "B", "D"]
+ignore = [
+    "D203", # one-blank-line-before-class (conflicts with D211)
+    "D213", # multi-line-summary-second-line (conflicts with D212)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]          # docstrings not required in tests
+"scripts/**" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# Third-party libs without type stubs — don't fail strict mode on them.
+module = ["yaml", "librosa.*", "transformers.*", "opacus.*", "flwr.*", "sklearn.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "integration: end-to-end pipeline tests (may be slower)",
+]
