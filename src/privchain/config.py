@@ -252,6 +252,8 @@ class AggregationConfig(_Strict):
     strategy: Literal["fedavg", "capability_aware"] = "fedavg"
     reputation_weighting: bool = False
     federated_distillation: bool = False
+    byzantine_filter: bool = False  # drop shared-group outlier updates (Phase 5)
+    byzantine_z: float = Field(default=2.5, gt=0.0)  # robust-std threshold
     reputation: ReputationConfig = Field(default_factory=ReputationConfig)
     distillation: DistillationConfig = Field(default_factory=DistillationConfig)
 
@@ -339,3 +341,39 @@ def load_privacy_config(path: str | Path) -> PrivacyConfig:
         The validated :class:`PrivacyConfig`.
     """
     return PrivacyConfig.model_validate(load_yaml(path))
+
+
+# ── Blockchain / ledger configuration (Phase 5, objective H3) ─────────────────
+
+
+class LedgerConfig(_Strict):
+    """How the Python bridge talks to the audit ledger.
+
+    ``mock`` uses the in-memory :class:`~privchain.chain_client.ledger.MockLedger`
+    (offline, enforces the same invariants as the chaincode); ``fabric_rest``
+    targets a live Fabric REST gateway fronting the ``privchain-cc`` chaincode.
+    """
+
+    backend: Literal["mock", "fabric_rest"] = "mock"
+    channel: str = "privchain-channel"
+    chaincode: str = "privchain-cc"
+    gateway_url: str = "http://localhost:8801"
+    timeout_seconds: float = Field(default=10.0, gt=0.0)
+
+
+class BlockchainConfig(_Strict):
+    """Top-level schema for ``configs/blockchain.yaml``."""
+
+    ledger: LedgerConfig
+
+
+def load_blockchain_config(path: str | Path) -> BlockchainConfig:
+    """Load and validate ``configs/blockchain.yaml``.
+
+    Args:
+        path: Path to the blockchain config file.
+
+    Returns:
+        The validated :class:`BlockchainConfig`.
+    """
+    return BlockchainConfig.model_validate(load_yaml(path))

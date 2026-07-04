@@ -1,0 +1,13 @@
+# Blockchain / ledger configuration (Phase 5, objective H3).
+#
+# The audit ledger records client registration, per-modality privacy budget
+# consumed (append-only), per-modality reputation, and the per-round aggregation
+# subgraph — making H1 (per-modality DP) and H2 (capability-aware aggregation)
+# auditable. See docs/architecture/ADR-0006.
+
+ledger:
+  backend: mock                       # {mock, fabric_rest}; mock runs offline
+  channel: privchain-channel
+  chaincode: privchain-cc
+  gateway_url: http://localhost:8801  # Fabric REST gateway (fabric_rest backend)
+  timeout_seconds: 10.0

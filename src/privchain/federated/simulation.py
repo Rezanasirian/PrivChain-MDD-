@@ -22,6 +22,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
+from privchain.chain_client import LedgerClient, record_round
 from privchain.config import AggregationConfig, ModelConfig
 from privchain.data.mock_daic_woz import Sample, collate_fn
 from privchain.federated.aggregation import ClientUpdate, capability_aware_aggregate, fedavg
@@ -29,7 +30,9 @@ from privchain.federated.capability import is_missing_any
 from privchain.federated.client import FederatedClient
 from privchain.federated.partition import ClientPartition, ModalityMaskedDataset
 from privchain.federated.reputation import ReputationTracker
+from privchain.federated.robust import flag_byzantine_updates
 from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
 from privchain.training.experiment import JsonlMetricLogger
 from privchain.training.objective import DepressionObjective, evaluate_model
 
@@ -204,6 +207,37 @@ def _evaluate_capabilities(
     return record
 
 
+def _record_round_to_ledger(
+    ledger: LedgerClient,
+    round_num: int,
+    updates: list[ClientUpdate],
+    tracker: ReputationTracker,
+    budget_allocator: PerModalityBudgetAllocator | None,
+    registered: set[str],
+) -> None:
+    """Write a round's subgraph, consumed budget, and reputation to the ledger.
+
+    Args:
+        ledger: The audit ledger client.
+        round_num: The current round.
+        updates: The client updates that were aggregated this round.
+        tracker: The reputation tracker (its snapshot is logged).
+        budget_allocator: Optional DP allocator for per-modality consumed ε.
+        registered: Set of already-registered client IDs (updated in place).
+    """
+    participants = [(str(u.client_id), u.capability) for u in updates]
+    reputation = {str(cid): groups for cid, groups in tracker.snapshot().items()}
+    consumed = budget_allocator.consumed_epsilon(round_num) if budget_allocator else None
+    record_round(
+        ledger,
+        round_num=round_num,
+        participants=participants,
+        reputation=reputation,
+        consumed_epsilon=consumed,
+        registered=registered,
+    )
+
+
 def run_capability_aware_simulation(
     global_model: MultimodalDepressionModel,
     clients: list[FederatedClient],
@@ -217,16 +251,23 @@ def run_capability_aware_simulation(
     run_dir: Path,
     seed: int,
     capability_val_loaders: dict[str, DataLoader[Sample]] | None = None,
+    ledger: LedgerClient | None = None,
+    budget_allocator: PerModalityBudgetAllocator | None = None,
     device: str = "cpu",
 ) -> list[dict[str, Any]]:
-    """Run the Phase 4 capability-aware protocol (objective H2).
+    """Run the Phase 4 capability-aware protocol (objectives H2, and H3 wiring).
 
     Replaces plain FedAvg with: (1) per-modality subgraph aggregation, (2)
-    reputation-weighted averaging, and (3) federated distillation for
-    missing-modality clients. Per-round global metrics — overall and, when
+    reputation-weighted averaging, (3) federated distillation for
+    missing-modality clients, and — when enabled — (4) a Byzantine outlier
+    filter (Phase 5). Per-round global metrics — overall and, when
     ``capability_val_loaders`` is given, per modality-access pattern — are logged
-    to ``metrics.jsonl`` and the per-client reputation snapshot is written to
-    ``reputation.jsonl`` (ledger-ready for Phase 5).
+    to ``metrics.jsonl`` and the per-client reputation snapshot to
+    ``reputation.jsonl``.
+
+    When a ``ledger`` is supplied, each round writes its audit trail (subgraph,
+    per-modality consumed ε from ``budget_allocator``, and reputation) to the
+    blockchain layer and is thereby auditable (objective H3, Phase 5).
 
     Args:
         global_model: The server's global model (updated in place each round).
@@ -240,6 +281,9 @@ def run_capability_aware_simulation(
         run_dir: Experiment run directory for logs / checkpoints.
         seed: Base seed for per-round client sampling.
         capability_val_loaders: Optional masked validation loaders per pattern.
+        ledger: Optional audit ledger; when set, each round is recorded to it.
+        budget_allocator: Optional DP allocator; when set (with a ledger), the
+            per-modality consumed ε is logged each round.
         device: Torch device string.
 
     Returns:
@@ -273,6 +317,7 @@ def run_capability_aware_simulation(
         (k, v.detach().cpu().clone()) for k, v in global_model.state_dict().items()
     )
     k_per_round = min(clients_per_round, len(clients))
+    registered: set[str] = set()
 
     for round_num in range(1, num_rounds + 1):
         rng = np.random.default_rng(seed + round_num)
@@ -298,14 +343,34 @@ def run_capability_aware_simulation(
                 ClientUpdate(client.client_id, client.capability, num_samples, updated)
             )
 
+        # Byzantine robustness: drop shared-group outlier updates before aggregation.
+        num_flagged = 0
+        if aggregation.byzantine_filter:
+            flagged = flag_byzantine_updates(
+                updates, global_state, z_thresh=aggregation.byzantine_z
+            )
+            num_flagged = len(flagged)
+            if flagged:
+                updates = [u for i, u in enumerate(updates) if i not in flagged]
+
         group_weights = tracker.compute_weights(
             updates, global_state, use_reputation=aggregation.reputation_weighting
         )
         global_state = capability_aware_aggregate(updates, global_state, group_weights)
         global_model.load_state_dict(global_state)
 
+        if ledger is not None:
+            _record_round_to_ledger(
+                ledger, round_num, updates, tracker, budget_allocator, registered
+            )
+
         metrics = evaluate_model(global_model, val_loader, objective, torch_device)
-        record: dict[str, Any] = {"round": round_num, "num_clients": len(selected)}
+        record: dict[str, Any] = {
+            "round": round_num,
+            "num_clients": len(selected),
+            "num_aggregated": len(updates),
+            "num_byzantine_flagged": num_flagged,
+        }
         record.update({f"val_{k}": v for k, v in metrics.items()})
         record.update(
             _evaluate_capabilities(global_model, capability_val_loaders, objective, torch_device)

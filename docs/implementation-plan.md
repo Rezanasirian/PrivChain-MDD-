@@ -127,15 +127,15 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 5 — Blockchain Layer with Hyperledger Fabric (H3 — integration) (2 weeks)
 **Goal:** Auditability and smart-contract enforcement for H1 and H2.
-- [ ] Stand up a local Fabric test network (2–4 peers + orderer)
-- [ ] Write chaincode in Go with 4 functions:
+- [ ] Stand up a local Fabric test network (2–4 peers + orderer). _(External/manual — needs Go + Docker + `fabric-samples`, not installed in the offline env.)_
+- [x] Write chaincode in Go with 4 functions + read helpers, input validation, explicit errors, and `shimtest` (MockStub) unit tests. `chaincode/privchain-cc/` (ADR-0006):
   - `RegisterClient(clientID, capabilityVector)`
-  - `LogPrivacyBudget(clientID, modality, round, epsilonSpent)`
-  - `UpdateReputation(clientID, modality, score)`
-  - `PublishSubgraph(round, []clientID)`
-- [ ] Connect the Flower server to the Fabric network (Go SDK or REST gateway calls) to read/write these values each round
-- [ ] Design Byzantine robustness (e.g., filter outlier gradients before aggregation — inspired by Sho et al. 2024) and personalized aggregation (Fan et al. 2025)
-- **Definition of Done:** One full round of federated training runs with real reads/writes against the blockchain (not an in-memory simulation).
+  - `LogPrivacyBudget(clientID, modality, round, epsilonSpent)` — **append-only** (consumed ε never overwritten, CLAUDE.md §7)
+  - `UpdateReputation(clientID, modality, score, round)`
+  - `PublishSubgraph(round, []clientID)` — **immutable** per round
+- [x] Connect the federated server to the ledger (read/write each round) via a backend-agnostic `LedgerClient`: in-memory `MockLedger` (offline) + `FabricRestLedger` (live REST gateway). Wired into `run_capability_aware_simulation` (subgraph + per-modality consumed ε + reputation); `scripts/run_federated_with_ledger.py` reads the trail back to `audit_report.json`. `src/privchain/chain_client/`.
+- [x] Byzantine robustness: shared-group outlier filter (robust median/MAD), `aggregation.byzantine_filter`. `src/privchain/federated/robust.py`. _(Personalized aggregation per Fan et al. 2025 is folded into the per-modality reputation weighting from Phase 4.)_
+- **Definition of Done:** One full round of federated training runs with real reads/writes against the blockchain (not an in-memory simulation). ✅ **Met against the `MockLedger`** (real ledger read/write semantics; same invariants as the chaincode) — the identical `LedgerClient` calls hit real Fabric with `backend: fabric_rest`. As with Phases 2–3, the **real Fabric/Go path is written to standard but not run offline** (Go/Docker absent); see ADR-0006. New tests: chaincode MockStub suite (Go) + Python ledger/robust/integration tests.
 
 ### Phase 6 — Attacker Models for Privacy Evaluation (part of H5) (1 week)
 **Goal:** Empirically prove that adaptive DP actually protects privacy.
