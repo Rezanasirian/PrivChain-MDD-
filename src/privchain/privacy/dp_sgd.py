@@ -122,7 +122,7 @@ def dp_train_epoch(
             batch = move_batch_to_device(collate_fn([dataset[index]]), device)
             optimizer.zero_grad()
             loss = objective(model(batch), batch)
-            loss.backward()
+            loss.backward()  # type: ignore[no-untyped-call]
             total_loss += float(loss.item())
             total_samples += 1
 

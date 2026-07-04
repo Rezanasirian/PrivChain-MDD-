@@ -30,7 +30,9 @@ class ClientPartition:
     indices: list[int]
 
 
-def assign_capabilities(federation: FederationConfig, seed: int) -> list[tuple[str, tuple[int, int, int]]]:
+def assign_capabilities(
+    federation: FederationConfig, seed: int
+) -> list[tuple[str, tuple[int, int, int]]]:
     """Assign a (pattern_name, capability) to each client per the population mix.
 
     Counts are proportional to each pattern's ``fraction`` (rounded, then
@@ -63,12 +65,12 @@ def assign_capabilities(federation: FederationConfig, seed: int) -> list[tuple[s
         idx += 1
 
     assignments: list[tuple[str, tuple[int, int, int]]] = []
-    for pattern, count in zip(patterns, counts):
+    for pattern, count in zip(patterns, counts, strict=True):
         cap = (pattern.capability[0], pattern.capability[1], pattern.capability[2])
         assignments.extend([(pattern.name, cap)] * count)
 
     rng = np.random.default_rng(seed)
-    rng.shuffle(assignments)  # type: ignore[arg-type]
+    rng.shuffle(assignments)
     return assignments
 
 
@@ -111,7 +113,7 @@ def build_client_partitions(
     shards = partition_indices(num_items, federation.num_clients, seed + 1)
     return [
         ClientPartition(client_id=cid, pattern_name=name, capability=cap, indices=shard)
-        for cid, ((name, cap), shard) in enumerate(zip(capabilities, shards))
+        for cid, ((name, cap), shard) in enumerate(zip(capabilities, shards, strict=True))
     ]
 
 
@@ -129,7 +131,7 @@ class ModalityMaskedDataset(Dataset[Sample]):
     ) -> None:
         self._base = base
         self._indices = indices
-        self._capability = dict(zip(CAPABILITY_MODALITIES, capability))
+        self._capability = dict(zip(CAPABILITY_MODALITIES, capability, strict=True))
 
     def __len__(self) -> int:
         """Return the number of items assigned to this client."""

@@ -43,7 +43,7 @@ def ndarrays_to_state(
 ) -> OrderedDict[str, torch.Tensor]:
     """Rebuild a ``state_dict`` from Flower NumPy arrays using the model's keys."""
     keys = list(model.state_dict().keys())
-    return OrderedDict((k, torch.tensor(v)) for k, v in zip(keys, arrays))
+    return OrderedDict((k, torch.tensor(v)) for k, v in zip(keys, arrays, strict=True))
 
 
 def run_flower_simulation(
@@ -53,7 +53,7 @@ def run_flower_simulation(
     *,
     input_dims: dict[str, int],
     model_config: ModelConfig,
-    global_model: "MultimodalDepressionModel",
+    global_model: MultimodalDepressionModel,
     num_rounds: int,
     clients_per_round: int,
     batch_size: int,
@@ -115,7 +115,7 @@ def run_flower_simulation(
     )
     clients_by_cid: dict[str, FederatedClient] = {str(c.client_id): c for c in clients}
 
-    class _FlowerClient(fl.client.NumPyClient):
+    class _FlowerClient(fl.client.NumPyClient):  # type: ignore[misc]
         def __init__(self, fed_client: FederatedClient) -> None:
             self._fc = fed_client
 

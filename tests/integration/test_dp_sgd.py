@@ -97,7 +97,7 @@ def test_dp_train_epoch_updates_parameters() -> None:
 
     assert loss > 0.0
     after = list(model.parameters())
-    assert any(not torch.equal(b, a) for b, a in zip(before, after))
+    assert any(not torch.equal(b, a) for b, a in zip(before, after, strict=True))
 
 
 def test_zero_noise_still_trains() -> None:

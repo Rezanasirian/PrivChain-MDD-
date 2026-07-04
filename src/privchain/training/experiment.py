@@ -9,7 +9,7 @@ and checkpoints. Run IDs follow the ``phaseN_<description>_<date>`` convention
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ def create_run_dir(output_dir: str | Path, phase: str, run_name: str) -> Path:
     Returns:
         The created run directory ``<output_dir>/<phase>/<run_name>_<timestamp>``.
     """
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     run_dir = Path(output_dir) / phase / f"{run_name}_{timestamp}"
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir

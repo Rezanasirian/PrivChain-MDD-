@@ -79,7 +79,9 @@ class FederatedClient:
         Returns:
             The local parameters.
         """
-        return OrderedDict((k, v.detach().cpu().clone()) for k, v in self.model.state_dict().items())
+        return OrderedDict(
+            (k, v.detach().cpu().clone()) for k, v in self.model.state_dict().items()
+        )
 
     def fit(
         self,
@@ -125,7 +127,7 @@ class FederatedClient:
                     loss = loss + distill_weight * distillation_loss(
                         outputs["logit"], teacher_logit, distill_temperature
                     )
-                loss.backward()
+                loss.backward()  # type: ignore[no-untyped-call]
                 optimizer.step()
         return self.get_parameters(), self.num_samples
 

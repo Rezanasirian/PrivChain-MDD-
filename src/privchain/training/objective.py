@@ -7,6 +7,8 @@ plus an optional (normalized) PHQ-8 regression term.
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import torch
 from torch import nn
@@ -26,7 +28,8 @@ def move_batch_to_device(batch: Batch, device: torch.device) -> Batch:
     Returns:
         A batch with all tensors on ``device``.
     """
-    return {key: value.to(device) for key, value in batch.items()}  # type: ignore[return-value]
+    moved = {key: cast("torch.Tensor", value).to(device) for key, value in batch.items()}
+    return cast("Batch", moved)
 
 
 class DepressionObjective:
@@ -53,10 +56,11 @@ class DepressionObjective:
         Returns:
             Scalar loss tensor.
         """
-        loss = self.bce(outputs["logit"], batch["label"].float())
+        loss: torch.Tensor = self.bce(outputs["logit"], batch["label"].float())
         if "phq_pred" in outputs and self.phq_loss_weight > 0:
             target = batch["phq8_score"].float() / self.phq8_max
-            loss = loss + self.phq_loss_weight * self.mse(outputs["phq_pred"], target)
+            mse = cast("torch.Tensor", self.mse(outputs["phq_pred"], target))
+            loss = loss + self.phq_loss_weight * mse
         return loss
 
 

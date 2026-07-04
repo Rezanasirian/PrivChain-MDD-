@@ -84,4 +84,5 @@ class SequenceEncoder(nn.Module):
             hidden, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
 
         pooled = masked_mean(hidden, lengths)
-        return self.out(self.dropout(pooled))
+        encoded: torch.Tensor = self.out(self.dropout(pooled))
+        return encoded

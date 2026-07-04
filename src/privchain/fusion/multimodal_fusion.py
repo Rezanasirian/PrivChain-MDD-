@@ -22,7 +22,9 @@ class ConcatFusion(nn.Module):
         dropout: Dropout applied after the projection.
     """
 
-    def __init__(self, modality_dims: dict[str, int], hidden_dim: int, dropout: float = 0.0) -> None:
+    def __init__(
+        self, modality_dims: dict[str, int], hidden_dim: int, dropout: float = 0.0
+    ) -> None:
         super().__init__()
         self.modalities = list(modality_dims)
         total = sum(modality_dims.values())
@@ -57,4 +59,5 @@ class ConcatFusion(nn.Module):
                 emb = emb * presence[modality].unsqueeze(-1).to(emb.dtype)
             parts.append(emb)
         fused = torch.cat(parts, dim=-1)
-        return self.net(fused)
+        projected: torch.Tensor = self.net(fused)
+        return projected

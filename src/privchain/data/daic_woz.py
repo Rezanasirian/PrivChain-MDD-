@@ -213,7 +213,8 @@ class DaicWozDataset(Dataset[Sample]):
 
     def _participant_dir(self, pid: int) -> Path:
         """Return the participant's directory path."""
-        return self._root / self._dir_template.format(pid=pid)
+        participant_dir: Path = self._root / self._dir_template.format(pid=pid)
+        return participant_dir
 
     def _file(self, pid: int, template: str) -> Path:
         """Resolve a per-participant file path from a ``{pid}`` template."""

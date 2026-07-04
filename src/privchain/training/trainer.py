@@ -68,7 +68,7 @@ class CentralizedTrainer:
             self.optimizer.zero_grad()
             outputs = self.model(batch)
             loss = self.objective(outputs, batch)
-            loss.backward()
+            loss.backward()  # type: ignore[no-untyped-call]
             self.optimizer.step()
             total += float(loss.item())
             count += 1

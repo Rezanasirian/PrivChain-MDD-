@@ -12,6 +12,7 @@ license = { text = "Proprietary — University of Tehran thesis project" }
 # optional-dependency groups below and are pulled in only when that phase starts.
 dependencies = [
     "numpy>=1.26",
+    "scipy>=1.11",   # RDP privacy accountant (scipy.special.logsumexp), Phase 3
     "torch>=2.2",
     "pyyaml>=6.0",
     "pydantic>=2.6",
@@ -52,6 +53,7 @@ select = ["E", "F", "I", "N", "UP", "B", "D"]
 ignore = [
     "D203", # one-blank-line-before-class (conflicts with D211)
     "D213", # multi-line-summary-second-line (conflicts with D212)
+    "D107", # __init__ docstring — args are documented in the class docstring
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -62,14 +64,16 @@ ignore = [
 convention = "google"
 
 [tool.mypy]
-python_version = "3.11"
+# 3.12 matches the development/runtime interpreter; required so the bundled
+# numpy 2.x stubs (which use 3.12-only `type` statements) parse under mypy.
+python_version = "3.12"
 strict = true
 files = ["src"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 # Third-party libs without type stubs — don't fail strict mode on them.
-module = ["yaml", "librosa.*", "transformers.*", "opacus.*", "flwr.*", "sklearn.*"]
+module = ["yaml", "librosa.*", "transformers.*", "opacus.*", "flwr.*", "sklearn.*", "scipy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

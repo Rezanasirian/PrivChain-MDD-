@@ -19,6 +19,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from torch.utils.data import DataLoader
+
 from privchain.config import (
     load_baseline_config,
     load_federated_config,
@@ -31,7 +33,6 @@ from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
-from torch.utils.data import DataLoader
 
 
 def main() -> None:
