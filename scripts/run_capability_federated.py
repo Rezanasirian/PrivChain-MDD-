@@ -187,7 +187,7 @@ def main() -> None:
     (run_dir / "comparison.json").write_text(json.dumps(comparison, indent=2), encoding="utf-8")
 
     print(f"\nRun dir: {run_dir}")
-    print(f"{'setting':<14}{'FedAvg F1':>12}{'CapAware F1':>14}{'ΔF1':>10}")
+    print(f"{'setting':<14}{'FedAvg F1':>12}{'CapAware F1':>14}{'d_F1':>10}")
     for name, row in comparison.items():
         print(
             f"{name:<14}{row['fedavg']['f1']:>12.4f}"

@@ -55,6 +55,7 @@ class ReputationTracker:
     """
 
     def __init__(self, config: ReputationConfig) -> None:
+        """Initialize the tracker with its reputation hyperparameters."""
         self._config = config
         # client_id -> {group -> reputation in [0, 1]}
         self._reputation: dict[int, dict[str, float]] = {}
@@ -87,7 +88,9 @@ class ReputationTracker:
             Per-client mapping ``{group: weight}`` aligned with ``updates``; a
             client only has a key for a group it contributes to.
         """
-        group_keys = {group: [k for k in global_state if param_group(k) == group] for group in GROUPS}
+        group_keys = {
+            group: [k for k in global_state if param_group(k) == group] for group in GROUPS
+        }
         weights: list[dict[str, float]] = [{} for _ in updates]
 
         for group in GROUPS:
@@ -95,10 +98,11 @@ class ReputationTracker:
             if not members:
                 continue
 
+            keys = group_keys[group]
             volumes = {i: float(updates[i].num_samples) for i in members}
             max_volume = max(volumes.values()) or 1.0
             deltas = {
-                i: _flatten_delta(updates[i].state, global_state, group_keys[group]) for i in members
+                i: _flatten_delta(updates[i].state, global_state, keys) for i in members
             }
             consensus = self._consensus(deltas, volumes)
 

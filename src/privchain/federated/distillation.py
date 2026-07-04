@@ -16,7 +16,7 @@ scaled by ``T²`` to keep gradient magnitudes comparable to the hard-label loss.
 from __future__ import annotations
 
 import torch
-from torch.nn import functional as F
+from torch.nn.functional import binary_cross_entropy_with_logits
 
 
 def distillation_loss(
@@ -41,6 +41,6 @@ def distillation_loss(
     if temperature <= 0:
         raise ValueError("temperature must be positive")
     soft_target = torch.sigmoid(teacher_logit.detach() / temperature)
-    return F.binary_cross_entropy_with_logits(student_logit / temperature, soft_target) * (
+    return binary_cross_entropy_with_logits(student_logit / temperature, soft_target) * (
         temperature * temperature
     )

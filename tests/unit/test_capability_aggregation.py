@@ -10,7 +10,9 @@ import torch
 from privchain.federated.aggregation import ClientUpdate, capability_aware_aggregate
 
 
-def _state(audio: float, video: float, text: float, shared: float) -> OrderedDict[str, torch.Tensor]:
+def _state(
+    audio: float, video: float, text: float, shared: float
+) -> OrderedDict[str, torch.Tensor]:
     return OrderedDict(
         {
             "encoders.audio.w": torch.full((2,), audio),
