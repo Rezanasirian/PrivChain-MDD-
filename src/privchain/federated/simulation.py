@@ -13,6 +13,7 @@ backends reuse the same :class:`~privchain.federated.client.FederatedClient` and
 
 from __future__ import annotations
 
+import copy
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any
@@ -21,11 +22,13 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from privchain.config import ModelConfig
+from privchain.config import AggregationConfig, ModelConfig
 from privchain.data.mock_daic_woz import Sample, collate_fn
-from privchain.federated.aggregation import fedavg
+from privchain.federated.aggregation import ClientUpdate, capability_aware_aggregate, fedavg
+from privchain.federated.capability import is_missing_any
 from privchain.federated.client import FederatedClient
 from privchain.federated.partition import ClientPartition, ModalityMaskedDataset
+from privchain.federated.reputation import ReputationTracker
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.training.experiment import JsonlMetricLogger
 from privchain.training.objective import DepressionObjective, evaluate_model
@@ -162,6 +165,153 @@ def run_simulation(
         record: dict[str, Any] = {"round": round_num, "num_clients": len(selected)}
         record.update({f"val_{k}": v for k, v in metrics.items()})
         logger.log(record)
+        history.append(record)
+
+        selector = metrics["roc_auc"]
+        if np.isnan(selector):
+            selector = metrics["f1"]
+        if selector > best_score:
+            best_score = selector
+            torch.save(global_state, run_dir / "best_global_model.pt")
+
+    return history
+
+
+def _evaluate_capabilities(
+    global_model: MultimodalDepressionModel,
+    capability_val_loaders: dict[str, DataLoader[Sample]] | None,
+    objective: DepressionObjective,
+    device: torch.device,
+) -> dict[str, float]:
+    """Evaluate the global model under each modality-access pattern.
+
+    Args:
+        global_model: The current global model.
+        capability_val_loaders: Optional ``{pattern_name: masked val loader}``
+            simulating inference when only that pattern's modalities are present.
+        objective: The evaluation objective.
+        device: Torch device.
+
+    Returns:
+        Flat metrics keyed ``val_<pattern>_<metric>`` (empty if no loaders).
+    """
+    if not capability_val_loaders:
+        return {}
+    record: dict[str, float] = {}
+    for pattern_name, loader in capability_val_loaders.items():
+        pattern_metrics = evaluate_model(global_model, loader, objective, device)
+        record.update({f"val_{pattern_name}_{k}": v for k, v in pattern_metrics.items()})
+    return record
+
+
+def run_capability_aware_simulation(
+    global_model: MultimodalDepressionModel,
+    clients: list[FederatedClient],
+    val_loader: DataLoader[Sample],
+    *,
+    aggregation: AggregationConfig,
+    num_rounds: int,
+    clients_per_round: int,
+    phq8_max: int,
+    phq_loss_weight: float,
+    run_dir: Path,
+    seed: int,
+    capability_val_loaders: dict[str, DataLoader[Sample]] | None = None,
+    device: str = "cpu",
+) -> list[dict[str, Any]]:
+    """Run the Phase 4 capability-aware protocol (objective H2).
+
+    Replaces plain FedAvg with: (1) per-modality subgraph aggregation, (2)
+    reputation-weighted averaging, and (3) federated distillation for
+    missing-modality clients. Per-round global metrics — overall and, when
+    ``capability_val_loaders`` is given, per modality-access pattern — are logged
+    to ``metrics.jsonl`` and the per-client reputation snapshot is written to
+    ``reputation.jsonl`` (ledger-ready for Phase 5).
+
+    Args:
+        global_model: The server's global model (updated in place each round).
+        clients: The federated clients.
+        val_loader: Held-out full-modality validation loader.
+        aggregation: Aggregation configuration (reputation + distillation flags).
+        num_rounds: Number of federated rounds.
+        clients_per_round: Clients sampled (without replacement) each round.
+        phq8_max: Max PHQ-8 score (objective).
+        phq_loss_weight: PHQ-8 regression weight.
+        run_dir: Experiment run directory for logs / checkpoints.
+        seed: Base seed for per-round client sampling.
+        capability_val_loaders: Optional masked validation loaders per pattern.
+        device: Torch device string.
+
+    Returns:
+        Per-round history records.
+
+    Raises:
+        ValueError: If there are no clients to train.
+    """
+    if not clients:
+        raise ValueError("no clients to run capability-aware simulation")
+
+    torch_device = torch.device(device)
+    global_model = global_model.to(torch_device)
+    objective = DepressionObjective(phq8_max, phq_loss_weight)
+    logger = JsonlMetricLogger(run_dir / "metrics.jsonl")
+    reputation_logger = JsonlMetricLogger(run_dir / "reputation.jsonl")
+    tracker = ReputationTracker(aggregation.reputation)
+    distill = aggregation.distillation
+
+    # A single reusable frozen teacher; its parameters are refreshed each round.
+    teacher: MultimodalDepressionModel | None = None
+    if aggregation.federated_distillation and distill.weight > 0.0:
+        teacher = copy.deepcopy(global_model).to(torch_device)
+        for param in teacher.parameters():
+            param.requires_grad_(False)
+
+    history: list[dict[str, Any]] = []
+    best_score = -float("inf")
+
+    global_state: OrderedDict[str, torch.Tensor] = OrderedDict(
+        (k, v.detach().cpu().clone()) for k, v in global_model.state_dict().items()
+    )
+    k_per_round = min(clients_per_round, len(clients))
+
+    for round_num in range(1, num_rounds + 1):
+        rng = np.random.default_rng(seed + round_num)
+        selected_idx = rng.choice(len(clients), size=k_per_round, replace=False)
+        selected = [clients[int(i)] for i in selected_idx]
+
+        if teacher is not None:
+            teacher.load_state_dict(global_state)
+            teacher.eval()
+
+        updates: list[ClientUpdate] = []
+        for client in selected:
+            use_distill = teacher is not None and (
+                distill.apply_to == "all" or is_missing_any(client.capability)
+            )
+            updated, num_samples = client.fit(
+                global_state,
+                teacher=teacher if use_distill else None,
+                distill_weight=distill.weight if use_distill else 0.0,
+                distill_temperature=distill.temperature,
+            )
+            updates.append(
+                ClientUpdate(client.client_id, client.capability, num_samples, updated)
+            )
+
+        group_weights = tracker.compute_weights(
+            updates, global_state, use_reputation=aggregation.reputation_weighting
+        )
+        global_state = capability_aware_aggregate(updates, global_state, group_weights)
+        global_model.load_state_dict(global_state)
+
+        metrics = evaluate_model(global_model, val_loader, objective, torch_device)
+        record: dict[str, Any] = {"round": round_num, "num_clients": len(selected)}
+        record.update({f"val_{k}": v for k, v in metrics.items()})
+        record.update(
+            _evaluate_capabilities(global_model, capability_val_loaders, objective, torch_device)
+        )
+        logger.log(record)
+        reputation_logger.log({"round": round_num, "reputation": tracker.snapshot()})
         history.append(record)
 
         selector = metrics["roc_auc"]

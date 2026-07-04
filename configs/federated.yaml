@@ -26,6 +26,19 @@ federation:
       fraction: 0.1
 
 aggregation:
-  strategy: fedavg            # Phase 2 baseline; replaced by capability-aware in Phase 4
-  reputation_weighting: false # enabled in Phase 4
-  federated_distillation: false
+  # Phase 4 (H2): capability_aware groups clients into per-modality subgraphs so a
+  # missing modality's zero-imputed gradients never corrupt that encoder. Set to
+  # fedavg to reproduce the Phase 2 baseline.
+  strategy: capability_aware  # {fedavg, capability_aware}
+  reputation_weighting: true  # weight updates by data volume + update consistency
+  federated_distillation: true
+
+  reputation:
+    volume_weight: 0.5        # alpha: blend of relative data volume vs. consistency
+    ema_decay: 0.8            # smoothing of reputation across rounds
+    min_reputation: 0.05      # floor so no participating client is fully excluded
+
+  distillation:
+    weight: 0.5               # weight of the soft-target (teacher) loss term
+    temperature: 2.0          # softening temperature for teacher/student logits
+    apply_to: missing_modality  # {missing_modality, all}

@@ -119,11 +119,11 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 4 — Capability-Aware Aggregation + Reputation + Federated Distillation (H2 complete) (2 weeks)
 **Goal:** Replace Phase 2's plain FedAvg with the actual proposed protocol.
-- [ ] Subgraph aggregation: group clients by their declared modality capability vector (e.g., one-hot [audio, video, text])
-- [ ] Aggregation weighting by reputation score (initially reputation = function of data volume and gradient consistency; later read from the blockchain)
-- [ ] Federated distillation for missing-modality clients — teacher from full-modality clients, student locally
-- [ ] Compare accuracy against the Phase 2 baseline (plain FedAvg) on the same heterogeneous distribution
-- **Definition of Done:** Measurable F1/ROC-AUC improvement over plain FedAvg, especially for missing-modality clients.
+- [x] Subgraph aggregation: group clients by their declared modality capability vector (one-hot [audio, video, text]); each modality encoder is averaged only over the clients that declare it, empty subgraphs keep the global value. `src/privchain/federated/capability.py`, `aggregation.py::capability_aware_aggregate`.
+- [x] Aggregation weighting by reputation score (reputation = data volume + per-group update consistency, EMA-smoothed; `reputation_weighting` toggle; per-modality `ρ` snapshot logged to `reputation.jsonl`, ledger-ready for Phase 5). `src/privchain/federated/reputation.py`.
+- [x] Federated distillation for missing-modality clients — teacher = frozen global model, student distills its soft predictions locally. `src/privchain/federated/distillation.py`, wired via `FederatedClient.fit`.
+- [x] Compare accuracy against the Phase 2 baseline (plain FedAvg) on the same heterogeneous distribution. `scripts/run_capability_federated.py` writes `comparison.json` (overall + per modality-access pattern).
+- **Definition of Done:** Measurable F1/ROC-AUC improvement over plain FedAvg, especially for missing-modality clients. ✅ **Met (mechanism)** — `scripts/run_capability_federated.py` runs both protocols on the same partition/seed/init and reports per-pattern deltas; 19 new tests pass. Design in ADR-0005. **On mock noise the accuracy delta is not meaningful** (as in Phases 1–3); the real improvement is produced once DAIC-WOZ is downloaded.
 
 ### Phase 5 — Blockchain Layer with Hyperledger Fabric (H3 — integration) (2 weeks)
 **Goal:** Auditability and smart-contract enforcement for H1 and H2.

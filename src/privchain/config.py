@@ -220,12 +220,40 @@ class FederationConfig(_Strict):
     modality_patterns: list[ModalityPattern]
 
 
+class ReputationConfig(_Strict):
+    """Reputation-scoring hyperparameters (Phase 4, objective H2).
+
+    Reputation blends a client's relative data volume with the per-group
+    consistency of its update (agreement with the subgraph consensus), smoothed
+    across rounds by an EMA. See ADR-0005.
+    """
+
+    volume_weight: float = Field(default=0.5, ge=0.0, le=1.0)  # alpha
+    ema_decay: float = Field(default=0.8, ge=0.0, lt=1.0)
+    min_reputation: float = Field(default=0.05, gt=0.0, le=1.0)
+
+
+class DistillationConfig(_Strict):
+    """Federated-distillation hyperparameters (Phase 4, objective H2).
+
+    The frozen global model at the start of a round acts as the teacher; a
+    client's local training adds a soft-target term matching the teacher's
+    predictions, transferring cross-modal knowledge to missing-modality clients.
+    """
+
+    weight: float = Field(default=0.5, ge=0.0)
+    temperature: float = Field(default=2.0, gt=0.0)
+    apply_to: Literal["missing_modality", "all"] = "missing_modality"
+
+
 class AggregationConfig(_Strict):
     """Aggregation-strategy schema (Phase 2 baseline; extended in Phase 4)."""
 
-    strategy: Literal["fedavg"] = "fedavg"
+    strategy: Literal["fedavg", "capability_aware"] = "fedavg"
     reputation_weighting: bool = False
     federated_distillation: bool = False
+    reputation: ReputationConfig = Field(default_factory=ReputationConfig)
+    distillation: DistillationConfig = Field(default_factory=DistillationConfig)
 
 
 class FederatedConfig(_Strict):

@@ -15,6 +15,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from privchain.data.mock_daic_woz import Sample
+from privchain.federated.distillation import distillation_loss
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.training.objective import DepressionObjective, evaluate_model, move_batch_to_device
 
@@ -81,12 +82,26 @@ class FederatedClient:
         return OrderedDict((k, v.detach().cpu().clone()) for k, v in self.model.state_dict().items())
 
     def fit(
-        self, global_state: OrderedDict[str, torch.Tensor]
+        self,
+        global_state: OrderedDict[str, torch.Tensor],
+        *,
+        teacher: MultimodalDepressionModel | None = None,
+        distill_weight: float = 0.0,
+        distill_temperature: float = 1.0,
     ) -> tuple[OrderedDict[str, torch.Tensor], int]:
         """Adopt global params, train locally, and return updated params.
 
+        When a ``teacher`` is supplied with a positive ``distill_weight``, each
+        local step adds a federated-distillation term (Phase 4, H2) matching the
+        teacher's soft predictions on the same batch — transferring cross-modal
+        knowledge to this client (see
+        :mod:`privchain.federated.distillation`).
+
         Args:
             global_state: The server's current global parameters.
+            teacher: Optional frozen teacher model (the round's global model).
+            distill_weight: Weight on the distillation term (0 disables it).
+            distill_temperature: Softening temperature for distillation.
 
         Returns:
             ``(updated_state, num_samples)``.
@@ -95,12 +110,21 @@ class FederatedClient:
         optimizer = torch.optim.Adam(
             self.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
+        distilling = teacher is not None and distill_weight > 0.0
         self.model.train()
         for _ in range(self.local_epochs):
             for raw_batch in self.train_loader:
                 batch = move_batch_to_device(raw_batch, self.device)
                 optimizer.zero_grad()
-                loss = self.objective(self.model(batch), batch)
+                outputs = self.model(batch)
+                loss = self.objective(outputs, batch)
+                if distilling:
+                    assert teacher is not None  # narrows type for mypy
+                    with torch.no_grad():
+                        teacher_logit = teacher(batch)["logit"]
+                    loss = loss + distill_weight * distillation_loss(
+                        outputs["logit"], teacher_logit, distill_temperature
+                    )
                 loss.backward()
                 optimizer.step()
         return self.get_parameters(), self.num_samples
