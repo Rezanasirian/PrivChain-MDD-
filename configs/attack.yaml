@@ -1,0 +1,28 @@
+# Attacker-model / privacy-evaluation configuration (Phase 6, objective H5).
+#
+# Empirically measures re-identification risk per modality and per privacy
+# budget: an attacker sees several noisy embedding "views" per subject, enrols a
+# few, and tries to re-identify the rest. As epsilon shrinks (more DP noise), the
+# attacker's success rate should fall toward the chance baseline — and the
+# higher-risk modality (audio), which the adaptive allocation gives the smallest
+# epsilon, should be the best protected. See docs/architecture/ADR-0007.
+
+seed: 42
+
+attack:
+  num_views: 6            # noisy embedding views generated per subject
+  enroll_views: 3         # views used to build each subject's template
+  jitter: 0.15            # intra-subject feature variability (mock stand-in)
+  noise_scale: 0.1        # released-embedding noise as a fraction of embedding RMS per unit sigma
+
+  # Nominal (q, T, delta) used only to map a target epsilon -> sigma via the RDP
+  # accountant (the same accountant Phase 3 uses).
+  delta: 1.0e-5
+  sample_rate: 0.1
+  steps: 100
+
+  # Privacy budgets at which to measure attack success (the sweep axis).
+  target_epsilons: [0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+
+  membership_inference:
+    enabled: true

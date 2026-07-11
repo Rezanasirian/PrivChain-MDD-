@@ -377,3 +377,80 @@ def load_blockchain_config(path: str | Path) -> BlockchainConfig:
         The validated :class:`BlockchainConfig`.
     """
     return BlockchainConfig.model_validate(load_yaml(path))
+
+
+# ── Attacker-model / privacy-evaluation configuration (Phase 6, objective H5) ─
+
+
+class MembershipInferenceConfig(_Strict):
+    """Membership-inference attack settings."""
+
+    enabled: bool = True
+
+
+class AttackSettings(_Strict):
+    """The ``attack`` block of ``configs/attack.yaml``.
+
+    A re-identification attacker sees several noisy "views" per subject; some are
+    enrolled (build the subject's template) and the rest are probed. The DP noise
+    a released embedding carries is calibrated from a target ε via the RDP
+    accountant using the nominal ``(sample_rate, steps, delta)`` mapping.
+    """
+
+    num_views: int = Field(default=6, gt=1)
+    enroll_views: int = Field(default=3, gt=0)
+    jitter: float = Field(default=0.1, ge=0.0)  # intra-subject feature variability
+    noise_scale: float = Field(default=0.1, gt=0.0)  # noise as a fraction of embedding RMS per σ
+    delta: float = Field(default=1.0e-5, gt=0.0, lt=1.0)
+    sample_rate: float = Field(default=0.1, gt=0.0, le=1.0)  # nominal q for σ(ε)
+    steps: int = Field(default=100, gt=0)  # nominal T for σ(ε)
+    target_epsilons: list[float]
+    membership_inference: MembershipInferenceConfig = Field(
+        default_factory=MembershipInferenceConfig
+    )
+
+    @field_validator("target_epsilons")
+    @classmethod
+    def _positive_nonempty(cls, value: list[float]) -> list[float]:
+        """Require a non-empty list of positive epsilon values."""
+        if not value:
+            raise ValueError("target_epsilons must be non-empty")
+        if any(v <= 0 for v in value):
+            raise ValueError("target_epsilons must all be positive")
+        return value
+
+    def validated(self) -> AttackSettings:
+        """Return self after checking ``enroll_views < num_views``.
+
+        Returns:
+            The same instance, once validated.
+
+        Raises:
+            ValueError: If there are not enough views left to probe.
+        """
+        if self.enroll_views >= self.num_views:
+            raise ValueError(
+                f"enroll_views ({self.enroll_views}) must be < num_views ({self.num_views})"
+            )
+        return self
+
+
+class AttackConfig(_Strict):
+    """Top-level schema for ``configs/attack.yaml``."""
+
+    seed: int
+    attack: AttackSettings
+
+
+def load_attack_config(path: str | Path) -> AttackConfig:
+    """Load and validate ``configs/attack.yaml``.
+
+    Args:
+        path: Path to the attack config file.
+
+    Returns:
+        The validated :class:`AttackConfig` (with view counts cross-checked).
+    """
+    config = AttackConfig.model_validate(load_yaml(path))
+    config.attack.validated()
+    return config

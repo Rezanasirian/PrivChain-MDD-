@@ -139,11 +139,11 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 6 — Attacker Models for Privacy Evaluation (part of H5) (1 week)
 **Goal:** Empirically prove that adaptive DP actually protects privacy.
-- [ ] Speaker-identification attacker model (audio re-identification)
-- [ ] Face-recognition attacker model (face re-identification)
-- [ ] Named-entity-extraction attacker model (text-based de-anonymization)
-- [ ] Run a membership-inference attack against the noised embeddings and report success rate at different per-modality ε levels
-- **Definition of Done:** A table of attack success rate per modality and per privacy-budget level — this feeds directly into Chapter 4.
+- [x] Speaker-identification attacker (audio re-identification) — nearest-centroid cosine attacker on the audio embedding. `src/privchain/eval/attackers.py::ReidentificationAttacker` (ADR-0007).
+- [x] Face-recognition attacker (video re-identification) — same engine on the video embedding.
+- [x] Named-entity-extraction attacker (text de-anonymization) — same engine on the text embedding.
+- [x] Membership-inference attack against the noised embeddings at different per-modality ε levels. `MembershipInferenceAttacker`; per-ε curve in the report.
+- **Definition of Done:** A table of attack success rate per modality and per privacy-budget level — this feeds directly into Chapter 4. ✅ **Met** — `scripts/run_attack_eval.py` writes `attack_success.json` (per-modality × per-ε re-identification, the adaptive-allocation headline, and the membership-inference curve) + `attack_curve.jsonl` + `attack_success_vs_epsilon.png`. On mock data the depression labels are noise but **subject identity is a real signal**, so the re-identification curve (and the "higher risk → smaller ε → better protected" headline) is demonstrable offline; DAIC-WOZ numbers replace the mock ones later. New unit + integration tests.
 
 ### Phase 7 — Comparative Baselines & Final Evaluation (H5 complete) (2 weeks)
 **Goal:** The final tables for Chapter 4.
