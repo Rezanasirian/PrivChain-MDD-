@@ -147,11 +147,11 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 7 — Comparative Baselines & Final Evaluation (H5 complete) (2 weeks)
 **Goal:** The final tables for Chapter 4.
-- [ ] Reproduce Xu et al. 2023, De Chaudhury et al. 2024, Fan et al. 2025 (at least a simplified version) on the same data
-- [ ] Run 10-fold cross-validation + held-out test for all variants (centralized baseline, plain FedAvg, full proposed framework)
-- [ ] Ablation analysis: remove adaptive DP → uniform DP only; remove reputation weighting; remove federated distillation
-- [ ] Measure inference latency under different compute budgets
-- **Definition of Done:** All tables and plots needed for Chapter 4 are generated.
+- [x] Reproduce Xu et al. 2023, De Chaudhury et al. 2024, Fan et al. 2025 as **simplified stand-ins** on the same data/model (centralized ≈ Xu; uniform-DP ≈ De Chaudhury; personalized/reputation ≈ Fan), each labelled as such — the papers are unavailable offline, so these are documented approximations (ADR-0008), not faithful reimplementations.
+- [x] 10-fold cross-validation + held-out test for all variants (centralized, plain FedAvg, personalized, full proposed framework, and an ablation), one shared split/seed protocol. `src/privchain/eval/benchmark.py`, `scripts/run_final_evaluation.py`.
+- [x] Ablation analysis: adaptive DP → uniform DP (same total ε, centralized DP-SGD); remove reputation weighting; remove federated distillation. Written to `ablation.json` + `dp_comparison.json`.
+- [x] Inference latency under different compute budgets (forward-pass ms/batch and ms/sample across batch sizes). `measure_inference_latency`; `latency.json` + `inference_latency.png`.
+- **Definition of Done:** All tables and plots needed for Chapter 4 are generated. ✅ **Met** — `scripts/run_final_evaluation.py` writes `cv_results.json`, `ablation.json`, `dp_comparison.json`, `latency.json`, `inference_latency.png`, and a combined `chapter4_summary.md` under `experiments/phase7/<run-id>/`. **On mock data the depression label is random, so the accuracy numbers are placeholders** demonstrating the table shapes; the real numbers come with DAIC-WOZ. New unit + integration tests; design in ADR-0008.
 
 ### Phase 8 — Writing Chapters 3, 4, and 5 (can proceed in parallel with phases above)
 - [ ] **Chapter 3:** Fully replace the current (unrelated) mathematical model with the formalization from Phase 3 (DP budget allocation) and Phase 4 (aggregation weighting) — indices/parameters/variables tables following the existing chapter's format but with real content

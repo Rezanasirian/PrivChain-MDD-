@@ -1,0 +1,19 @@
+# Final-evaluation configuration (Phase 7, objective H5).
+#
+# One cross-validation protocol shared by every method variant (centralized,
+# plain FedAvg, the proposed framework, its ablations, and the simplified
+# prior-work reproductions), plus an inference-latency benchmark. Epoch/round
+# counts are modest so the whole Chapter-4 comparison runs offline on mock data.
+# See docs/architecture/ADR-0008.
+
+seed: 42
+
+evaluation:
+  k_folds: 10             # 10-fold cross-validation (thesis protocol)
+  held_out_fraction: 0.2  # held-out test fold reserved before CV
+  epochs: 3               # centralized / DP-SGD training epochs
+  rounds: 5               # federated rounds per fold
+
+  # Inference-latency "compute budget" axis.
+  latency_batch_sizes: [1, 2, 4, 8, 16]
+  latency_repeats: 20

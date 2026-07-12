@@ -454,3 +454,51 @@ def load_attack_config(path: str | Path) -> AttackConfig:
     config = AttackConfig.model_validate(load_yaml(path))
     config.attack.validated()
     return config
+
+
+# ── Final-evaluation configuration (Phase 7, objective H5) ────────────────────
+
+
+class EvaluationSettings(_Strict):
+    """The ``evaluation`` block of ``configs/evaluation.yaml``.
+
+    Controls the cross-validation protocol shared by every method variant, plus
+    the inference-latency benchmark (the compute-budget axis). Epoch/round counts
+    are kept modest so the whole comparison runs offline on mock data.
+    """
+
+    k_folds: int = Field(default=10, ge=2)
+    held_out_fraction: float = Field(default=0.2, gt=0.0, lt=1.0)
+    epochs: int = Field(default=3, gt=0)  # centralized / DP-SGD epochs
+    rounds: int = Field(default=5, gt=0)  # federated rounds
+    latency_batch_sizes: list[int]
+    latency_repeats: int = Field(default=20, gt=0)
+
+    @field_validator("latency_batch_sizes")
+    @classmethod
+    def _positive_nonempty(cls, value: list[int]) -> list[int]:
+        """Require a non-empty list of positive batch sizes."""
+        if not value:
+            raise ValueError("latency_batch_sizes must be non-empty")
+        if any(v <= 0 for v in value):
+            raise ValueError("latency_batch_sizes must all be positive")
+        return value
+
+
+class EvaluationConfig(_Strict):
+    """Top-level schema for ``configs/evaluation.yaml``."""
+
+    seed: int
+    evaluation: EvaluationSettings
+
+
+def load_evaluation_config(path: str | Path) -> EvaluationConfig:
+    """Load and validate ``configs/evaluation.yaml``.
+
+    Args:
+        path: Path to the evaluation config file.
+
+    Returns:
+        The validated :class:`EvaluationConfig`.
+    """
+    return EvaluationConfig.model_validate(load_yaml(path))

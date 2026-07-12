@@ -27,6 +27,9 @@ ml = ["scikit-learn>=1.4"]
 privacy = ["opacus>=1.4"]
 # Phase 2/4 — federated orchestration
 federated = ["flwr>=1.8"]
+# Phase 7 — evaluation plots (inference-latency figure); harness degrades
+# gracefully to JSON-only when this is not installed.
+viz = ["matplotlib>=3.8"]
 # Developer tooling (lint, types, tests, hooks)
 dev = [
     "pytest>=8.0",
