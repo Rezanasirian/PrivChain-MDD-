@@ -85,3 +85,34 @@ deliverable is never lost to a missing plotting library.
   its own logging and is discarded per fold (temp run dir).
 - Latency is single-thread CPU forward-pass time; a GPU/quantized sweep can reuse
   `measure_inference_latency` unchanged.
+
+---
+
+## Revision (2026-08-06)
+
+### R1. Cross-validation is stratified
+
+Folds were drawn without stratification. DAIC-WOZ has ~190 sessions with a
+minority depressed class, so 10-fold splitting routinely yields single-class test
+folds on which ROC-AUC is undefined. `aggregate_metrics` then dropped those nan
+values *silently*, so a reported "10-fold mean ROC-AUC" could in fact be a mean
+over 7 folds with nothing in the output saying so.
+
+`stratified_k_fold_indices` / `stratified_held_out_split` preserve the class
+balance in every fold (and refuse a split that would leave a class with fewer
+members than folds). `scripts/run_final_evaluation.py` derives the labels from
+the dataset and uses them, printing the positive rate alongside the split sizes.
+
+### R2. Fold counts are reported, not hidden
+
+`aggregate_metrics` now emits `<metric>_num_valid_folds` next to every mean and
+std. A count below `num_folds` is a visible signal that a metric was undefined
+somewhere, instead of a silently shrinking denominator.
+
+### R3. Splitting granularity
+
+Splits are at session granularity, which on DAIC-WOZ is also subject granularity
+(one interview per participant), so no subject spans a split. This is now stated
+in `benchmark.py`: if the pipeline ever moves to utterance-level items, these
+functions must be replaced by group-aware variants keyed on participant id, or
+every reported number will be inflated by subject leakage.

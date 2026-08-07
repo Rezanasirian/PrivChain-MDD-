@@ -5,12 +5,15 @@ data/*
 !data/.gitkeep
 !data/README.md
 
-# Raw media / tabular extensions, wherever they appear
+# Raw media, wherever it appears
 *.wav
 *.mp4
 *.avi
 *.mov
-*.csv
+
+# Tabular data is only sensitive under data/ — a global `*.csv` rule would also
+# silently swallow the Chapter-4 result tables, so scope it.
+data/**/*.csv
 
 # ─── Secrets ────────────────────────────────────────────────────────────────
 .env
@@ -37,6 +40,10 @@ htmlcov/
 # ─── Experiment outputs (regenerated; not source of truth) ──────────────────
 experiments/*
 !experiments/.gitkeep
+
+# ─── Go / chaincode build output ────────────────────────────────────────────
+chaincode/**/*.exe
+chaincode/**/privchain-cc
 
 # ─── Notebooks scratch ──────────────────────────────────────────────────────
 .ipynb_checkpoints/

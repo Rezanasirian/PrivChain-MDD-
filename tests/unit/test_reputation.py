@@ -38,8 +38,10 @@ def test_outlier_client_is_down_weighted() -> None:
 
 def test_use_reputation_false_is_pure_volume() -> None:
     global_state = OrderedDict({"classifier.w": torch.zeros(4)})
-    updates = [_update(0, [1.0, 0.0, 0.0, 0.0], num_samples=7),
-               _update(1, [-5.0, 0.0, 0.0, 0.0], num_samples=3)]
+    updates = [
+        _update(0, [1.0, 0.0, 0.0, 0.0], num_samples=7),
+        _update(1, [-5.0, 0.0, 0.0, 0.0], num_samples=3),
+    ]
     tracker = ReputationTracker(ReputationConfig())
     weights = tracker.compute_weights(updates, global_state, use_reputation=False)
     assert weights[0]["shared"] == 7.0

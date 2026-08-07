@@ -1,0 +1,65 @@
+# CI for PrivChain-MDD — enforces the Definition of Done in CLAUDE.md §8.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    name: Python (ruff, mypy, pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check .
+
+      - name: Types (mypy --strict)
+        run: uv run mypy
+
+      - name: Tests (pytest)
+        # Mock data only — no DAIC-WOZ is ever available in CI (CLAUDE.md §7).
+        run: uv run pytest -q
+
+  chaincode:
+    name: Chaincode (gofmt, vet, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chaincode/privchain-cc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache-dependency-path: chaincode/privchain-cc/go.sum
+
+      - name: Format check (gofmt)
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed for:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Tests
+        run: go test ./...

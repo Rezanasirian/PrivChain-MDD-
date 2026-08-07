@@ -1,61 +1,39 @@
-"""Opacus bridge and accountant cross-check (Phase 3, objective H1/H4).
+"""Opacus integration notes for the per-modality DP mechanism (Phase 3, H1/H4).
 
-The thesis names **Opacus** for per-modality noise injection. ``opacus`` is an
-optional dependency and is not installed in this offline environment, so Phase 3
-implements the DP mechanism directly (:mod:`privchain.privacy.dp_sgd`) — which is
-mathematically what Opacus does (per-sample clipping + Gaussian noise + RDP
-accounting).
+The thesis names **Opacus** for per-vertex/per-modality noise injection, and the
+project now uses it in two places:
 
-This module provides:
+1. :mod:`privchain.privacy.accountant` wraps Opacus's RDP analysis — every ``ε``
+   reported in Chapter 4 comes from Opacus.
+2. :mod:`privchain.privacy.dp_sgd` uses :class:`opacus.GradSampleModule` to
+   obtain per-sample gradients in a single backward pass, then applies the
+   **per-modality** clipping and noise that is the actual novelty of H1.
 
-1. :func:`opacus_available` / :func:`cross_check_epsilon` — when ``opacus`` *is*
-   installed, recompute ε with Opacus's ``RDPAccountant`` to validate our
-   :mod:`privchain.privacy.accountant` numbers.
-2. Documentation of how to attach a real ``opacus.PrivacyEngine`` per modality
-   (see module notes) for the production path.
+Why not ``opacus.PrivacyEngine`` directly? ``PrivacyEngine`` attaches one
+mechanism to one optimizer, clipping the *whole* gradient vector to a single
+bound with a single ``σ``. H1 requires a different clip/noise pair per modality
+parameter group with a shared optimizer step, so the engine's outer loop is
+replaced while its per-sample gradient machinery and accountant are reused.
+The equivalent production wiring with stock Opacus would be one optimizer +
+``PrivacyEngine`` per modality encoder, stepped together each iteration; that
+composes identically (see :func:`privchain.privacy.accountant.compose_epsilon`).
 
-Production wiring (when ``opacus`` is installed): build one optimizer per
-modality encoder, wrap each with its own ``PrivacyEngine`` configured with that
-modality's ``noise_multiplier`` and ``max_grad_norm``, and step them together.
-Because each modality is an independent DP mechanism, per-modality ε accounting
-is exactly the per-group accounting used here.
+Note that :class:`opacus.GradSampleModule` does not support ``nn.GRU``; the
+sequence encoders therefore use :class:`opacus.layers.DPGRU` (see ADR-0004).
 """
 
 from __future__ import annotations
 
 
 def opacus_available() -> bool:
-    """Return whether the ``opacus`` package is importable."""
+    """Return whether the ``opacus`` package is importable.
+
+    ``opacus`` is a required dependency, so this is a diagnostic helper for
+    environment checks rather than a feature gate.
+
+    Returns:
+        ``True`` when ``opacus`` can be imported.
+    """
     import importlib.util
 
     return importlib.util.find_spec("opacus") is not None
-
-
-def cross_check_epsilon(
-    noise_multiplier: float, sample_rate: float, steps: int, delta: float
-) -> float:
-    """Recompute ε via Opacus's RDP accountant (for validation/tests).
-
-    Args:
-        noise_multiplier: Gaussian noise multiplier ``σ``.
-        sample_rate: Poisson sampling rate ``q``.
-        steps: Number of steps.
-        delta: Target ``δ``.
-
-    Returns:
-        Opacus's spent ``ε`` for the same parameters.
-
-    Raises:
-        ImportError: If ``opacus`` is not installed.
-    """
-    try:
-        from opacus.accountants import RDPAccountant
-    except ImportError as exc:  # pragma: no cover - exercised only without opacus
-        raise ImportError(
-            "cross_check_epsilon requires 'opacus'. Install with `pip install opacus`."
-        ) from exc
-
-    accountant = RDPAccountant()
-    for _ in range(steps):
-        accountant.step(noise_multiplier=noise_multiplier, sample_rate=sample_rate)
-    return float(accountant.get_epsilon(delta=delta))

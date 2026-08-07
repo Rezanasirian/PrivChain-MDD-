@@ -29,7 +29,13 @@ func (s *SmartContract) PublishSubgraph(stub shim.ChaincodeStubInterface, args [
 		}
 	}
 
-	key, err := stub.CreateCompositeKey(subgraphObjectType, []string{strconv.Itoa(round)})
+	// Coordinator-only: the subgraph decides who aggregates with whom, so a
+	// client must not be able to write itself into another round's federation.
+	if _, err := requireCoordinator(stub); err != nil {
+		return shim.Error(err.Error())
+	}
+
+	key, err := stub.CreateCompositeKey(subgraphObjectType, []string{roundKey(round)})
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -60,7 +66,7 @@ func (s *SmartContract) GetSubgraph(stub shim.ChaincodeStubInterface, args []str
 	if err != nil || round < 0 {
 		return shim.Error("round must be a non-negative integer")
 	}
-	key, err := stub.CreateCompositeKey(subgraphObjectType, []string{strconv.Itoa(round)})
+	key, err := stub.CreateCompositeKey(subgraphObjectType, []string{roundKey(round)})
 	if err != nil {
 		return shim.Error(err.Error())
 	}

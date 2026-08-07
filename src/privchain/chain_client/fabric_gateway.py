@@ -28,6 +28,7 @@ from privchain.chain_client.ledger import (
     Capability,
     ClientRecord,
     LedgerError,
+    LedgerIdentity,
     ReputationRecord,
     SubgraphRecord,
 )
@@ -59,9 +60,7 @@ class FabricRestLedger:
         self, client_id: str, modality: str, round_num: int, epsilon_spent: float
     ) -> None:
         """Invoke ``LogPrivacyBudget``."""
-        self._invoke(
-            "LogPrivacyBudget", [client_id, modality, str(round_num), repr(epsilon_spent)]
-        )
+        self._invoke("LogPrivacyBudget", [client_id, modality, str(round_num), repr(epsilon_spent)])
 
     def update_reputation(
         self, client_id: str, modality: str, score: float, round_num: int
@@ -81,7 +80,12 @@ class FabricRestLedger:
         if payload is None:
             return None
         capability = payload["capability"]
-        return ClientRecord(payload["clientId"], (capability[0], capability[1], capability[2]))
+        owner = None
+        if payload.get("ownerMspId"):
+            owner = LedgerIdentity(payload["ownerMspId"], payload.get("ownerFingerprint", ""))
+        return ClientRecord(
+            payload["clientId"], (capability[0], capability[1], capability[2]), owner
+        )
 
     def get_reputation(self, client_id: str, modality: str) -> ReputationRecord | None:
         """Query ``GetReputation``."""

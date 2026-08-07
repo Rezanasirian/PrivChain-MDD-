@@ -31,13 +31,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import torch
 from torch.utils.data import DataLoader, Subset
 
@@ -52,9 +50,9 @@ from privchain.config import (
 from privchain.data.mock_daic_woz import MockDaicWozDataset, collate_fn
 from privchain.eval.benchmark import (
     aggregate_metrics,
-    held_out_split,
-    k_fold_indices,
     measure_inference_latency,
+    stratified_held_out_split,
+    stratified_k_fold_indices,
 )
 from privchain.federated.partition import build_client_partitions
 from privchain.federated.simulation import (
@@ -64,7 +62,14 @@ from privchain.federated.simulation import (
 )
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.privacy.budget_allocator import PerModalityBudgetAllocator, allocate_target_epsilons
-from privchain.privacy.dp_sgd import dp_train_epoch, map_parameter_groups, resolve_group_sigmas
+from privchain.privacy.dp_sgd import (
+    dp_train_steps,
+    map_parameter_groups,
+    poisson_batches,
+    resolve_group_sigmas,
+    steps_for_epochs,
+    wrap_for_per_sample_grads,
+)
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import DepressionObjective, evaluate_model
@@ -81,13 +86,6 @@ def _loader(
     return DataLoader(
         Subset(dataset, indices), batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
     )
-
-
-def _make_batches(num_items: int, batch_size: int, seed: int) -> list[list[int]]:
-    """Shuffle indices and chunk into logical batches (for DP-SGD)."""
-    rng = np.random.default_rng(seed)
-    order = rng.permutation(num_items).tolist()
-    return [order[i : i + batch_size] for i in range(0, num_items, batch_size)]
 
 
 def _eval_centralized(
@@ -138,30 +136,32 @@ def _eval_centralized_dp(
     batch_size = base.train.batch_size
     n_train = len(train_idx)
     sample_rate = min(1.0, batch_size / n_train)
-    steps = epochs * math.ceil(n_train / batch_size)
+    expected_batch_size = sample_rate * n_train
+    steps = steps_for_epochs(n_train, batch_size, epochs)
     allocator = PerModalityBudgetAllocator(
         targets, risks, delta=priv.delta, sample_rate=sample_rate, steps=steps
     )
     group_sigmas = resolve_group_sigmas(allocator.noise_multipliers())
 
     model = MultimodalDepressionModel(input_dims, base.model).to(device)
-    groups = map_parameter_groups(model)
-    optimizer = torch.optim.SGD(model.parameters(), lr=base.train.learning_rate)
-    generator = torch.Generator().manual_seed(seed)
+    dp_model = wrap_for_per_sample_grads(model)
+    groups = map_parameter_groups(dp_model)
+    optimizer = torch.optim.SGD(dp_model.parameters(), lr=base.train.learning_rate)
+    generator = torch.Generator(device=device).manual_seed(seed)
     train_subset = Subset(full, train_idx)
-    for _ in range(epochs):
-        dp_train_epoch(
-            model,
-            train_subset,
-            _make_batches(n_train, batch_size, seed),
-            objective,
-            groups=groups,
-            group_sigmas=group_sigmas,
-            max_grad_norm=priv.max_grad_norm,
-            optimizer=optimizer,
-            device=device,
-            generator=generator,
-        )
+    dp_train_steps(
+        dp_model,
+        train_subset,
+        poisson_batches(n_train, sample_rate, steps, generator),
+        objective,
+        groups=groups,
+        group_sigmas=group_sigmas,
+        max_grad_norm=priv.max_grad_norm,
+        expected_batch_size=expected_batch_size,
+        optimizer=optimizer,
+        device=device,
+        generator=generator,
+    )
     return evaluate_model(model, _loader(full, test_idx, batch_size), objective, device)
 
 
@@ -206,17 +206,28 @@ def _eval_federated(
         run_dir = Path(tmp)
         if strategy == "fedavg":
             run_simulation(
-                global_model, clients, test_loader,
-                num_rounds=rounds, clients_per_round=federation.num_clients,
-                phq8_max=base.data.phq8_max, phq_loss_weight=base.model.phq_loss_weight,
-                run_dir=run_dir, seed=seed,
+                global_model,
+                clients,
+                test_loader,
+                num_rounds=rounds,
+                clients_per_round=federation.num_clients,
+                phq8_max=base.data.phq8_max,
+                phq_loss_weight=base.model.phq_loss_weight,
+                run_dir=run_dir,
+                seed=seed,
             )
         else:
             run_capability_aware_simulation(
-                global_model, clients, test_loader, aggregation=aggregation,
-                num_rounds=rounds, clients_per_round=federation.num_clients,
-                phq8_max=base.data.phq8_max, phq_loss_weight=base.model.phq_loss_weight,
-                run_dir=run_dir, seed=seed,
+                global_model,
+                clients,
+                test_loader,
+                aggregation=aggregation,
+                num_rounds=rounds,
+                clients_per_round=federation.num_clients,
+                phq8_max=base.data.phq8_max,
+                phq_loss_weight=base.model.phq_loss_weight,
+                run_dir=run_dir,
+                seed=seed,
             )
     objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight)
     return evaluate_model(global_model, test_loader, objective, device)
@@ -270,9 +281,18 @@ def main() -> None:
 
     full = MockDaicWozDataset(base.data, seed=base.seed)
     n = len(full)
-    dev_idx, held_out_idx = held_out_split(n, ev.held_out_fraction, base.seed)
-    splits = k_fold_indices(len(dev_idx), min(k_folds, len(dev_idx)), base.seed)
-    print(f"n={n}  dev={len(dev_idx)}  held_out={len(held_out_idx)}  folds={len(splits)}")
+    # Stratify on the binary depression label: on an imbalanced corpus an
+    # unstratified 10-fold split yields single-class folds whose ROC-AUC is
+    # undefined, quietly shrinking the fold count behind every reported mean.
+    labels_all = [int(full[i]["label"].item()) for i in range(n)]
+    dev_idx, held_out_idx = stratified_held_out_split(labels_all, ev.held_out_fraction, base.seed)
+    dev_labels = [labels_all[i] for i in dev_idx]
+    splits = stratified_k_fold_indices(dev_labels, min(k_folds, len(dev_idx)), base.seed)
+    positive_rate = sum(labels_all) / n
+    print(
+        f"n={n}  dev={len(dev_idx)}  held_out={len(held_out_idx)}  folds={len(splits)}  "
+        f"positive_rate={positive_rate:.3f} (stratified)"
+    )
 
     def cap_config(*, reputation: bool, distillation: bool) -> AggregationConfig:
         return fed.aggregation.model_copy(
@@ -289,20 +309,46 @@ def main() -> None:
             full, tr, te, base=base, epochs=ev.epochs, seed=s
         ),
         "fedavg": lambda tr, te, s: _eval_federated(
-            full, tr, te, base=base, fed=fed, rounds=rounds, seed=s,
-            strategy="fedavg", aggregation=fed.aggregation,
+            full,
+            tr,
+            te,
+            base=base,
+            fed=fed,
+            rounds=rounds,
+            seed=s,
+            strategy="fedavg",
+            aggregation=fed.aggregation,
         ),
         "personalized": lambda tr, te, s: _eval_federated(
-            full, tr, te, base=base, fed=fed, rounds=rounds, seed=s,
+            full,
+            tr,
+            te,
+            base=base,
+            fed=fed,
+            rounds=rounds,
+            seed=s,
             strategy="capability_aware",
             aggregation=cap_config(reputation=True, distillation=False),
         ),
         "proposed": lambda tr, te, s: _eval_federated(
-            full, tr, te, base=base, fed=fed, rounds=rounds, seed=s,
-            strategy="capability_aware", aggregation=cap_config(reputation=True, distillation=True),
+            full,
+            tr,
+            te,
+            base=base,
+            fed=fed,
+            rounds=rounds,
+            seed=s,
+            strategy="capability_aware",
+            aggregation=cap_config(reputation=True, distillation=True),
         ),
         "proposed_no_reputation": lambda tr, te, s: _eval_federated(
-            full, tr, te, base=base, fed=fed, rounds=rounds, seed=s,
+            full,
+            tr,
+            te,
+            base=base,
+            fed=fed,
+            rounds=rounds,
+            seed=s,
             strategy="capability_aware",
             aggregation=cap_config(reputation=False, distillation=True),
         ),
@@ -321,22 +367,32 @@ def main() -> None:
             lambda tr, te, s, mode=mode: _eval_centralized_dp(
                 full, tr, te, base=base, priv=priv, epochs=ev.epochs, seed=s, mode=mode
             ),
-            dev_idx, splits, held_out_idx, seed=base.seed,
+            dev_idx,
+            splits,
+            held_out_idx,
+            seed=base.seed,
         )
 
     # Inference latency across batch sizes.
     seed_everything(base.seed)
     latency_model = MultimodalDepressionModel(modality_input_dims(base.data), base.model)
     latency = measure_inference_latency(
-        latency_model, full, batch_sizes=ev.latency_batch_sizes,
-        repeats=ev.latency_repeats, device=torch.device("cpu"),
+        latency_model,
+        full,
+        batch_sizes=ev.latency_batch_sizes,
+        repeats=ev.latency_repeats,
+        device=torch.device("cpu"),
     )
 
     run_dir = create_run_dir(base.train.output_dir, "phase7", "phase7_final_evaluation")
     save_config(
         run_dir,
-        {"baseline": base.model_dump(), "federated": fed.model_dump(),
-         "privacy": priv.model_dump(), "evaluation": ev.model_dump()},
+        {
+            "baseline": base.model_dump(),
+            "federated": fed.model_dump(),
+            "privacy": priv.model_dump(),
+            "evaluation": ev.model_dump(),
+        },
     )
     (run_dir / "cv_results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
     ablation = {k: results[k] for k in ("proposed", "proposed_no_reputation", "personalized")}
@@ -353,8 +409,10 @@ def main() -> None:
             f"{res['held_out']['f1']:>14.3f}"
         )
     print(f"\nRun dir: {run_dir}")
-    print("(On mock data the labels are random, so accuracy is a placeholder; "
-          "the tables are the deliverable.)")
+    print(
+        "(On mock data the labels are random, so accuracy is a placeholder; "
+        "the tables are the deliverable.)"
+    )
 
 
 def _write_summary(
@@ -366,8 +424,10 @@ def _write_summary(
 ) -> None:
     """Write the combined Chapter-4 markdown tables."""
     lines = ["# Chapter 4 — final evaluation (mock data)\n"]
-    lines.append("> On mock data the depression label is random; these are "
-                 "placeholder numbers demonstrating the tables. DAIC-WOZ fills them in.\n")
+    lines.append(
+        "> On mock data the depression label is random; these are "
+        "placeholder numbers demonstrating the tables. DAIC-WOZ fills them in.\n"
+    )
 
     lines.append("\n## Main comparison (10-fold CV, mean±std)\n")
     lines.append("| method | F1 | ROC-AUC | accuracy | held-out F1 |")

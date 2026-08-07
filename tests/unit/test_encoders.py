@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import pytest
 import torch
+from torch import nn
 
 from privchain.config import EncoderConfig
 from privchain.encoders.audio import AudioEncoder
-from privchain.encoders.sequence_encoder import SequenceEncoder, masked_mean
+from privchain.encoders.sequence_encoder import (
+    SequenceEncoder,
+    masked_mean,
+    reverse_padded,
+)
 from privchain.encoders.text import TextEncoder
 from privchain.encoders.video import VideoEncoder
 
@@ -44,6 +49,65 @@ def test_padding_does_not_change_output() -> None:
         a = encoder(base, lengths)
         b = encoder(padded, lengths)
     assert torch.allclose(a, b, atol=1e-6)
+
+
+def test_reverse_padded_reverses_only_the_valid_prefix() -> None:
+    sequence = torch.tensor([[[1.0], [2.0], [3.0], [0.0], [0.0]]])
+    lengths = torch.tensor([3])
+    reversed_seq = reverse_padded(sequence, lengths)
+    assert torch.allclose(reversed_seq, torch.tensor([[[3.0], [2.0], [1.0], [0.0], [0.0]]]))
+    # Applying it twice is the identity.
+    assert torch.allclose(reverse_padded(reversed_seq, lengths), sequence)
+
+
+def test_gru_embedding_is_independent_of_batch_mates() -> None:
+    """Padding from other samples must not leak into an embedding (DP-critical)."""
+    config = EncoderConfig(type="gru", hidden_dim=8, out_dim=6, dropout=0.0, bidirectional=True)
+    encoder = SequenceEncoder(input_dim=5, config=config).eval()
+
+    lengths = torch.tensor([12, 4, 9, 2, 7])
+    batch = torch.randn(5, 12, 5)
+    for row, length in enumerate(lengths):
+        batch[row, length:] = 0.0
+
+    with torch.no_grad():
+        batched = encoder(batch, lengths)
+        for row, length in enumerate(lengths):
+            alone = encoder(batch[row : row + 1, :length], lengths[row : row + 1])
+            assert torch.allclose(batched[row], alone[0], atol=1e-5)
+
+
+def test_bidirectional_gru_matches_packed_reference() -> None:
+    """The hand-unrolled bidirection must equal `nn.GRU` + `pack_padded_sequence`."""
+    hidden_dim = 8
+    config = EncoderConfig(
+        type="gru", hidden_dim=hidden_dim, out_dim=6, dropout=0.0, bidirectional=True
+    )
+    encoder = SequenceEncoder(input_dim=5, config=config).eval()
+    assert encoder.rnn is not None and encoder.rnn_reverse is not None
+
+    reference = nn.GRU(hidden_dim, hidden_dim, batch_first=True, bidirectional=True)
+    with torch.no_grad():
+        for suffix, source in (("", encoder.rnn), ("_reverse", encoder.rnn_reverse)):
+            for kind in ("weight_ih", "weight_hh", "bias_ih", "bias_hh"):
+                getattr(reference, f"{kind}_l0{suffix}").copy_(getattr(source, f"{kind}_l0"))
+
+        lengths = torch.tensor([10, 3, 7])
+        sequence = torch.randn(3, 10, 5)
+        for row, length in enumerate(lengths):
+            sequence[row, length:] = 0.0
+
+        projected = encoder.proj(sequence)
+        time_index = torch.arange(sequence.shape[1]).unsqueeze(0)
+        projected = projected * (time_index < lengths.unsqueeze(1)).unsqueeze(-1).float()
+        packed = nn.utils.rnn.pack_padded_sequence(
+            projected, lengths, batch_first=True, enforce_sorted=False
+        )
+        packed_out, _ = reference(packed)
+        unpacked, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
+        expected = encoder.out(masked_mean(unpacked, lengths))
+
+        assert torch.allclose(encoder(sequence, lengths), expected, atol=1e-5)
 
 
 def test_modality_encoders_are_sequence_encoders() -> None:

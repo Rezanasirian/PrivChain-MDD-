@@ -9,6 +9,8 @@ from privchain.eval.attackers import (
     MembershipInferenceAttacker,
     ReidentificationAttacker,
     add_gaussian_noise,
+    clip_rows,
+    release_embeddings_dp,
 )
 
 
@@ -62,15 +64,88 @@ def test_membership_inference_detects_separated_scores() -> None:
     assert result["auc"] > 0.9
     assert result["advantage"] > 0.8
     assert 0.9 < result["accuracy"] <= 1.0
+    assert result["direction"] == 1.0
 
 
-def test_membership_inference_near_chance_when_indistinguishable() -> None:
-    rng = np.random.default_rng(4)
-    members = rng.normal(0.0, 1.0, 300)
-    nonmembers = rng.normal(0.0, 1.0, 300)
+def test_membership_inference_finds_inverted_signal() -> None:
+    """Calibration must be free to flip the rule when members score *lower*."""
+    rng = np.random.default_rng(11)
+    members = rng.normal(-1.0, 0.5, 200)
+    nonmembers = rng.normal(1.0, 0.5, 200)
     result = MembershipInferenceAttacker().attack(members, nonmembers)
-    assert result["auc"] < 0.65  # symmetric-max AUC stays close to 0.5
-    assert result["advantage"] < 0.3
+    assert result["direction"] == -1.0
+    assert result["auc"] > 0.9
+
+
+def test_membership_inference_is_unbiased_on_identical_distributions() -> None:
+    """No leakage must report ~no advantage — averaged over many draws.
+
+    The old implementation folded the AUC about 0.5 (``max(auc, 1-auc)``) and
+    tuned its threshold on the scored data, so pure noise always looked like
+    leakage. The mean advantage over independent trials pins that down.
+    """
+    attacker = MembershipInferenceAttacker()
+    advantages = []
+    for seed in range(40):
+        rng = np.random.default_rng(seed)
+        members = rng.normal(0.0, 1.0, 200)
+        nonmembers = rng.normal(0.0, 1.0, 200)
+        advantages.append(attacker.attack(members, nonmembers, rng=rng)["advantage"])
+
+    assert abs(float(np.mean(advantages))) < 0.05
+    assert min(advantages) < 0.0, "a truly unbiased estimator must sometimes go negative"
+
+
+def test_membership_inference_rejects_tiny_groups() -> None:
+    with pytest.raises(ValueError):
+        MembershipInferenceAttacker().attack(np.array([1.0]), np.array([0.0, 1.0]))
+
+
+# ── DP release of embeddings (what actually bounds re-identification) ────────
+
+
+def test_clip_rows_bounds_the_norm() -> None:
+    rng = np.random.default_rng(5)
+    embeddings = rng.standard_normal((20, 8)) * 10.0
+    clipped = clip_rows(embeddings, 1.5)
+    assert np.all(np.linalg.norm(clipped, axis=1) <= 1.5 + 1e-9)
+    # Rows already inside the ball are untouched.
+    small = np.array([[0.1, 0.0]])
+    assert np.allclose(clip_rows(small, 1.0), small)
+
+
+def test_clip_rows_rejects_non_positive_norm() -> None:
+    with pytest.raises(ValueError):
+        clip_rows(np.ones((2, 2)), 0.0)
+
+
+def test_dp_release_degrades_reidentification_as_epsilon_shrinks() -> None:
+    """Tighter budget ⇒ more noise ⇒ the attacker does worse. The Phase 6 claim."""
+    emb, subjects, views = _subject_views(16, 4, 16, spread=0.01, seed=6)
+
+    def success(epsilon: float) -> float:
+        rng = np.random.default_rng(7)
+        released = release_embeddings_dp(
+            emb, target_epsilon=epsilon, delta=1e-5, clip_norm=1.0, rng=rng
+        )
+        attacker = ReidentificationAttacker()
+        attacker.enroll(released[views < 2], subjects[views < 2])
+        return attacker.attack(released[views >= 2], subjects[views >= 2])
+
+    tight, loose = success(0.5), success(512.0)
+    assert tight < loose
+    assert tight <= 2 * ReidentificationAttacker.chance_accuracy(16)
+    assert loose > 0.5
+
+
+def test_dp_release_bounds_the_released_norm() -> None:
+    rng = np.random.default_rng(8)
+    embeddings = rng.standard_normal((10, 6)) * 20.0
+    released = release_embeddings_dp(
+        embeddings, target_epsilon=512.0, delta=1e-5, clip_norm=1.0, rng=rng
+    )
+    # Tiny sigma at a huge epsilon: the release is essentially the clipped input.
+    assert np.all(np.linalg.norm(released, axis=1) < 2.0)
 
 
 def test_reidentification_errors() -> None:

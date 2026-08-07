@@ -78,9 +78,7 @@ def split_enroll_probe(
     subject_ids: NDArray[np.int_],
     view_ids: NDArray[np.int_],
     enroll_views: int,
-) -> tuple[
-    NDArray[np.float64], NDArray[np.int_], NDArray[np.float64], NDArray[np.int_]
-]:
+) -> tuple[NDArray[np.float64], NDArray[np.int_], NDArray[np.float64], NDArray[np.int_]]:
     """Split views into enrollment (``view_id < enroll_views``) and probe sets.
 
     Args:

@@ -2,15 +2,20 @@
 
 These assert the MockLedger enforces exactly the invariants the Go chaincode
 does: one-shot registration, append-only privacy budget, immutable subgraph,
-updatable reputation.
+updatable reputation — and the same access control, so an authorization bug
+cannot pass offline only to surface against real Fabric.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from privchain.chain_client import LedgerError, MockLedger, build_ledger
+from privchain.chain_client import LedgerError, LedgerIdentity, MockLedger, build_ledger
 from privchain.config import LedgerConfig
+
+CLIENT_0 = LedgerIdentity("ClientOrgMSP", "client-0-cert")
+CLIENT_1 = LedgerIdentity("ClientOrgMSP", "client-1-cert")
+ATTACKER = LedgerIdentity("OtherOrgMSP", "attacker-cert")
 
 
 def test_register_and_get_client() -> None:
@@ -78,6 +83,75 @@ def test_reputation_is_updatable_and_bounded() -> None:
     assert record.score == 0.9 and record.round == 2
     with pytest.raises(LedgerError):
         ledger.update_reputation("client-0", "audio", 1.5, 3)  # out of [0, 1]
+
+
+# ── access control (parity with the chaincode's identity checks) ────────────
+
+
+def test_registration_binds_the_client_to_its_registrant() -> None:
+    ledger = MockLedger()
+    with ledger.acting_as(CLIENT_0):
+        ledger.register_client("client-0", (1, 0, 1))
+    record = ledger.get_client("client-0")
+    assert record is not None
+    assert record.owner == CLIENT_0
+
+
+def test_only_owner_or_coordinator_may_log_a_budget() -> None:
+    ledger = MockLedger()
+    with ledger.acting_as(CLIENT_0):
+        ledger.register_client("client-0", (1, 0, 1))
+        ledger.log_privacy_budget("client-0", "audio", 1, 0.5)  # owner: allowed
+
+    # A foreign organization cannot forge this client's privacy accounting.
+    with ledger.acting_as(ATTACKER), pytest.raises(LedgerError, match="does not own"):
+        ledger.log_privacy_budget("client-0", "audio", 2, 99.0)
+
+    # Nor can a different identity inside the same organization.
+    with ledger.acting_as(CLIENT_1), pytest.raises(LedgerError, match="does not own"):
+        ledger.log_privacy_budget("client-0", "audio", 2, 99.0)
+
+    # The coordinator may (backfill path).
+    ledger.log_privacy_budget("client-0", "audio", 2, 0.6)
+    assert len(ledger.budget_history("client-0", "audio")) == 2
+
+
+def test_reputation_is_coordinator_only() -> None:
+    """A client that could write its own reputation could set its own weight."""
+    ledger = MockLedger()
+    with ledger.acting_as(CLIENT_0):
+        ledger.register_client("client-0", (1, 0, 1))
+        with pytest.raises(LedgerError, match="only the coordinator"):
+            ledger.update_reputation("client-0", "audio", 1.0, 1)
+
+    ledger.update_reputation("client-0", "audio", 0.7, 1)  # coordinator: allowed
+    record = ledger.get_reputation("client-0", "audio")
+    assert record is not None and record.score == 0.7
+
+
+def test_subgraph_publication_is_coordinator_only() -> None:
+    ledger = MockLedger()
+    with ledger.acting_as(CLIENT_0), pytest.raises(LedgerError, match="only the coordinator"):
+        ledger.publish_subgraph(1, ["client-0"])
+    ledger.publish_subgraph(1, ["client-0"])  # coordinator: allowed
+
+
+def test_acting_as_restores_the_previous_caller() -> None:
+    ledger = MockLedger()
+    original = ledger.caller
+    with ledger.acting_as(CLIENT_0):
+        assert ledger.caller == CLIENT_0
+    assert ledger.caller == original
+
+
+def test_budget_history_is_ordered_beyond_round_ten() -> None:
+    """Mirrors the chaincode's zero-padded round key."""
+    ledger = MockLedger()
+    ledger.register_client("client-0", (1, 0, 1))
+    for round_num in (12, 2, 10, 1):
+        ledger.log_privacy_budget("client-0", "audio", round_num, 0.1 * round_num)
+    rounds = [record.round for record in ledger.budget_history("client-0", "audio")]
+    assert rounds == [1, 2, 10, 12]
 
 
 def test_build_ledger_selects_backend() -> None:

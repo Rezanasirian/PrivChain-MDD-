@@ -1,8 +1,12 @@
 """Pre-commit guard: block raw data / media files from being committed.
 
-Enforces CLAUDE.md §7. Fails if any staged file is a raw-data extension
-(``.wav``, ``.mp4``, ``.avi``, ``.mov``, ``.csv``) or lives under ``data/``
-(other than the allowlisted ``.gitkeep`` / ``README.md`` placeholders).
+Enforces CLAUDE.md §7. Fails if any staged file is raw media (``.wav``,
+``.mp4``, ``.avi``, ``.mov``) anywhere, is a ``.csv`` **under** ``data/``, or
+lives under ``data/`` at all (other than the allowlisted ``.gitkeep`` /
+``README.md`` placeholders).
+
+``.csv`` is deliberately only blocked under ``data/``: a repo-wide rule would
+also block the Chapter-4 result tables that belong in ``experiments/``.
 
 Invoked by ``.pre-commit-config.yaml`` with the staged filenames as arguments.
 """
@@ -12,7 +16,10 @@ from __future__ import annotations
 import sys
 from pathlib import PurePosixPath
 
-BLOCKED_SUFFIXES = {".wav", ".mp4", ".avi", ".mov", ".csv"}
+# Raw media — never committable, wherever it lives. `.csv` is intentionally
+# absent: it is blocked under data/ by the path rule below, and a repo-wide ban
+# would also block the Chapter-4 result tables.
+BLOCKED_SUFFIXES = {".wav", ".mp4", ".avi", ".mov"}
 ALLOWLIST = {"data/.gitkeep", "data/README.md"}
 
 
@@ -31,6 +38,7 @@ def is_blocked(path_str: str) -> bool:
         return False
     if path.suffix.lower() in BLOCKED_SUFFIXES:
         return True
+    # Everything under data/ is blocked, which already covers `.csv` there.
     return normalized.startswith("data/")
 
 

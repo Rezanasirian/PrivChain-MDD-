@@ -1,0 +1,13 @@
+# Normalize line endings. `core.autocrlf=true` on Windows gives the working tree
+# CRLF, which makes `gofmt -l` report every Go file as unformatted even though
+# the committed content is fine. Pin the tools' native endings explicitly.
+* text=auto
+
+*.go     text eol=lf
+go.mod   text eol=lf
+go.sum   text eol=lf
+*.py     text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.md     text eol=lf
+*.toml   text eol=lf

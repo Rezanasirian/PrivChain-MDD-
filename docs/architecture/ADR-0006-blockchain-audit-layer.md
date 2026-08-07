@@ -102,3 +102,62 @@ caveat is recorded here and in the chaincode README.
   refinement.
 - `go test ./...`, `gofmt`, and `golangci-lint` must be run once Go is installed;
   they could not run here.
+
+---
+
+## Revision (2026-08-06)
+
+### R1. Access control (the layer was fully open)
+
+Every chaincode function accepted any submitter. Any peer could log another
+client's consumed ε, or — worse — raise its own reputation, which directly sets
+its aggregation weight. For a thesis whose contribution is *auditability*, an
+audit log anyone can write is the weakest possible link.
+
+`identity.go` now resolves the submitter from `stub.GetCreator()` (parsing
+`msp.SerializedIdentity` for the MSP ID plus a SHA-256 fingerprint of the
+certificate bytes), and the four write paths are gated:
+
+| Function | Who may call it |
+|---|---|
+| `RegisterClient` | any authenticated identity; the client is **bound** to it |
+| `LogPrivacyBudget` | the client's owner, or the coordinator (backfill) |
+| `UpdateReputation` | coordinator only |
+| `PublishSubgraph` | coordinator only |
+
+The coordinator MSP is written to the ledger at `Init` from the instantiation
+arguments (`-c '{"Args":["init","CoordinatorMSP"]}'`), never hardcoded
+(CLAUDE.md §3). `ClientRecord` gained `OwnerMSPID` / `OwnerFingerprint`.
+
+Fingerprint-based binding is testable under `shimtest` — the MockStub's `Creator`
+field takes a serialized identity directly, so no x509 material is needed in CI.
+
+### R2. Round keys are zero-padded
+
+Composite keys iterate lexicographically, so a round stored as a bare decimal
+ordered `"10"` before `"2"`: `GetBudgetHistory` returned an out-of-order audit
+history as soon as training passed round 9. Rounds are now rendered with
+`roundKey()` (`%010d`) in the budget and subgraph key spaces, with a test that
+writes rounds 1–12 and asserts ascending order.
+
+### R3. The offline ledger enforces the same rules
+
+`MockLedger` mirrored the invariants but not the authorization, so a permission
+bug could pass every offline test and only surface against real Fabric. It now
+carries a `caller` identity (defaulting to the coordinator, which is what the
+federated server is), an `acting_as()` context manager, and the same
+owner/coordinator checks, covered by matching Python tests.
+
+### R4. The chaincode had never been compiled
+
+`go.sum` did not exist, so `go build` could not have run. Go 1.26.5 is now
+installed, `go mod tidy` generated `go.sum`, and `gofmt`/`go vet`/`go test` run
+clean and are enforced by the `chaincode` job in `.github/workflows/ci.yml`.
+
+### R5. Staying on the low-level shim API (deliberate)
+
+`contract-api-go` is the modern Fabric 2.x contract API, but CLAUDE.md §4
+mandates unit tests with `shimtest.MockStub`, which only works with the
+low-level `shim.Chaincode` interface. Low-level chaincode remains fully
+supported on Fabric 2.x, so the API is kept and the trade-off recorded here
+rather than silently migrating away from the mandated test approach.

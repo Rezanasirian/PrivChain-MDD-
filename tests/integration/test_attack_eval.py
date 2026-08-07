@@ -79,6 +79,6 @@ def test_reidentification_signal_decays_with_noise() -> None:
     noisy = attacker.attack(add_gaussian_noise(probe_emb, std=100.0, rng=rng), probe_ids)
 
     chance = ReidentificationAttacker.chance_accuracy(12)
-    assert clean > 3 * chance          # identity is clearly recoverable when clean
-    assert noisy <= clean              # heavy noise never helps the attacker
+    assert clean > 3 * chance  # identity is clearly recoverable when clean
+    assert noisy <= clean  # heavy noise never helps the attacker
     assert 0.0 <= noisy <= 1.0

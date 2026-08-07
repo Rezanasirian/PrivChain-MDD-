@@ -5,11 +5,15 @@ chaincode functions (plus reads), and an in-memory :class:`MockLedger` that
 enforces the **same invariants** as the Go chaincode so the whole federated
 pipeline can be exercised offline:
 
-* client registration is one-shot (no duplicates);
+* client registration is one-shot (no duplicates) and **binds the client to the
+  identity that registered it**;
 * consumed privacy budget is **append-only** — a second write for the same
-  ``(client, modality, round)`` is refused (CLAUDE.md §7);
-* a round's aggregation **subgraph is immutable** once published;
-* reputation is updatable by design.
+  ``(client, modality, round)`` is refused (CLAUDE.md §7) — and only the owning
+  client or the coordinator may write it;
+* a round's aggregation **subgraph is immutable** once published, and only the
+  coordinator may publish it;
+* reputation is updatable by design, but **coordinator-only**: a client that
+  could write its own reputation could set its own aggregation weight.
 
 The live Fabric path lives in :mod:`privchain.chain_client.fabric_gateway`; both
 implement this protocol so callers are backend-agnostic. See ADR-0006.
@@ -17,6 +21,8 @@ implement this protocol so callers are backend-agnostic. See ADR-0006.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
@@ -30,11 +36,29 @@ class LedgerError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class LedgerIdentity:
+    """A submitting identity, mirroring Fabric's ``SerializedIdentity``.
+
+    Args:
+        msp_id: The submitter's membership service provider (its organization).
+        name: A stable per-identity label standing in for the certificate
+            fingerprint the chaincode hashes.
+    """
+
+    msp_id: str
+    name: str = ""
+
+
+DEFAULT_COORDINATOR_MSP = "CoordinatorMSP"
+
+
+@dataclass(frozen=True)
 class ClientRecord:
-    """A registered federated client and its declared capability vector."""
+    """A registered federated client, its capability vector, and its owner."""
 
     client_id: str
     capability: Capability
+    owner: LedgerIdentity | None = None
 
 
 @dataclass(frozen=True)
@@ -127,15 +151,64 @@ class MockLedger:
 
     Used for offline development and testing (Risk #3 in the implementation
     plan): a drop-in :class:`LedgerClient` that behaves like the real chaincode
-    without a running Fabric network.
+    without a running Fabric network — including its **access control**, so a
+    permission bug cannot pass offline and only surface against real Fabric.
+
+    The caller identity defaults to the coordinator, which is what the federated
+    server is; :meth:`acting_as` switches it to exercise the client-side rules.
+
+    Args:
+        coordinator_msp: MSP allowed to update reputation and publish subgraphs.
+        caller: Identity submitting operations (defaults to the coordinator).
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        coordinator_msp: str = DEFAULT_COORDINATOR_MSP,
+        caller: LedgerIdentity | None = None,
+    ) -> None:
         """Create an empty ledger."""
         self._clients: dict[str, ClientRecord] = {}
         self._budgets: dict[tuple[str, str, int], BudgetRecord] = {}
         self._reputation: dict[tuple[str, str], ReputationRecord] = {}
         self._subgraphs: dict[int, SubgraphRecord] = {}
+        self.coordinator_msp = coordinator_msp
+        self.caller = caller or LedgerIdentity(coordinator_msp, "coordinator")
+
+    @contextmanager
+    def acting_as(self, identity: LedgerIdentity) -> Iterator[MockLedger]:
+        """Temporarily submit operations as ``identity``.
+
+        Args:
+            identity: The identity to act as inside the block.
+
+        Yields:
+            This ledger, with ``caller`` swapped for the duration.
+        """
+        previous = self.caller
+        self.caller = identity
+        try:
+            yield self
+        finally:
+            self.caller = previous
+
+    def _require_coordinator(self, operation: str) -> None:
+        """Raise unless the caller belongs to the coordinator MSP."""
+        if self.caller.msp_id != self.coordinator_msp:
+            raise LedgerError(
+                f"only the coordinator MSP {self.coordinator_msp!r} may {operation} "
+                f"(caller is {self.caller.msp_id!r})"
+            )
+
+    def _require_owner_or_coordinator(self, client_id: str) -> None:
+        """Raise unless the caller owns ``client_id`` or is the coordinator."""
+        if self.caller.msp_id == self.coordinator_msp:
+            return
+        record = self._clients.get(client_id)
+        if record is None:
+            raise LedgerError(f"client {client_id!r} is not registered")
+        if record.owner != self.caller:
+            raise LedgerError(f"identity {self.caller.msp_id!r} does not own client {client_id!r}")
 
     def register_client(self, client_id: str, capability: Capability) -> None:
         """Register a client; raise if empty ID, bad capability, or duplicate."""
@@ -144,7 +217,7 @@ class MockLedger:
         _validate_capability(capability)
         if client_id in self._clients:
             raise LedgerError(f"client {client_id!r} is already registered")
-        self._clients[client_id] = ClientRecord(client_id, capability)
+        self._clients[client_id] = ClientRecord(client_id, capability, self.caller)
 
     def log_privacy_budget(
         self, client_id: str, modality: str, round_num: int, epsilon_spent: float
@@ -157,6 +230,7 @@ class MockLedger:
             raise LedgerError("epsilon_spent must be finite and non-negative")
         if client_id not in self._clients:
             raise LedgerError(f"client {client_id!r} is not registered")
+        self._require_owner_or_coordinator(client_id)
         key = (client_id, modality, round_num)
         if key in self._budgets:
             raise LedgerError(
@@ -174,6 +248,7 @@ class MockLedger:
             raise LedgerError("round must be non-negative")
         if not 0.0 <= score <= 1.0:
             raise LedgerError("score must be in [0, 1]")
+        self._require_coordinator("update reputation")
         if client_id not in self._clients:
             raise LedgerError(f"client {client_id!r} is not registered")
         self._reputation[(client_id, modality)] = ReputationRecord(
@@ -188,6 +263,7 @@ class MockLedger:
             raise LedgerError("a subgraph must contain at least one client")
         if any(not cid for cid in client_ids):
             raise LedgerError("subgraph client IDs must not be empty")
+        self._require_coordinator("publish a subgraph")
         if round_num in self._subgraphs:
             raise LedgerError(f"subgraph for round {round_num} is already published (immutable)")
         self._subgraphs[round_num] = SubgraphRecord(round_num, tuple(client_ids))

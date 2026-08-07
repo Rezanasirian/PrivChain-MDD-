@@ -8,11 +8,31 @@ module projects, optionally runs a lightweight bidirectional GRU, and pools over
 The same building block backs the audio, video, and text encoders so they share
 masking/pooling behaviour; modality-specific subclasses live in
 :mod:`privchain.encoders.audio`, ``.video``, and ``.text``.
+
+Two DP-driven implementation constraints shape this module (Phase 3, H1 — see
+ADR-0004):
+
+* the recurrent layer is :class:`opacus.layers.DPGRU`, because
+  :class:`opacus.GradSampleModule` cannot produce per-sample gradients for
+  ``nn.GRU``; and
+* the sequence is **not** packed with ``pack_padded_sequence``. Packing collapses
+  the batch dimension, which makes Opacus attribute per-sample gradients to the
+  wrong samples *silently* — no error, wrong numbers, invalid DP guarantees.
+
+Simply dropping the packing is not enough on its own: a bidirectional RNN run
+over a padded tensor starts its backward direction inside another sample's
+padding, so an embedding would depend on which samples share its batch. The
+bidirectional case is therefore built from **two unidirectional** DPGRUs, the
+second one fed the per-sample reversed *valid prefix* (:func:`reverse_padded`).
+A unidirectional pass cannot see trailing padding, so each sample's embedding is
+independent of its batch mates and numerically equal to the packed formulation —
+verified against ``nn.GRU`` + ``pack_padded_sequence`` in the encoder tests.
 """
 
 from __future__ import annotations
 
 import torch
+from opacus.layers import DPGRU
 from torch import nn
 
 from privchain.config import EncoderConfig
@@ -36,6 +56,27 @@ def masked_mean(features: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
     return summed / count
 
 
+def reverse_padded(sequence: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+    """Reverse each sample's valid prefix in place, leaving right-padding put.
+
+    ``[a, b, c, 0, 0]`` with ``length=3`` becomes ``[c, b, a, 0, 0]``. This is
+    what lets a unidirectional RNN reproduce the backward direction of a packed
+    bidirectional one.
+
+    Args:
+        sequence: Padded tensor of shape ``(B, T, D)``.
+        lengths: True per-sample lengths, shape ``(B,)``.
+
+    Returns:
+        A tensor of the same shape with each valid prefix reversed.
+    """
+    time_steps = sequence.shape[1]
+    idx = torch.arange(time_steps, device=sequence.device).unsqueeze(0)  # (1, T)
+    mirrored = lengths.unsqueeze(1) - 1 - idx  # (B, T); negative inside padding
+    gather_idx = torch.where(mirrored >= 0, mirrored, idx)
+    return torch.gather(sequence, 1, gather_idx.unsqueeze(-1).expand_as(sequence))
+
+
 class SequenceEncoder(nn.Module):
     """Project → (optional GRU) → masked mean-pool → output projection.
 
@@ -50,15 +91,28 @@ class SequenceEncoder(nn.Module):
         self.proj = nn.Linear(input_dim, config.hidden_dim)
 
         if config.type == "gru":
-            self.rnn: nn.GRU | None = nn.GRU(
+            # Two unidirectional GRUs rather than one bidirectional one — see the
+            # module docstring for why the direction is unrolled by hand.
+            self.rnn: DPGRU | None = DPGRU(
                 input_size=config.hidden_dim,
                 hidden_size=config.hidden_dim,
                 batch_first=True,
-                bidirectional=config.bidirectional,
+                bidirectional=False,
+            )
+            self.rnn_reverse: DPGRU | None = (
+                DPGRU(
+                    input_size=config.hidden_dim,
+                    hidden_size=config.hidden_dim,
+                    batch_first=True,
+                    bidirectional=False,
+                )
+                if config.bidirectional
+                else None
             )
             pooled_dim = config.hidden_dim * (2 if config.bidirectional else 1)
         else:
             self.rnn = None
+            self.rnn_reverse = None
             pooled_dim = config.hidden_dim
 
         self.dropout = nn.Dropout(config.dropout)
@@ -77,11 +131,20 @@ class SequenceEncoder(nn.Module):
         hidden = self.proj(sequence)  # (B, T, hidden_dim)
 
         if self.rnn is not None:
-            packed = nn.utils.rnn.pack_padded_sequence(
-                hidden, lengths.cpu(), batch_first=True, enforce_sorted=False
-            )
-            packed_out, _ = self.rnn(packed)
-            hidden, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
+            # Zero the padded steps so they cannot contribute state, then run the
+            # directions separately (unpacked — see the module docstring).
+            time_index = torch.arange(hidden.shape[1], device=hidden.device).unsqueeze(0)
+            valid = (time_index < lengths.unsqueeze(1)).unsqueeze(-1).to(hidden.dtype)
+            masked = hidden * valid
+
+            forward_out, _ = self.rnn(masked)
+            if self.rnn_reverse is not None:
+                reversed_out, _ = self.rnn_reverse(reverse_padded(masked, lengths))
+                # Undo the reversal so timesteps line up before pooling.
+                backward_out = reverse_padded(reversed_out, lengths)
+                hidden = torch.cat([forward_out, backward_out], dim=-1)
+            else:
+                hidden = forward_out
 
         pooled = masked_mean(hidden, lengths)
         encoded: torch.Tensor = self.out(self.dropout(pooled))

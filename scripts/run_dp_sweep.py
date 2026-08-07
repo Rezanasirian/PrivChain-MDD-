@@ -16,10 +16,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
 
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -31,20 +29,20 @@ from privchain.config import (
 from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
-from privchain.privacy.dp_sgd import dp_train_epoch, map_parameter_groups, resolve_group_sigmas
+from privchain.privacy.dp_sgd import (
+    dp_train_steps,
+    map_parameter_groups,
+    poisson_batches,
+    resolve_group_sigmas,
+    steps_for_epochs,
+    wrap_for_per_sample_grads,
+)
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
 from privchain.training.objective import DepressionObjective, evaluate_model
 
 MODALITIES = ("audio", "video", "text")
-
-
-def _make_batches(num_items: int, batch_size: int, seed: int) -> list[list[int]]:
-    """Shuffle indices and chunk into logical batches."""
-    rng = np.random.default_rng(seed)
-    order = rng.permutation(num_items).tolist()
-    return [order[i : i + batch_size] for i in range(0, num_items, batch_size)]
 
 
 def main() -> None:
@@ -66,8 +64,10 @@ def main() -> None:
 
     batch_size = base.train.batch_size
     n_train = len(train_subset)
-    sample_rate = batch_size / n_train
-    steps_per_epoch = math.ceil(n_train / batch_size)
+    # Poisson subsampling: each sample enters a step with probability q, which is
+    # exactly the assumption the RDP accountant makes (ADR-0004).
+    sample_rate = min(1.0, batch_size / n_train)
+    expected_batch_size = sample_rate * n_train
     input_dims = modality_input_dims(base.data)
     objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight)
     device = torch.device("cpu")
@@ -76,7 +76,7 @@ def main() -> None:
     save_config(run_dir, {"baseline": base.model_dump(), "privacy": priv.model_dump()})
 
     # ── 1. Per-modality allocation report (configured allocation) ────────────
-    planned_steps = steps_per_epoch * priv.sweep.epochs
+    planned_steps = steps_for_epochs(n_train, batch_size, priv.sweep.epochs)
     configured = PerModalityBudgetAllocator.from_config(
         priv.allocation,
         priv.per_modality,
@@ -85,10 +85,14 @@ def main() -> None:
         steps=planned_steps,
     )
     consumed = configured.consumed_epsilon(planned_steps)
+    participant_epsilon = configured.participant_epsilon(planned_steps)
     report = {
+        "accountant": "opacus-rdp",
+        "sampling": "poisson",
         "allocation_mode": priv.allocation.mode,
         "delta": priv.delta,
         "sample_rate": sample_rate,
+        "expected_batch_size": expected_batch_size,
         "planned_steps": planned_steps,
         "per_modality": {
             m: {
@@ -99,6 +103,9 @@ def main() -> None:
             }
             for m, a in configured.allocations.items()
         },
+        # The budget a subject contributing every modality actually spends: the
+        # RDP composition of the three encoders plus the shared head (ADR-0009).
+        "participant_epsilon": participant_epsilon,
     }
     (run_dir / "allocation_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print("Per-modality DP allocation (configured):")
@@ -107,6 +114,7 @@ def main() -> None:
             f"  {m:5s}  risk={a.risk:.2f}  target_eps={a.target_epsilon:.2f}  "
             f"sigma={a.noise_multiplier:.3f}  consumed_eps={consumed[m]:.3f}"
         )
+    print(f"  composed participant epsilon (all groups): {participant_epsilon:.3f}")
 
     # ── 2. Accuracy-vs-epsilon sweep (uniform per-modality target) ───────────
     curve: list[dict[str, float]] = []
@@ -124,24 +132,25 @@ def main() -> None:
         group_sigmas = resolve_group_sigmas(allocator.noise_multipliers())
 
         model = MultimodalDepressionModel(input_dims, base.model).to(device)
-        groups = map_parameter_groups(model)
-        optimizer = torch.optim.SGD(model.parameters(), lr=base.train.learning_rate)
-        generator = torch.Generator().manual_seed(base.seed)
+        dp_model = wrap_for_per_sample_grads(model)
+        groups = map_parameter_groups(dp_model)
+        optimizer = torch.optim.SGD(dp_model.parameters(), lr=base.train.learning_rate)
+        generator = torch.Generator(device=device).manual_seed(base.seed)
 
-        for _ in range(priv.sweep.epochs):
-            batches = _make_batches(n_train, batch_size, base.seed)
-            dp_train_epoch(
-                model,
-                train_subset,
-                batches,
-                objective,
-                groups=groups,
-                group_sigmas=group_sigmas,
-                max_grad_norm=priv.max_grad_norm,
-                optimizer=optimizer,
-                device=device,
-                generator=generator,
-            )
+        batches = poisson_batches(n_train, sample_rate, planned_steps, generator)
+        dp_train_steps(
+            dp_model,
+            train_subset,
+            batches,
+            objective,
+            groups=groups,
+            group_sigmas=group_sigmas,
+            max_grad_norm=priv.max_grad_norm,
+            expected_batch_size=expected_batch_size,
+            optimizer=optimizer,
+            device=device,
+            generator=generator,
+        )
 
         metrics = evaluate_model(model, val_loader, objective, device)
         consumed_eps = allocator.consumed_epsilon(planned_steps)["audio"]

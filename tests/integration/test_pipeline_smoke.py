@@ -35,9 +35,7 @@ def test_mock_pipeline_produces_correctly_shaped_tensors() -> None:
     seed_everything(config.seed)
 
     batch_size = config.train.batch_size
-    loader = build_dataloader(
-        config.data, batch_size=batch_size, seed=config.seed, shuffle=True
-    )
+    loader = build_dataloader(config.data, batch_size=batch_size, seed=config.seed, shuffle=True)
 
     batch = next(iter(loader))
 

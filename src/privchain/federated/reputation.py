@@ -59,6 +59,8 @@ class ReputationTracker:
         self._config = config
         # client_id -> {group -> reputation in [0, 1]}
         self._reputation: dict[int, dict[str, float]] = {}
+        # client_id -> {group -> last raw consistency}, for the H1/H2 trade-off.
+        self._consistency_log: dict[int, dict[str, float]] = {}
 
     def snapshot(self) -> dict[int, dict[str, float]]:
         """Return a copy of the current per-client, per-group reputation.
@@ -67,6 +69,27 @@ class ReputationTracker:
             Mapping ``{client_id: {group: reputation}}`` (ledger-ready).
         """
         return {cid: dict(groups) for cid, groups in self._reputation.items()}
+
+    def consistency_snapshot(self) -> dict[int, dict[str, float]]:
+        """Return the last round's raw consistency score per client and group.
+
+        Reputation deliberately rewards agreement with the subgraph consensus,
+        which creates a tension with H1 that Chapter 5 has to discuss: a client
+        carrying more DP noise (the high-risk modality gets the *smallest* ε, so
+        the *largest* σ) produces a noisier update, agrees less with the
+        consensus, and is down-weighted for it. The same is true of an honestly
+        atypical client under strong non-IID heterogeneity.
+
+        Exposing the raw consistency separately from the volume term makes that
+        effect measurable rather than merely arguable — set
+        ``reputation.volume_weight`` to 1.0 to switch the consistency term off
+        entirely and compare.
+
+        Returns:
+            Mapping ``{client_id: {group: consistency}}`` from the latest call to
+            :meth:`compute_weights`.
+        """
+        return {cid: dict(groups) for cid, groups in self._consistency_log.items()}
 
     def compute_weights(
         self,
@@ -101,17 +124,17 @@ class ReputationTracker:
             keys = group_keys[group]
             volumes = {i: float(updates[i].num_samples) for i in members}
             max_volume = max(volumes.values()) or 1.0
-            deltas = {
-                i: _flatten_delta(updates[i].state, global_state, keys) for i in members
-            }
+            deltas = {i: _flatten_delta(updates[i].state, global_state, keys) for i in members}
             consensus = self._consensus(deltas, volumes)
 
             for i in members:
                 norm_volume = volumes[i] / max_volume
                 consistency = self._consistency(deltas[i], consensus, len(members))
-                raw = self._config.volume_weight * norm_volume + (
-                    1.0 - self._config.volume_weight
-                ) * consistency
+                self._consistency_log.setdefault(updates[i].client_id, {})[group] = consistency
+                raw = (
+                    self._config.volume_weight * norm_volume
+                    + (1.0 - self._config.volume_weight) * consistency
+                )
                 reputation = self._blend(updates[i].client_id, group, raw)
 
                 if use_reputation:
@@ -130,9 +153,7 @@ class ReputationTracker:
         return updated
 
     @staticmethod
-    def _consensus(
-        deltas: dict[int, torch.Tensor], volumes: dict[int, float]
-    ) -> torch.Tensor:
+    def _consensus(deltas: dict[int, torch.Tensor], volumes: dict[int, float]) -> torch.Tensor:
         """Volume-weighted mean update direction over a subgraph."""
         total = sum(volumes.values()) or 1.0
         stacked = torch.stack([deltas[i] * volumes[i] for i in deltas], dim=0)

@@ -71,14 +71,18 @@ def test_aggregate_metrics_is_nan_aware() -> None:
 
 def _tiny_model() -> tuple[MultimodalDepressionModel, MockDaicWozDataset]:
     data_cfg = DataConfig(
-        num_sessions=8, root="data/mock", phq8_max=24, depression_cutoff=10,
+        num_sessions=8,
+        root="data/mock",
+        phq8_max=24,
+        depression_cutoff=10,
         audio=AudioConfig(n_mels=8, min_frames=6, max_frames=10),
         video=VideoConfig(n_features=6, min_frames=4, max_frames=8),
         text=TextConfig(embed_dim=8, min_tokens=3, max_tokens=6),
     )
     model_cfg = ModelConfig(
         encoder=EncoderConfig(type="gru", hidden_dim=6, out_dim=6),
-        fusion=FusionConfig(hidden_dim=8), head=HeadConfig(hidden_dim=6),
+        fusion=FusionConfig(hidden_dim=8),
+        head=HeadConfig(hidden_dim=6),
     )
     model = MultimodalDepressionModel(modality_input_dims(data_cfg), model_cfg)
     return model, MockDaicWozDataset(data_cfg, seed=0)

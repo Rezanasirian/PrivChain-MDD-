@@ -1,17 +1,25 @@
 """CLI: privacy-attacker evaluation (Phase 6, objective H5).
 
 Produces the Chapter-4 table of **attack success rate per modality and per
-privacy budget** plus a membership-inference curve:
+privacy budget**. For each target ε the pipeline trains a *real* per-modality
+DP-SGD model at that budget and attacks it — no non-private model with noise
+pasted on afterwards.
 
-1. Trains the multimodal model briefly on the "member" split (so membership
-   inference has something to find), then extracts several noisy embedding views
-   per subject for each modality.
-2. For a sweep of target ε values, calibrates the released-embedding noise σ(ε)
-   with the RDP accountant and runs the re-identification attacker per modality.
-3. Runs the same attackers at each modality's *adaptive* ε (the H1 allocation) —
-   the headline that the highest-risk modality (audio, smallest ε) is the best
-   protected.
-4. Runs a loss-threshold membership-inference attack at each ε.
+The two attacks answer questions about two different mechanisms, and the report
+keeps them apart (ADR-0007):
+
+1. **Membership inference** against the DP-SGD-trained model. This is the attack
+   DP-SGD actually bounds, so its advantage should collapse toward 0 as ε
+   shrinks, while the non-private reference run still leaks.
+2. **Re-identification** (speaker-id / face / text de-anonymisation) against the
+   **DP release** of an embedding: clipped to a bounded norm and perturbed by the
+   Gaussian mechanism at the same ε. DP-SGD alone does *not* prevent this — an
+   encoder can map an unseen subject to a distinctive point no matter how it was
+   trained — so the release mechanism is what the curve measures.
+
+Both are also run at each modality's *adaptive* ε (the H1 allocation), the
+headline that the highest-risk modality (audio, smallest ε) ends up best
+protected.
 
 Outputs ``attack_success.json`` (the table), ``attack_curve.jsonl``, and
 ``attack_success_vs_epsilon.png`` under ``experiments/phase6/<run-id>/``. On mock
@@ -20,7 +28,7 @@ signal, so the re-identification curve is informative; see ADR-0007.
 
 Usage:
     python scripts/run_attack_eval.py
-    python scripts/run_attack_eval.py --rounds-epochs 3
+    python scripts/run_attack_eval.py --train-epochs 8
 """
 
 from __future__ import annotations
@@ -28,6 +36,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import torch
@@ -46,11 +55,22 @@ from privchain.eval.attackers import (
     MembershipInferenceAttacker,
     ReidentificationAttacker,
     add_gaussian_noise,
+    release_embeddings_dp,
 )
 from privchain.eval.embeddings import extract_subject_embeddings, split_enroll_probe
 from privchain.fusion.baseline_model import MultimodalDepressionModel
-from privchain.privacy.accountant import get_noise_multiplier
-from privchain.privacy.budget_allocator import allocate_target_epsilons
+from privchain.privacy.budget_allocator import (
+    PerModalityBudgetAllocator,
+    allocate_target_epsilons,
+)
+from privchain.privacy.dp_sgd import (
+    dp_train_steps,
+    map_parameter_groups,
+    poisson_batches,
+    resolve_group_sigmas,
+    steps_for_epochs,
+    wrap_for_per_sample_grads,
+)
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
@@ -59,7 +79,7 @@ from privchain.training.objective import DepressionObjective, move_batch_to_devi
 MODALITIES = ("audio", "video", "text")
 
 
-def _train_briefly(
+def _train_non_private(
     model: MultimodalDepressionModel,
     members: Dataset[Sample],
     *,
@@ -70,7 +90,7 @@ def _train_briefly(
     phq_loss_weight: float,
     device: torch.device,
 ) -> None:
-    """Fit the model on the member split so membership inference has a signal."""
+    """Fit the model on the member split with no privacy (the ε = ∞ reference)."""
     loader: DataLoader[Sample] = DataLoader(
         members, batch_size=batch_size, shuffle=True, collate_fn=collate_fn
     )
@@ -85,6 +105,74 @@ def _train_briefly(
             optimizer.step()
 
 
+def _train_private(
+    model: MultimodalDepressionModel,
+    members: Dataset[Sample],
+    *,
+    target_epsilon: float,
+    priv: Any,
+    epochs: int,
+    batch_size: int,
+    learning_rate: float,
+    phq8_max: int,
+    phq_loss_weight: float,
+    device: torch.device,
+    seed: int,
+) -> dict[str, float]:
+    """Fit the model with per-modality DP-SGD at a uniform target ``ε``.
+
+    This is what makes the Chapter-4 curve a statement about the *mechanism*:
+    the attacked embeddings come from a model actually trained under DP-SGD at
+    that budget, not from a non-private model with noise pasted on afterwards.
+
+    Args:
+        model: Model to train in place.
+        members: The member (training) split.
+        target_epsilon: Per-modality target ``ε`` for this point of the sweep.
+        priv: Validated privacy config section (``delta``, ``max_grad_norm``).
+        epochs: Nominal passes, converted to Poisson steps.
+        batch_size: Nominal batch size, setting the sampling rate ``q``.
+        learning_rate: SGD learning rate.
+        phq8_max: Maximum PHQ-8 score (loss normalisation).
+        phq_loss_weight: Weight of the PHQ-8 regression term.
+        device: Torch device.
+        seed: Seed for the Poisson draws and the DP noise.
+
+    Returns:
+        The per-group noise multipliers actually used.
+    """
+    num_items = len(members)  # type: ignore[arg-type]
+    sample_rate = min(1.0, batch_size / num_items)
+    expected_batch_size = sample_rate * num_items
+    steps = steps_for_epochs(num_items, batch_size, epochs)
+
+    allocator = PerModalityBudgetAllocator(
+        {m: target_epsilon for m in MODALITIES},
+        {m: priv.per_modality[m].reidentification_risk for m in MODALITIES},
+        delta=priv.delta,
+        sample_rate=sample_rate,
+        steps=steps,
+    )
+    group_sigmas = resolve_group_sigmas(allocator.noise_multipliers())
+
+    dp_model = wrap_for_per_sample_grads(model)
+    generator = torch.Generator(device=device).manual_seed(seed)
+    dp_train_steps(
+        dp_model,
+        members,
+        poisson_batches(num_items, sample_rate, steps, generator),
+        DepressionObjective(phq8_max, phq_loss_weight),
+        groups=map_parameter_groups(dp_model),
+        group_sigmas=group_sigmas,
+        max_grad_norm=priv.max_grad_norm,
+        expected_batch_size=expected_batch_size,
+        optimizer=torch.optim.SGD(dp_model.parameters(), lr=learning_rate),
+        device=device,
+        generator=generator,
+    )
+    return group_sigmas
+
+
 @torch.no_grad()
 def _membership_scores(
     model: MultimodalDepressionModel, subset: Dataset[Sample], device: torch.device
@@ -96,16 +184,9 @@ def _membership_scores(
     for raw in loader:
         batch = move_batch_to_device(raw, device)
         logits = model(batch)["logit"]
-        loss = binary_cross_entropy_with_logits(
-            logits, batch["label"].float(), reduction="none"
-        )
+        loss = binary_cross_entropy_with_logits(logits, batch["label"].float(), reduction="none")
         scores.append((-loss).cpu().numpy().astype(np.float64))
     return np.concatenate(scores)
-
-
-def _sigma_for_epsilon(epsilon: float, *, sample_rate: float, steps: int, delta: float) -> float:
-    """Map a target ε to a noise multiplier σ via the RDP accountant."""
-    return get_noise_multiplier(epsilon, sample_rate, steps, delta)
 
 
 def main() -> None:
@@ -132,96 +213,157 @@ def main() -> None:
     members, nonmembers = split_dataset(full, base.train.val_fraction, base.seed)
 
     input_dims = modality_input_dims(base.data)
-    model = MultimodalDepressionModel(input_dims, base.model).to(device)
-    _train_briefly(
-        model,
-        members,
-        epochs=args.train_epochs,
-        batch_size=base.train.batch_size,
-        learning_rate=base.train.learning_rate,
-        phq8_max=base.data.phq8_max,
-        phq_loss_weight=base.model.phq_loss_weight,
-        device=device,
-    )
-
     num_subjects = len(full)
     chance = ReidentificationAttacker.chance_accuracy(num_subjects)
-    noise_kwargs = {"sample_rate": atk.sample_rate, "steps": atk.steps, "delta": atk.delta}
-
-    # Clean per-modality enrollment/probe embeddings (identity signal, no DP noise).
-    # The released-embedding noise is scaled by each modality's own embedding RMS
-    # (its sensitivity), so a unit of sigma is commensurate with the signal.
-    enroll_probe: dict[str, tuple] = {}
-    emb_rms: dict[str, float] = {}
-    for modality in MODALITIES:
-        embeddings, subjects, views = extract_subject_embeddings(
-            model, full, modality, num_views=atk.num_views, jitter=atk.jitter,
-            seed=base.seed, device=device,
-        )
-        emb_rms[modality] = float(np.sqrt(np.mean(embeddings**2))) or 1.0
-        enroll_probe[modality] = split_enroll_probe(embeddings, subjects, views, atk.enroll_views)
-
     run_dir = create_run_dir(base.train.output_dir, "phase6", "phase6_attack_eval")
     save_config(
         run_dir,
         {"baseline": base.model_dump(), "privacy": priv.model_dump(), "attack": atk.model_dump()},
     )
 
-    # ── 1. Re-identification success per modality across the ε sweep ──────────
+    def train_at(target_epsilon: float | None) -> MultimodalDepressionModel:
+        """Train a fresh model at a given per-modality ε (``None`` = no privacy)."""
+        seed_everything(base.seed)
+        model = MultimodalDepressionModel(input_dims, base.model).to(device)
+        if target_epsilon is None:
+            _train_non_private(
+                model,
+                members,
+                epochs=args.train_epochs,
+                batch_size=base.train.batch_size,
+                learning_rate=base.train.learning_rate,
+                phq8_max=base.data.phq8_max,
+                phq_loss_weight=base.model.phq_loss_weight,
+                device=device,
+            )
+        else:
+            _train_private(
+                model,
+                members,
+                target_epsilon=target_epsilon,
+                priv=priv,
+                epochs=args.train_epochs,
+                batch_size=base.train.batch_size,
+                learning_rate=base.train.learning_rate,
+                phq8_max=base.data.phq8_max,
+                phq_loss_weight=base.model.phq_loss_weight,
+                device=device,
+                seed=base.seed,
+            )
+        return model
+
+    def attack_model(
+        model: MultimodalDepressionModel, release_epsilon: float | None
+    ) -> dict[str, float]:
+        """Run the three re-identification attackers on one trained model.
+
+        Args:
+            model: The (DP-)trained model whose encoders produce the embeddings.
+            release_epsilon: Budget for the DP *release* of each embedding, or
+                ``None`` to release it in the clear.
+
+        Returns:
+            Top-1 re-identification success per modality.
+        """
+        successes: dict[str, float] = {}
+        for modality in MODALITIES:
+            embeddings, subjects, views = extract_subject_embeddings(
+                model,
+                full,
+                modality,
+                num_views=atk.num_views,
+                jitter=atk.jitter,
+                seed=base.seed,
+                device=device,
+            )
+            if release_epsilon is not None:
+                embeddings = release_embeddings_dp(
+                    embeddings,
+                    target_epsilon=release_epsilon,
+                    delta=atk.delta,
+                    clip_norm=atk.embedding_clip_norm,
+                    rng=np.random.default_rng(base.seed),
+                )
+            successes[modality] = _reid_success(
+                split_enroll_probe(embeddings, subjects, views, atk.enroll_views), base.seed
+            )
+        return successes
+
+    attacker = MembershipInferenceAttacker()
+
+    def membership_result(model: MultimodalDepressionModel) -> dict[str, float]:
+        """Run the membership-inference attack against one trained model."""
+        return attacker.attack(
+            _membership_scores(model, members, device),
+            _membership_scores(model, nonmembers, device),
+            rng=np.random.default_rng(base.seed),
+        )
+
+    # ── 1. Sweep: train a real DP-SGD model per ε, then attack *that* model ───
     reid: dict[str, list[dict[str, float]]] = {m: [] for m in MODALITIES}
     curve_rows: list[dict[str, float]] = []
+    mia: list[dict[str, float]] = []
     for epsilon in atk.target_epsilons:
-        sigma = _sigma_for_epsilon(epsilon, **noise_kwargs)
-        row: dict[str, float] = {"target_epsilon": epsilon, "sigma": sigma}
+        model = train_at(epsilon)
+        successes = attack_model(model, epsilon)
+        row: dict[str, float] = {"target_epsilon": epsilon}
         for modality in MODALITIES:
-            noise_std = sigma * atk.noise_scale * emb_rms[modality]
-            success = _reid_success(enroll_probe[modality], noise_std, base.seed)
-            reid[modality].append(
-                {"target_epsilon": epsilon, "sigma": sigma, "success_rate": success}
-            )
-            row[f"reid_{modality}"] = success
+            reid[modality].append({"target_epsilon": epsilon, "success_rate": successes[modality]})
+            row[f"reid_{modality}"] = successes[modality]
         curve_rows.append(row)
+        if atk.membership_inference.enabled:
+            mia.append({"target_epsilon": epsilon, **membership_result(model)})
         print(
             f"eps={epsilon:5.2f}  reid: "
             + "  ".join(f"{m}={row[f'reid_{m}']:.3f}" for m in MODALITIES)
         )
 
-    # ── 2. Adaptive allocation headline (per-modality ε from H1) ─────────────
+    # ── 2. The ε = ∞ reference: same attacks on a non-private model ──────────
+    non_private_model = train_at(None)
+    non_private = attack_model(non_private_model, None)
+    non_private_mia = (
+        membership_result(non_private_model) if atk.membership_inference.enabled else {}
+    )
+    print(
+        "eps=  inf  reid: "
+        + "  ".join(f"{m}={non_private[m]:.3f}" for m in MODALITIES)
+        + "  (no DP)"
+    )
+
+    # ── 3. Adaptive allocation headline (per-modality ε from H1) ─────────────
+    # Each modality is attacked on a model trained at *its own* budget, which is
+    # the claim under test: higher risk -> smaller ε -> better protected.
     adaptive_eps = allocate_target_epsilons(priv.allocation, priv.per_modality)
     adaptive: dict[str, dict[str, float]] = {}
     for modality in MODALITIES:
         epsilon = adaptive_eps[modality]
-        sigma = _sigma_for_epsilon(epsilon, **noise_kwargs)
-        noise_std = sigma * atk.noise_scale * emb_rms[modality]
-        success = _reid_success(enroll_probe[modality], noise_std, base.seed)
+        successes = attack_model(train_at(epsilon), epsilon)
         adaptive[modality] = {
             "epsilon": epsilon,
             "reidentification_risk": priv.per_modality[modality].reidentification_risk,
-            "sigma": sigma,
-            "success_rate": success,
+            "success_rate": successes[modality],
         }
 
-    # ── 3. Membership inference across the ε sweep ────────────────────────────
-    mia: list[dict[str, float]] = []
-    if atk.membership_inference.enabled:
-        member_scores = _membership_scores(model, members, device)
-        nonmember_scores = _membership_scores(model, nonmembers, device)
-        score_scale = float(np.std(np.concatenate([member_scores, nonmember_scores]))) or 1.0
-        attacker = MembershipInferenceAttacker()
-        for epsilon in atk.target_epsilons:
-            sigma = _sigma_for_epsilon(epsilon, **noise_kwargs)
-            rng = np.random.default_rng(base.seed)
-            std = sigma * atk.noise_scale * score_scale
-            noisy_member = member_scores + rng.standard_normal(member_scores.shape) * std
-            noisy_nonmember = nonmember_scores + rng.standard_normal(nonmember_scores.shape) * std
-            result = attacker.attack(noisy_member, noisy_nonmember)
-            mia.append({"target_epsilon": epsilon, "sigma": sigma, **result})
-
     report = {
+        "mechanisms": {
+            "membership_inference": (
+                "per-modality DP-SGD training at the swept epsilon (Poisson sampling, "
+                "Opacus RDP accounting)"
+            ),
+            "reidentification": (
+                "DP release of the embedding: clipped to embedding_clip_norm, then the "
+                "Gaussian mechanism at the swept epsilon"
+            ),
+        },
+        "embedding_clip_norm": atk.embedding_clip_norm,
         "num_subjects": num_subjects,
         "chance_accuracy": chance,
-        "noise_mapping": {"delta": atk.delta, "sample_rate": atk.sample_rate, "steps": atk.steps},
+        "delta": priv.delta,
         "reidentification": reid,
+        "non_private_reference": {
+            "reidentification": non_private,
+            "membership_inference": non_private_mia,
+        },
         "adaptive_allocation": {"mode": priv.allocation.mode, "per_modality": adaptive},
         "membership_inference": mia,
     }
@@ -243,8 +385,19 @@ def main() -> None:
     print("(On mock data the depression labels are noise; subject identity is real.)")
 
 
-def _reid_success(enroll_probe: tuple, noise_std: float, seed: int) -> float:
-    """Run one re-identification attack at a given embedding-noise level."""
+def _reid_success(enroll_probe: tuple, seed: int, noise_std: float = 0.0) -> float:
+    """Run one re-identification attack on a trained model's embeddings.
+
+    Args:
+        enroll_probe: ``(enroll_emb, enroll_ids, probe_emb, probe_ids)``.
+        seed: Seed for any additional embedding noise.
+        noise_std: Optional extra Gaussian noise on the released embeddings. The
+            main sweep leaves this at 0 — the protection under test comes from
+            DP-SGD training, not from post-hoc perturbation.
+
+    Returns:
+        Top-1 re-identification accuracy.
+    """
     enroll_emb, enroll_ids, probe_emb, probe_ids = enroll_probe
     rng = np.random.default_rng(seed)
     attacker = ReidentificationAttacker()

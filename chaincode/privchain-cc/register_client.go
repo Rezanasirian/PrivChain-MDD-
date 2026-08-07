@@ -10,7 +10,9 @@ import (
 )
 
 // RegisterClient records a federated client and its declared modality
-// capability vector.
+// capability vector, binding it to the submitting identity. That binding is what
+// later lets LogPrivacyBudget reject a client writing another client's consumed
+// epsilon (ADR-0006).
 //
 // Args: clientID, audio, video, text — where the last three are 0/1 flags.
 // A client must declare at least one modality, and may not be registered twice.
@@ -21,6 +23,11 @@ func (s *SmartContract) RegisterClient(stub shim.ChaincodeStubInterface, args []
 	clientID := args[0]
 	if clientID == "" {
 		return shim.Error("clientID must not be empty")
+	}
+
+	caller, err := getCallerIdentity(stub)
+	if err != nil {
+		return shim.Error(err.Error())
 	}
 
 	var capability CapabilityVector
@@ -47,7 +54,12 @@ func (s *SmartContract) RegisterClient(stub shim.ChaincodeStubInterface, args []
 		return shim.Error(fmt.Sprintf("client %q is already registered", clientID))
 	}
 
-	blob, err := json.Marshal(ClientRecord{ClientID: clientID, Capability: capability})
+	blob, err := json.Marshal(ClientRecord{
+		ClientID:         clientID,
+		Capability:       capability,
+		OwnerMSPID:       caller.MSPID,
+		OwnerFingerprint: caller.Fingerprint,
+	})
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -62,16 +74,33 @@ func (s *SmartContract) GetClient(stub shim.ChaincodeStubInterface, args []strin
 	if len(args) != 1 {
 		return shim.Error("GetClient expects 1 arg: clientID")
 	}
-	key, err := stub.CreateCompositeKey(clientObjectType, []string{args[0]})
+	record, err := readClient(stub, args[0])
 	if err != nil {
 		return shim.Error(err.Error())
+	}
+	blob, err := json.Marshal(record)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(blob)
+}
+
+// readClient loads a registered client's record, or reports that it is absent.
+func readClient(stub shim.ChaincodeStubInterface, clientID string) (ClientRecord, error) {
+	key, err := stub.CreateCompositeKey(clientObjectType, []string{clientID})
+	if err != nil {
+		return ClientRecord{}, err
 	}
 	blob, err := stub.GetState(key)
 	if err != nil {
-		return shim.Error(err.Error())
+		return ClientRecord{}, err
 	}
 	if blob == nil {
-		return shim.Error(fmt.Sprintf("client %q is not registered", args[0]))
+		return ClientRecord{}, fmt.Errorf("client %q is not registered", clientID)
 	}
-	return shim.Success(blob)
+	var record ClientRecord
+	if err := json.Unmarshal(blob, &record); err != nil {
+		return ClientRecord{}, fmt.Errorf("client %q has a corrupt record: %w", clientID, err)
+	}
+	return record, nil
 }

@@ -37,11 +37,14 @@ func (s *SmartContract) LogPrivacyBudget(stub shim.ChaincodeStubInterface, args 
 		return shim.Error("epsilonSpent must be a finite, non-negative number")
 	}
 
-	if err := s.assertClientExists(stub, clientID); err != nil {
+	// Only the identity that registered this client (or the coordinator) may
+	// write its consumed epsilon — otherwise any peer could forge another
+	// client's privacy accounting.
+	if _, err := requireOwnerOrCoordinator(stub, clientID); err != nil {
 		return shim.Error(err.Error())
 	}
 
-	key, err := stub.CreateCompositeKey(budgetObjectType, []string{clientID, modality, strconv.Itoa(round)})
+	key, err := stub.CreateCompositeKey(budgetObjectType, []string{clientID, modality, roundKey(round)})
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -71,8 +74,10 @@ func (s *SmartContract) LogPrivacyBudget(stub shim.ChaincodeStubInterface, args 
 	return shim.Success(blob)
 }
 
-// GetBudgetHistory returns every budget entry for a client+modality, ordered by
-// the ledger's composite-key iteration. Args: clientID, modality.
+// GetBudgetHistory returns every budget entry for a client+modality in
+// ascending round order (the round is zero-padded in the composite key, so the
+// ledger's lexicographic iteration is also numeric order).
+// Args: clientID, modality.
 func (s *SmartContract) GetBudgetHistory(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	if len(args) != 2 {
 		return shim.Error("GetBudgetHistory expects 2 args: clientID, modality")
@@ -111,16 +116,6 @@ func (s *SmartContract) GetBudgetHistory(stub shim.ChaincodeStubInterface, args 
 
 // assertClientExists returns an error if clientID has not been registered.
 func (s *SmartContract) assertClientExists(stub shim.ChaincodeStubInterface, clientID string) error {
-	key, err := stub.CreateCompositeKey(clientObjectType, []string{clientID})
-	if err != nil {
-		return err
-	}
-	blob, err := stub.GetState(key)
-	if err != nil {
-		return err
-	}
-	if blob == nil {
-		return fmt.Errorf("client %q is not registered", clientID)
-	}
-	return nil
+	_, err := readClient(stub, clientID)
+	return err
 }

@@ -24,7 +24,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from privchain.config import AllocationConfig, ModalityPrivacy
-from privchain.privacy.accountant import get_epsilon, get_noise_multiplier
+from privchain.privacy.accountant import (
+    Mechanism,
+    compose_epsilon,
+    get_epsilon,
+    get_noise_multiplier,
+)
 
 
 def allocate_target_epsilons(
@@ -145,8 +150,43 @@ class PerModalityBudgetAllocator:
             Mapping ``{modality: epsilon_spent}``.
         """
         return {
-            modality: get_epsilon(
-                alloc.noise_multiplier, self.sample_rate, steps_done, self.delta
-            )
+            modality: get_epsilon(alloc.noise_multiplier, self.sample_rate, steps_done, self.delta)
             for modality, alloc in self.allocations.items()
         }
+
+    def participant_epsilon(self, steps_done: int, *, include_shared: bool = True) -> float:
+        """Composed ``ε`` for a subject whose data touches every group (ADR-0009).
+
+        The per-modality budgets of :meth:`consumed_epsilon` are *per mechanism*.
+        A participant contributing all three modalities is exposed to all three
+        mechanisms plus the shared fusion/head group, so their true budget is the
+        RDP composition of those mechanisms — always larger than any single
+        ``ε_m``, and reported alongside them so the audit trail is honest.
+
+        Args:
+            steps_done: Number of steps actually executed.
+            include_shared: Whether to include the shared (fusion + head) group,
+                which conservatively runs at ``max_m σ_m``.
+
+        Returns:
+            The composed ``ε`` across all mechanisms the participant is exposed to.
+        """
+        mechanisms = [
+            Mechanism(
+                noise_multiplier=alloc.noise_multiplier,
+                sample_rate=self.sample_rate,
+                steps=steps_done,
+                name=modality,
+            )
+            for modality, alloc in self.allocations.items()
+        ]
+        if include_shared and self.allocations:
+            mechanisms.append(
+                Mechanism(
+                    noise_multiplier=max(a.noise_multiplier for a in self.allocations.values()),
+                    sample_rate=self.sample_rate,
+                    steps=steps_done,
+                    name="shared",
+                )
+            )
+        return compose_epsilon(mechanisms, self.delta)

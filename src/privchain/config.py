@@ -391,19 +391,28 @@ class MembershipInferenceConfig(_Strict):
 class AttackSettings(_Strict):
     """The ``attack`` block of ``configs/attack.yaml``.
 
-    A re-identification attacker sees several noisy "views" per subject; some are
-    enrolled (build the subject's template) and the rest are probed. The DP noise
-    a released embedding carries is calibrated from a target ε via the RDP
-    accountant using the nominal ``(sample_rate, steps, delta)`` mapping.
+    A re-identification attacker sees several "views" per subject; some are
+    enrolled (build the subject's template) and the rest are probed.
+
+    Two different privacy mechanisms are measured against the same attackers, and
+    the config separates them deliberately (ADR-0007):
+
+    * **DP-SGD training** — the model is trained at the swept ε. This is what
+      bounds membership inference.
+    * **Embedding release** — each released embedding is clipped to
+      ``embedding_clip_norm`` (bounding its sensitivity) and perturbed by the
+      Gaussian mechanism calibrated to the same ε. This is what bounds
+      re-identification; DP-SGD alone does not, since an encoder may map an
+      unseen subject to a distinctive point regardless of how it was trained.
     """
 
     num_views: int = Field(default=6, gt=1)
     enroll_views: int = Field(default=3, gt=0)
     jitter: float = Field(default=0.1, ge=0.0)  # intra-subject feature variability
-    noise_scale: float = Field(default=0.1, gt=0.0)  # noise as a fraction of embedding RMS per σ
+    # L2 bound enforced on a released embedding: its sensitivity, and therefore
+    # the scale the Gaussian mechanism's sigma multiplies.
+    embedding_clip_norm: float = Field(default=1.0, gt=0.0)
     delta: float = Field(default=1.0e-5, gt=0.0, lt=1.0)
-    sample_rate: float = Field(default=0.1, gt=0.0, le=1.0)  # nominal q for σ(ε)
-    steps: int = Field(default=100, gt=0)  # nominal T for σ(ε)
     target_epsilons: list[float]
     membership_inference: MembershipInferenceConfig = Field(
         default_factory=MembershipInferenceConfig

@@ -135,10 +135,14 @@ def run_flower_simulation(
         ) -> tuple[float, int, dict[str, Any]]:
             state = ndarrays_to_state(self._fc.model, parameters)
             metrics = self._fc.evaluate(state, val_loader)
-            return float(metrics["loss"]), self._fc.num_samples, {
-                "f1": metrics["f1"],
-                "roc_auc": metrics["roc_auc"],
-            }
+            return (
+                float(metrics["loss"]),
+                self._fc.num_samples,
+                {
+                    "f1": metrics["f1"],
+                    "roc_auc": metrics["roc_auc"],
+                },
+            )
 
     def client_fn(cid: str) -> fl.client.Client:
         return _FlowerClient(clients_by_cid[cid]).to_client()

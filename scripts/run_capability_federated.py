@@ -109,7 +109,9 @@ def main() -> None:
     capability_val_loaders: dict[str, DataLoader[Sample]] = {}
     for pattern in federation.modality_patterns:
         masked = ModalityMaskedDataset(
-            full_dataset, val_indices, tuple(pattern.capability)  # type: ignore[arg-type]
+            full_dataset,
+            val_indices,
+            tuple(pattern.capability),  # type: ignore[arg-type]
         )
         capability_val_loaders[pattern.name] = DataLoader(
             masked, batch_size=base.train.batch_size, shuffle=False, collate_fn=collate_fn
@@ -193,8 +195,10 @@ def main() -> None:
             f"{name:<14}{row['fedavg']['f1']:>12.4f}"
             f"{row['capability_aware']['f1']:>14.4f}{row['delta_f1']:>10.4f}"
         )
-    print("\n(On mock noise these numbers are not meaningful; the harness reports "
-          "the real improvement once DAIC-WOZ is available.)")
+    print(
+        "\n(On mock noise these numbers are not meaningful; the harness reports "
+        "the real improvement once DAIC-WOZ is available.)"
+    )
 
 
 if __name__ == "__main__":

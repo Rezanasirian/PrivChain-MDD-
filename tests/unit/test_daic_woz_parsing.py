@@ -86,9 +86,7 @@ def _config(root: Path) -> dict[str, Any]:
 
 
 def test_dataset_length_and_labels(daic_root: Path) -> None:
-    ds = DaicWozDataset(
-        _config(daic_root), split="train", text_vectorizer=HashingTextVectorizer(8)
-    )
+    ds = DaicWozDataset(_config(daic_root), split="train", text_vectorizer=HashingTextVectorizer(8))
     assert len(ds) == 2
     assert int(ds[0]["label"].item()) == 0
     assert int(ds[0]["phq8_score"].item()) == 4
@@ -97,9 +95,7 @@ def test_dataset_length_and_labels(daic_root: Path) -> None:
 
 
 def test_feature_dims_and_shapes(daic_root: Path) -> None:
-    ds = DaicWozDataset(
-        _config(daic_root), split="train", text_vectorizer=HashingTextVectorizer(8)
-    )
+    ds = DaicWozDataset(_config(daic_root), split="train", text_vectorizer=HashingTextVectorizer(8))
     assert ds.feature_dims == {"audio": 4, "video": 3, "text": 8}
 
     sample = ds[0]
@@ -109,9 +105,7 @@ def test_feature_dims_and_shapes(daic_root: Path) -> None:
 
 
 def test_samples_collate(daic_root: Path) -> None:
-    ds = DaicWozDataset(
-        _config(daic_root), split="train", text_vectorizer=HashingTextVectorizer(8)
-    )
+    ds = DaicWozDataset(_config(daic_root), split="train", text_vectorizer=HashingTextVectorizer(8))
     batch = collate_fn([ds[0], ds[1]])
     assert batch["audio"].shape == (2, 6, 4)
     assert batch["label"].shape == (2,)

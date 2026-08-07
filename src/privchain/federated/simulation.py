@@ -339,9 +339,7 @@ def run_capability_aware_simulation(
                 distill_weight=distill.weight if use_distill else 0.0,
                 distill_temperature=distill.temperature,
             )
-            updates.append(
-                ClientUpdate(client.client_id, client.capability, num_samples, updated)
-            )
+            updates.append(ClientUpdate(client.client_id, client.capability, num_samples, updated))
 
         # Byzantine robustness: drop shared-group outlier updates before aggregation.
         num_flagged = 0
@@ -376,7 +374,15 @@ def run_capability_aware_simulation(
             _evaluate_capabilities(global_model, capability_val_loaders, objective, torch_device)
         )
         logger.log(record)
-        reputation_logger.log({"round": round_num, "reputation": tracker.snapshot()})
+        reputation_logger.log(
+            {
+                "round": round_num,
+                "reputation": tracker.snapshot(),
+                # Logged separately so the H1/H2 tension (noisier DP clients look
+                # less consistent, and are down-weighted for it) is measurable.
+                "consistency": tracker.consistency_snapshot(),
+            }
+        )
         history.append(record)
 
         selector = metrics["roc_auc"]

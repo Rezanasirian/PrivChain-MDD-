@@ -12,10 +12,13 @@ license = { text = "Proprietary — University of Tehran thesis project" }
 # optional-dependency groups below and are pulled in only when that phase starts.
 dependencies = [
     "numpy>=1.26",
-    "scipy>=1.11",   # RDP privacy accountant (scipy.special.logsumexp), Phase 3
+    "scipy>=1.11",
     "torch>=2.2",
     "pyyaml>=6.0",
     "pydantic>=2.6",
+    # Phase 3 (H1): RDP accounting and per-sample gradients. Core, not optional —
+    # every epsilon reported in Chapter 4 comes from Opacus (ADR-0004).
+    "opacus>=1.4",
 ]
 
 [project.optional-dependencies]
@@ -23,8 +26,6 @@ dependencies = [
 audio = ["librosa>=0.10"]
 nlp = ["transformers>=4.40"]
 ml = ["scikit-learn>=1.4"]
-# Phase 3 — per-modality differential privacy
-privacy = ["opacus>=1.4"]
 # Phase 2/4 — federated orchestration
 federated = ["flwr>=1.8"]
 # Phase 7 — evaluation plots (inference-latency figure); harness degrades
@@ -79,8 +80,17 @@ plugins = ["pydantic.mypy"]
 module = ["yaml", "librosa.*", "transformers.*", "opacus.*", "flwr.*", "sklearn.*", "scipy.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# `flwr` is optional: with it installed `NumPyClient` is a real class, without it
+# the base is `Any` and subclassing it needs a `type: ignore[misc]`. Keep the
+# ignore (needed in the uninstalled case) without failing in the installed one.
+module = ["privchain.federated.flower_app"]
+warn_unused_ignores = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Run against `src/` without requiring an editable install.
+pythonpath = ["src"]
 addopts = "-ra"
 markers = [
     "integration: end-to-end pipeline tests (may be slower)",

@@ -1,28 +1,32 @@
-"""Unit tests for the RDP accountant (Phase 3)."""
+"""Unit tests for the Opacus-backed RDP accountant (Phase 3)."""
 
 from __future__ import annotations
-
-import math
 
 import pytest
 
 from privchain.privacy.accountant import (
+    Mechanism,
+    compose_epsilon,
     get_epsilon,
     get_noise_multiplier,
-    rdp_sampled_gaussian,
 )
 
 
-def test_full_batch_matches_gaussian_rdp() -> None:
-    # q=1 -> non-subsampled Gaussian: RDP(alpha) = alpha / (2 sigma^2).
-    for alpha, sigma in ((2, 1.0), (5, 2.0), (10, 0.5)):
-        assert rdp_sampled_gaussian(alpha, 1.0, sigma) == pytest.approx(alpha / (2 * sigma**2))
+def test_matches_opacus_reference() -> None:
+    """The wrapper must reproduce Opacus's own RDPAccountant number."""
+    from opacus.accountants import RDPAccountant
+
+    reference = RDPAccountant()
+    for _ in range(100):
+        reference.step(noise_multiplier=1.1, sample_rate=0.05)
+
+    assert get_epsilon(1.1, 0.05, 100, 1e-5) == pytest.approx(
+        reference.get_epsilon(delta=1e-5), rel=1e-6
+    )
 
 
 def test_epsilon_decreases_with_more_noise() -> None:
-    e_low = get_epsilon(0.8, 0.01, 1000, 1e-5)
-    e_high = get_epsilon(3.0, 0.01, 1000, 1e-5)
-    assert e_high < e_low
+    assert get_epsilon(3.0, 0.01, 1000, 1e-5) < get_epsilon(0.8, 0.01, 1000, 1e-5)
 
 
 def test_epsilon_increases_with_more_steps() -> None:
@@ -37,8 +41,8 @@ def test_noise_multiplier_round_trip() -> None:
     for target in (0.5, 1.0, 2.0, 8.0):
         sigma = get_noise_multiplier(target, 0.01, 1000, 1e-5)
         spent = get_epsilon(sigma, 0.01, 1000, 1e-5)
-        assert spent <= target + 1e-3
-        # And just below: a hair less noise should exceed the target.
+        assert spent <= target + 1e-2
+        # And just below: a hair less noise should exceed the achieved epsilon.
         assert get_epsilon(sigma * 0.9, 0.01, 1000, 1e-5) > spent
 
 
@@ -54,8 +58,50 @@ def test_invalid_inputs() -> None:
     with pytest.raises(ValueError):
         get_noise_multiplier(0.0, 0.01, 100, 1e-5)  # non-positive target
     with pytest.raises(ValueError):
-        rdp_sampled_gaussian(1, 0.5, 1.0)  # alpha < 2
+        get_noise_multiplier(1.0, 0.01, 0, 1e-5)  # no steps to calibrate against
+    with pytest.raises(ValueError):
+        compose_epsilon([], 1.5)  # delta out of range
 
 
-def test_no_noise_is_infinite_rdp() -> None:
-    assert math.isinf(rdp_sampled_gaussian(2, 0.5, 0.0))
+# ── composition (participant-level budget, ADR-0009) ────────────────────────
+
+
+_AUDIO = Mechanism(noise_multiplier=1.5, sample_rate=0.05, steps=100, name="audio")
+_VIDEO = Mechanism(noise_multiplier=1.0, sample_rate=0.05, steps=100, name="video")
+_TEXT = Mechanism(noise_multiplier=0.8, sample_rate=0.05, steps=100, name="text")
+
+
+def test_empty_composition_spends_nothing() -> None:
+    assert compose_epsilon([], 1e-5) == 0.0
+
+
+def test_single_mechanism_composition_matches_get_epsilon() -> None:
+    assert compose_epsilon([_AUDIO], 1e-5) == pytest.approx(
+        get_epsilon(_AUDIO.noise_multiplier, _AUDIO.sample_rate, _AUDIO.steps, 1e-5)
+    )
+
+
+def test_composition_exceeds_every_individual_mechanism() -> None:
+    """A subject exposed to all three groups spends more than any single one."""
+    composed = compose_epsilon([_AUDIO, _VIDEO, _TEXT], 1e-5)
+    for mechanism in (_AUDIO, _VIDEO, _TEXT):
+        individual = get_epsilon(
+            mechanism.noise_multiplier, mechanism.sample_rate, mechanism.steps, 1e-5
+        )
+        assert composed > individual
+
+
+def test_composition_is_tighter_than_naive_epsilon_sum() -> None:
+    """Summing RDP curves beats summing epsilons — that is why this exists."""
+    composed = compose_epsilon([_AUDIO, _VIDEO, _TEXT], 1e-5)
+    naive = sum(
+        get_epsilon(m.noise_multiplier, m.sample_rate, m.steps, 1e-5)
+        for m in (_AUDIO, _VIDEO, _TEXT)
+    )
+    assert composed < naive
+
+
+def test_composition_is_monotone_in_mechanism_count() -> None:
+    two = compose_epsilon([_AUDIO, _VIDEO], 1e-5)
+    three = compose_epsilon([_AUDIO, _VIDEO, _TEXT], 1e-5)
+    assert three > two

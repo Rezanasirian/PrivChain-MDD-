@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // Object-type prefixes for composite ledger keys.
 const (
 	clientObjectType     = "client"
@@ -15,10 +17,19 @@ var modalities = [3]string{"audio", "video", "text"}
 type CapabilityVector [3]int
 
 // ClientRecord is a registered federated client and its declared capability.
+// The owner fields bind the client to the identity that registered it, so only
+// that identity (or the coordinator) may later write records about it.
 type ClientRecord struct {
-	ClientID   string           `json:"clientId"`
-	Capability CapabilityVector `json:"capability"`
+	ClientID         string           `json:"clientId"`
+	Capability       CapabilityVector `json:"capability"`
+	OwnerMSPID       string           `json:"ownerMspId"`
+	OwnerFingerprint string           `json:"ownerFingerprint"`
 }
+
+// roundKeyWidth zero-pads the round component of a composite key. Composite
+// keys iterate in lexicographic order, so a bare decimal round would order
+// "10" before "2" and hand back an out-of-order audit history.
+const roundKeyWidth = 10
 
 // BudgetRecord is one append-only entry of per-modality privacy budget consumed
 // by a client in a given round. Consumed epsilon is never overwritten
@@ -45,6 +56,11 @@ type ReputationRecord struct {
 type SubgraphRecord struct {
 	Round     int      `json:"round"`
 	ClientIDs []string `json:"clientIds"`
+}
+
+// roundKey renders a round number as a lexicographically sortable key part.
+func roundKey(round int) string {
+	return fmt.Sprintf("%0*d", roundKeyWidth, round)
 }
 
 // isKnownModality reports whether name is one of the three modalities.

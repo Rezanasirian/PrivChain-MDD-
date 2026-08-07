@@ -37,6 +37,11 @@ func (s *SmartContract) UpdateReputation(stub shim.ChaincodeStubInterface, args 
 		return shim.Error("round must be a non-negative integer")
 	}
 
+	// Coordinator-only: a client must never be able to raise its own reputation,
+	// which directly sets its aggregation weight (ADR-0006).
+	if _, err := requireCoordinator(stub); err != nil {
+		return shim.Error(err.Error())
+	}
 	if err := s.assertClientExists(stub, clientID); err != nil {
 		return shim.Error(err.Error())
 	}

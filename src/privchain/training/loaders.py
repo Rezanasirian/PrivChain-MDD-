@@ -33,9 +33,7 @@ def split_dataset(
     val_size = int(round(total * val_fraction))
     train_size = total - val_size
     if train_size <= 0 or val_size <= 0:
-        raise ValueError(
-            f"val_fraction={val_fraction} on {total} samples yields an empty split"
-        )
+        raise ValueError(f"val_fraction={val_fraction} on {total} samples yields an empty split")
     generator = torch.Generator().manual_seed(seed)
     train_subset, val_subset = random_split(dataset, [train_size, val_size], generator=generator)
     return train_subset, val_subset

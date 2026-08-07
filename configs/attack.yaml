@@ -1,28 +1,37 @@
 # Attacker-model / privacy-evaluation configuration (Phase 6, objective H5).
 #
-# Empirically measures re-identification risk per modality and per privacy
-# budget: an attacker sees several noisy embedding "views" per subject, enrols a
-# few, and tries to re-identify the rest. As epsilon shrinks (more DP noise), the
-# attacker's success rate should fall toward the chance baseline — and the
-# higher-risk modality (audio), which the adaptive allocation gives the smallest
-# epsilon, should be the best protected. See docs/architecture/ADR-0007.
+# Empirically measures re-identification and membership-inference risk per
+# modality and per privacy budget. An attacker sees several embedding "views" per
+# subject, enrols a few, and tries to re-identify the rest.
+#
+# Two mechanisms are measured against the same attackers (see ADR-0007):
+#   1. DP-SGD training at the swept epsilon -> bounds MEMBERSHIP INFERENCE.
+#   2. DP release of the embedding (clip to embedding_clip_norm + Gaussian
+#      mechanism at the same epsilon) -> bounds RE-IDENTIFICATION.
+# DP-SGD alone does not stop re-identification: it constrains how much the
+# trained model depends on any one training record, not how distinctive an
+# encoder's output is for a given input.
+#
+# As epsilon shrinks, re-identification success should fall toward the chance
+# baseline — and the higher-risk modality (audio), which the adaptive allocation
+# gives the smallest epsilon, should be the best protected.
 
 seed: 42
 
 attack:
-  num_views: 6            # noisy embedding views generated per subject
+  num_views: 6            # embedding views generated per subject
   enroll_views: 3         # views used to build each subject's template
   jitter: 0.15            # intra-subject feature variability (mock stand-in)
-  noise_scale: 0.1        # released-embedding noise as a fraction of embedding RMS per unit sigma
+  embedding_clip_norm: 1.0  # L2 bound on a released embedding = its sensitivity
 
-  # Nominal (q, T, delta) used only to map a target epsilon -> sigma via the RDP
-  # accountant (the same accountant Phase 3 uses).
   delta: 1.0e-5
-  sample_rate: 0.1
-  steps: 100
 
   # Privacy budgets at which to measure attack success (the sweep axis).
-  target_epsilons: [0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+  # The range runs well past the budgets Phase 3 actually uses (2-8) so the
+  # re-identification curve shows the whole transition from "noise dominates"
+  # (chance-level) to "signal dominates" (near the non-private reference); a
+  # curve that is flat at chance everywhere reports nothing.
+  target_epsilons: [0.5, 2.0, 8.0, 32.0, 128.0, 512.0]
 
   membership_inference:
     enabled: true
