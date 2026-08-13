@@ -20,22 +20,50 @@ daic_woz:
 
   participant_dir_template: "{pid}_P"
 
+  # Parsed/subsampled feature matrices are memoized here (relative to `root`),
+  # keyed by the parsing options below so a stride change invalidates them.
+  # Re-parsing the ~36 MB COVAREP files on every run cost minutes; set to null
+  # to disable. Lives under data/, so it is git-ignored.
+  feature_cache_dir: _feature_cache
+
   splits:
     train: train_split_Depression_AVEC2017.csv
     dev: dev_split_Depression_AVEC2017.csv
     test: full_test_split.csv
 
+  # Default header names (train/dev). Verified against the real corpus
+  # downloaded 2026-08-13; see docs/architecture/ADR-0010.
   label_columns:
     participant_id: Participant_ID
     phq_binary: PHQ8_Binary
     phq_score: PHQ8_Score
 
+  # The AVEC2017 test split ships different header names for the same fields
+  # (PHQ_* rather than PHQ8_*). Without this override every test label would be
+  # missing — the loader now raises instead of silently reading them as 0.
+  split_label_columns:
+    test:
+      participant_id: Participant_ID
+      phq_binary: PHQ_Binary
+      phq_score: PHQ_Score
+
+  # Participant 440's archive is truncated at source on the USC server (its
+  # TRANSCRIPT/COVAREP/FORMANT files are absent from the published zip), so the
+  # session has no text or audio modality. Dropped from the dev split; see
+  # docs/architecture/ADR-0010.
+  exclude_participants: [440]
+
+  # Coverage note (ADR-0011): the loader keeps every `frame_stride`-th frame and
+  # stops at `max_frames`, so stride x max_frames must exceed the raw frame count
+  # or the tail of the interview is silently discarded. Interviews run ~15 min.
+  # The previous 1000x5 setting covered only the first ~50 s of each session.
   audio:
     file_template: "{pid}_COVAREP.csv"   # 74-dim COVAREP features, ~10ms frames
     has_header: false
     delimiter: ","
-    max_frames: 1000                     # cap after subsampling
-    frame_stride: 5                      # keep every 5th frame (~50ms)
+    # 100 Hz x 900 s = ~90k frames; 30 x 3000 = 90k -> full session at ~3.3 Hz.
+    max_frames: 3000
+    frame_stride: 30
     standardize: true
 
   video:
@@ -43,8 +71,9 @@ daic_woz:
     has_header: true
     delimiter: ","
     drop_columns: [frame, timestamp, confidence, success]  # OpenFace metadata cols
-    max_frames: 1000
-    frame_stride: 5
+    # 30 Hz x 900 s = ~27k frames; 10 x 3000 = 30k -> full session at 3 Hz.
+    max_frames: 3000
+    frame_stride: 10
     standardize: true
 
   text:

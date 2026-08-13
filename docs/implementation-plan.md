@@ -94,13 +94,14 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 1 — Centralized Multimodal Baseline Model (no federation, no privacy) (1–2 weeks)
 **Goal:** Establish a diagnostic accuracy baseline before federated/DP complexity is added.
-- [x] Audio encoder (lightweight projection → bi-GRU → masked mean-pool over acoustic-feature sequences; COVAREP on real data). `src/privchain/encoders/audio.py`, `sequence_encoder.py`.
+- [x] Audio encoder (session-level statistical functionals → MLP on real data; projection → bi-GRU → masked mean-pool also available. COVAREP features). `src/privchain/encoders/audio.py`, `sequence_encoder.py`, ADR-0012.
 - [x] Video encoder (same sequence encoder over facial-feature sequences; OpenFace AUs on real data). `src/privchain/encoders/video.py`.
 - [x] Text encoder (sequence encoder over transcript features; offline hashing / opt-in TF-IDF vectorizer on real data). `src/privchain/encoders/text.py`, `data/text_vectorizers.py`.
 - [x] Fusion layer (concat, with a forward-compatible per-sample presence mask) → binary classification head + optional PHQ-8 regression head. `src/privchain/fusion/`.
 - [x] Centralized training on mock data (config-driven, seeded, experiment logging). `src/privchain/training/`, `scripts/train_baseline.py`.
-- [x] Report F1 and ROC-AUC (pure-NumPy metrics). `src/privchain/eval/metrics.py`. _(On mock data these are meaningless by design — random-noise features; real numbers come once DAIC-WOZ is downloaded.)_
-- **Definition of Done:** The model trains/evaluates on mock data; once real data arrives, F1 and ROC-AUC are reportable. ✅ **Met** — 33 tests pass; `scripts/train_baseline.py` runs end-to-end and writes config + `metrics.jsonl` + checkpoint. Real DAIC-WOZ loader built (`src/privchain/data/daic_woz.py`, `configs/daic_woz.yaml`, ADR-0002) and unit-tested against a fabricated fixture; **not yet run against the real ~300 GB corpus** (pending download via the DUA link).
+- [x] Report F1 and ROC-AUC (pure-NumPy metrics). `src/privchain/eval/metrics.py`.
+- [x] **Trained and evaluated on the real DAIC-WOZ corpus** (downloaded 2026-08-13; 189 participants, 85.6 GB). Validation on the official dev split (n=34), class-weighted loss, session-level statistical encoder, hyperparameters swept over 3 seeds. ADR-0010 / ADR-0011 / ADR-0012.
+- **Definition of Done:** The model trains/evaluates on mock data; once real data arrives, F1 and ROC-AUC are reportable. ✅ **Met on real data** — 150 tests pass; `scripts/train_baseline.py --daic-config configs/daic_woz.yaml` runs end-to-end and writes config + `metrics.jsonl` + checkpoint. Real DAIC-WOZ dev results: **F1 = 0.560, ROC-AUC = 0.664** (seed 42; sweep mean over 3 seeds F1 = 0.588 ± 0.037), in the range the AVEC2017 baseline reports. Two defects were found and fixed on first contact with the real corpus: silently-zeroed test labels from a split-header mismatch, and a source-truncated archive for participant 440 (ADR-0010). The held-out test split remains untouched until the Chapter 4 table.
 
 ### Phase 2 — Simulating Heterogeneous Federated Clients with Flower (1 week)
 **Goal:** Build H2 without privacy and without blockchain — federation basics first.

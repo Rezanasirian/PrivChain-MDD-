@@ -11,6 +11,7 @@ from privchain.encoders.audio import AudioEncoder
 from privchain.encoders.sequence_encoder import (
     SequenceEncoder,
     masked_mean,
+    masked_statistics,
     reverse_padded,
 )
 from privchain.encoders.text import TextEncoder
@@ -26,7 +27,61 @@ def test_masked_mean_ignores_padding() -> None:
     assert torch.allclose(pooled, torch.tensor([[2.0, 2.0]]))
 
 
-@pytest.mark.parametrize("encoder_type", ["mean", "gru"])
+def test_masked_statistics_computes_functionals_over_the_valid_prefix() -> None:
+    """mean/std/min/max/delta are taken over real frames only, never padding."""
+    features = torch.tensor([[[1.0], [3.0], [5.0], [-99.0], [-99.0]]])  # 2 padded frames
+    lengths = torch.tensor([3])
+
+    stats = masked_statistics(features, lengths)
+
+    # One channel x 5 functionals, in order: mean, std, min, max, delta-mean.
+    assert stats.shape == (1, 5)
+    mean, std, minimum, maximum, delta = stats[0].tolist()
+    assert mean == pytest.approx(3.0)  # (1+3+5)/3
+    assert std == pytest.approx(1.632993, abs=1e-5)  # population std of [1,3,5]
+    assert minimum == pytest.approx(1.0)  # padding's -99 must not win
+    assert maximum == pytest.approx(5.0)
+    assert delta == pytest.approx(2.0)  # mean(|3-1|, |5-3|)
+
+
+def test_masked_statistics_ignores_extra_padding() -> None:
+    """Appending padding to a sample must not change its functionals."""
+    base = torch.randn(1, 6, 4)
+    lengths = torch.tensor([6])
+    padded = torch.cat([base, torch.full((1, 5, 4), 7.5)], dim=1)
+
+    assert torch.allclose(
+        masked_statistics(base, lengths), masked_statistics(padded, lengths), atol=1e-6
+    )
+
+
+def test_masked_statistics_handles_a_single_frame() -> None:
+    """A length-1 session has zero spread and no first differences."""
+    stats = masked_statistics(torch.tensor([[[2.0], [9.0]]]), torch.tensor([1]))
+    mean, std, minimum, maximum, delta = stats[0].tolist()
+    assert (mean, minimum, maximum) == pytest.approx((2.0, 2.0, 2.0))
+    assert std == pytest.approx(0.0, abs=1e-4)
+    assert delta == pytest.approx(0.0)
+
+
+def test_stats_encoder_is_independent_of_batch_mates() -> None:
+    """A stats embedding must not depend on what else shares its batch.
+
+    The DP path (Phase 3) relies on this for correct per-sample gradients.
+    """
+    config = EncoderConfig(type="stats", hidden_dim=16, out_dim=8, dropout=0.0)
+    encoder = SequenceEncoder(input_dim=3, config=config).eval()
+
+    sample = torch.randn(1, 5, 3)
+    alone = encoder(sample, torch.tensor([5]))
+
+    batched = torch.cat([sample, torch.randn(1, 5, 3)], dim=0)
+    together = encoder(batched, torch.tensor([5, 2]))[:1]
+
+    assert torch.allclose(alone, together, atol=1e-6)
+
+
+@pytest.mark.parametrize("encoder_type", ["mean", "gru", "stats"])
 def test_sequence_encoder_output_shape(encoder_type: str) -> None:
     config = EncoderConfig(type=encoder_type, hidden_dim=16, out_dim=8, dropout=0.0)
     encoder = SequenceEncoder(input_dim=5, config=config)

@@ -1,9 +1,16 @@
 """Shared masked sequence encoder for all modalities.
 
 Phase 1 (Centralized Multimodal Baseline). Each modality arrives as a padded
-float sequence ``(B, T, input_dim)`` plus true per-sample ``lengths``. This
-module projects, optionally runs a lightweight bidirectional GRU, and pools over
-*valid* (unpadded) timesteps into a fixed-size embedding ``(B, out_dim)``.
+float sequence ``(B, T, input_dim)`` plus true per-sample ``lengths``, and leaves
+as a fixed-size embedding ``(B, out_dim)``. Three encoder types share that
+contract (``EncoderConfig.type``):
+
+* ``stats`` — session-level statistical functionals (:func:`masked_statistics`)
+  followed by an MLP. This is the AVEC2017 DAIC-WOZ baseline representation and
+  the default for real-data runs: with 107 training sessions a recurrent model
+  over thousands of timesteps does not fit (ADR-0012).
+* ``mean`` — learned projection, then masked mean-pool.
+* ``gru`` — bidirectional recurrence, then masked mean-pool.
 
 The same building block backs the audio, video, and text encoders so they share
 masking/pooling behaviour; modality-specific subclasses live in
@@ -56,6 +63,51 @@ def masked_mean(features: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
     return summed / count
 
 
+def masked_statistics(features: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+    """Summarize a whole session into fixed-size statistical functionals.
+
+    Computes, per feature channel and over valid timesteps only, the **mean**,
+    **standard deviation**, **min**, **max**, and **mean absolute first
+    difference** (a coarse measure of temporal variability). This is the
+    "functionals over low-level descriptors" representation used by the AVEC2017
+    DAIC-WOZ baseline, and it is what makes the model tractable at this dataset
+    size — 107 training sessions cannot support a recurrent model over thousands
+    of timesteps (ADR-0012).
+
+    Every statistic is computed independently per sample from that sample's own
+    valid prefix, so an embedding never depends on its batch mates — the same
+    property the DP path requires of the recurrent encoders.
+
+    Args:
+        features: Padded tensor of shape ``(B, T, D)``.
+        lengths: True per-sample lengths, shape ``(B,)`` (all ``>= 1``).
+
+    Returns:
+        Tensor of shape ``(B, 5 * D)``.
+    """
+    time_steps = features.shape[1]
+    idx = torch.arange(time_steps, device=features.device).unsqueeze(0)  # (1, T)
+    valid = idx < lengths.unsqueeze(1)  # (B, T)
+    mask = valid.unsqueeze(-1).to(features.dtype)  # (B, T, 1)
+    count = mask.sum(dim=1).clamp(min=1.0)  # (B, 1)
+
+    mean = (features * mask).sum(dim=1) / count
+    variance = (((features - mean.unsqueeze(1)) ** 2) * mask).sum(dim=1) / count
+    std = torch.sqrt(variance + 1e-8)
+
+    # Padding must not win an extremum, so push it to the opposite infinity.
+    minimum = features.masked_fill(~valid.unsqueeze(-1), float("inf")).min(dim=1).values
+    maximum = features.masked_fill(~valid.unsqueeze(-1), float("-inf")).max(dim=1).values
+
+    # First differences are valid only where both endpoints are inside the prefix.
+    deltas = (features[:, 1:] - features[:, :-1]).abs()
+    delta_mask = (valid[:, 1:] & valid[:, :-1]).unsqueeze(-1).to(features.dtype)
+    delta_count = delta_mask.sum(dim=1).clamp(min=1.0)
+    delta_mean = (deltas * delta_mask).sum(dim=1) / delta_count
+
+    return torch.cat([mean, std, minimum, maximum, delta_mean], dim=-1)
+
+
 def reverse_padded(sequence: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
     """Reverse each sample's valid prefix in place, leaving right-padding put.
 
@@ -85,10 +137,16 @@ class SequenceEncoder(nn.Module):
         config: Encoder hyperparameters (type, dims, dropout).
     """
 
+    # Number of functionals produced per feature channel by `masked_statistics`.
+    NUM_STATISTICS = 5
+
     def __init__(self, input_dim: int, config: EncoderConfig) -> None:
         super().__init__()
         self.config = config
-        self.proj = nn.Linear(input_dim, config.hidden_dim)
+        # The `stats` encoder summarizes the raw sequence *before* projecting, so
+        # its projection consumes the concatenated functionals instead.
+        proj_in = input_dim * self.NUM_STATISTICS if config.type == "stats" else input_dim
+        self.proj = nn.Linear(proj_in, config.hidden_dim)
 
         if config.type == "gru":
             # Two unidirectional GRUs rather than one bidirectional one — see the
@@ -128,6 +186,13 @@ class SequenceEncoder(nn.Module):
         Returns:
             Embedding tensor of shape ``(B, out_dim)``.
         """
+        if self.config.type == "stats":
+            # Pool first: the session collapses to functionals, then an MLP.
+            summary = masked_statistics(sequence, lengths)  # (B, 5 * input_dim)
+            pooled = torch.relu(self.proj(summary))  # (B, hidden_dim)
+            stats_encoded: torch.Tensor = self.out(self.dropout(pooled))
+            return stats_encoded
+
         hidden = self.proj(sequence)  # (B, T, hidden_dim)
 
         if self.rnn is not None:

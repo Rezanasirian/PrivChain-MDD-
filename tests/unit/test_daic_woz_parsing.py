@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import torch
 
 from privchain.data.daic_woz import DaicWozDataset
 from privchain.data.mock_daic_woz import collate_fn
@@ -110,3 +111,84 @@ def test_samples_collate(daic_root: Path) -> None:
     assert batch["audio"].shape == (2, 6, 4)
     assert batch["label"].shape == (2,)
     assert batch["text_lengths"].tolist() == [1, 1]
+
+
+def test_feature_cache_is_written_and_reused(daic_root: Path) -> None:
+    """Parsed features are memoized, and a stride change invalidates the entry."""
+    config = _config(daic_root)
+    config["feature_cache_dir"] = "_feature_cache"
+    cache_dir = daic_root / "_feature_cache"
+
+    first = DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))
+    baseline_audio = first[0]["audio"].clone()
+    assert cache_dir.is_dir()
+    entries = {p.name for p in cache_dir.glob("*.npy")}
+    assert entries, "expected cached feature matrices"
+
+    # A second dataset reads the cache and yields identical tensors...
+    second = DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))
+    assert torch.equal(second[0]["audio"], baseline_audio)
+    assert {p.name for p in cache_dir.glob("*.npy")} == entries  # no new entries
+
+    # ...while changing a parsing option keys to a different entry.
+    config["audio"]["frame_stride"] = 2
+    DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))[0]
+    assert {p.name for p in cache_dir.glob("*.npy")} > entries
+
+
+def test_feature_cache_can_be_disabled(daic_root: Path) -> None:
+    """``feature_cache_dir: null`` writes nothing to disk."""
+    config = _config(daic_root)
+    config["feature_cache_dir"] = None
+
+    DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))[0]
+
+    assert not (daic_root / "_feature_cache").exists()
+
+
+def test_missing_label_column_raises_instead_of_zeroing_labels(daic_root: Path) -> None:
+    """A header mismatch must fail loudly, not silently read every label as 0.
+
+    The real AVEC2017 test split names its columns ``PHQ_Binary``/``PHQ_Score``
+    rather than ``PHQ8_*`` (ADR-0010).
+    """
+    config = _config(daic_root)
+    config["label_columns"]["phq_binary"] = "PHQ_Binary"  # not in the fixture header
+
+    with pytest.raises(ValueError, match="PHQ_Binary"):
+        DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))
+
+
+def test_split_label_columns_override_per_split(tmp_path: Path, daic_root: Path) -> None:
+    """A per-split override resolves the train/dev vs test header difference."""
+    _write(
+        daic_root / "full_test_split.csv",
+        "Participant_ID,PHQ_Binary,PHQ_Score\n300,1,11\n301,0,3\n",
+    )
+    config = _config(daic_root)
+    config["splits"]["test"] = "full_test_split.csv"
+    config["split_label_columns"] = {
+        "test": {
+            "participant_id": "Participant_ID",
+            "phq_binary": "PHQ_Binary",
+            "phq_score": "PHQ_Score",
+        }
+    }
+
+    ds = DaicWozDataset(config, split="test", text_vectorizer=HashingTextVectorizer(8))
+    assert [int(ds[i]["label"].item()) for i in range(len(ds))] == [1, 0]
+    assert [int(ds[i]["phq8_score"].item()) for i in range(len(ds))] == [11, 3]
+
+
+def test_excluded_participants_are_dropped(daic_root: Path) -> None:
+    """Sessions listed in ``exclude_participants`` never reach the split.
+
+    Participant 440's published archive is truncated at source and has no
+    transcript, so it is excluded from the dev split (ADR-0010).
+    """
+    config = _config(daic_root)
+    config["exclude_participants"] = [301]
+
+    ds = DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))
+    assert len(ds) == 1
+    assert int(ds[0]["phq8_score"].item()) == 4  # participant 300 only

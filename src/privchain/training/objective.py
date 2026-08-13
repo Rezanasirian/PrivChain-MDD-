@@ -38,13 +38,34 @@ class DepressionObjective:
     Args:
         phq8_max: Maximum PHQ-8 score, used to normalize the regression target.
         phq_loss_weight: Weight on the PHQ-8 regression MSE term (0 disables it).
+        pos_weight: Optional weight on the positive class in the BCE term,
+            counteracting DAIC-WOZ's ~28%-positive imbalance. Typically
+            ``n_negative / n_positive`` over the training split; ``None`` leaves
+            the loss unweighted.
     """
 
-    def __init__(self, phq8_max: int, phq_loss_weight: float) -> None:
-        self.bce = nn.BCEWithLogitsLoss()
+    def __init__(
+        self, phq8_max: int, phq_loss_weight: float, pos_weight: float | None = None
+    ) -> None:
+        self.bce = nn.BCEWithLogitsLoss(
+            pos_weight=None if pos_weight is None else torch.tensor(float(pos_weight))
+        )
         self.mse = nn.MSELoss()
         self.phq8_max = float(phq8_max)
         self.phq_loss_weight = phq_loss_weight
+        self.pos_weight = pos_weight
+
+    def to(self, device: torch.device) -> DepressionObjective:
+        """Move the loss's internal buffers (``pos_weight``) to ``device``.
+
+        Args:
+            device: Target device.
+
+        Returns:
+            The same instance, for chaining.
+        """
+        self.bce = self.bce.to(device)
+        return self
 
     def __call__(self, outputs: dict[str, torch.Tensor], batch: Batch) -> torch.Tensor:
         """Compute the combined loss for one batch.
@@ -62,6 +83,31 @@ class DepressionObjective:
             mse = cast("torch.Tensor", self.mse(outputs["phq_pred"], target))
             loss = loss + self.phq_loss_weight * mse
         return loss
+
+
+def positive_class_weight(loader: DataLoader[Sample]) -> float | None:
+    """Compute ``n_negative / n_positive`` over a loader's labels.
+
+    This is measured from the data rather than configured, so it stays correct
+    across splits, folds, and federated client shards.
+
+    Args:
+        loader: The training DataLoader to count labels over.
+
+    Returns:
+        The positive-class weight, or ``None`` when either class is absent (in
+        which case weighting is undefined and the loss is left unweighted).
+    """
+    positives = 0
+    total = 0
+    for batch in loader:
+        labels = batch["label"]
+        positives += int(labels.sum().item())
+        total += int(labels.numel())
+    negatives = total - positives
+    if positives == 0 or negatives == 0:
+        return None
+    return negatives / positives
 
 
 @torch.no_grad()

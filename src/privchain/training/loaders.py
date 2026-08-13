@@ -44,8 +44,9 @@ def build_train_val_loaders(
     train_config: TrainConfig,
     seed: int,
     dataset: Dataset[Sample] | None = None,
+    val_dataset: Dataset[Sample] | None = None,
 ) -> tuple[DataLoader[Sample], DataLoader[Sample]]:
-    """Build train/val DataLoaders over the mock dataset (or a provided one).
+    """Build train/val DataLoaders over the mock dataset (or provided ones).
 
     Args:
         data_config: Validated mock-data config (used to build the default
@@ -55,6 +56,9 @@ def build_train_val_loaders(
         dataset: Optional pre-built dataset (e.g., a real DAIC-WOZ dataset that
             follows the same :class:`Sample` contract). When ``None``, a
             :class:`MockDaicWozDataset` is constructed.
+        val_dataset: Optional dedicated validation set. When given, ``dataset``
+            is used for training in full and ``val_fraction`` is ignored — this
+            is how the official DAIC-WOZ dev split is wired in (ADR-0011).
 
     Returns:
         ``(train_loader, val_loader)`` yielding padded batches.
@@ -62,7 +66,11 @@ def build_train_val_loaders(
     if dataset is None:
         dataset = MockDaicWozDataset(data_config, seed=seed)
 
-    train_subset, val_subset = split_dataset(dataset, train_config.val_fraction, seed)
+    if val_dataset is not None:
+        train_subset: Dataset[Sample] = dataset
+        val_subset: Dataset[Sample] = val_dataset
+    else:
+        train_subset, val_subset = split_dataset(dataset, train_config.val_fraction, seed)
 
     train_loader: DataLoader[Sample] = DataLoader(
         train_subset,

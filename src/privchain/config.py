@@ -78,7 +78,11 @@ class DataConfig(_Strict):
 class EncoderConfig(_Strict):
     """Per-modality sequence-encoder hyperparameters (Phase 1)."""
 
-    type: Literal["mean", "gru"] = "gru"
+    # stats: AVEC2017-style functionals over the whole session (mean/std/min/max/
+    #        delta) then an MLP — the tractable choice at 107 training sessions.
+    # mean:  learned projection then masked mean-pool.
+    # gru:   bidirectional DPGRU over the sequence (needs far more data).
+    type: Literal["mean", "gru", "stats"] = "gru"
     hidden_dim: int = Field(gt=0)
     out_dim: int = Field(gt=0)
     bidirectional: bool = True
@@ -111,7 +115,11 @@ class ModelConfig(_Strict):
 
 
 class TrainConfig(_Strict):
-    """Centralized-training schema (Phase 1)."""
+    """Centralized-training schema (Phase 1).
+
+    ``val_fraction`` only applies when no dedicated validation set is supplied;
+    on real DAIC-WOZ the official dev split is used instead (ADR-0011).
+    """
 
     batch_size: int = Field(gt=0)
     epochs: int = Field(gt=0)
@@ -122,6 +130,21 @@ class TrainConfig(_Strict):
     output_dir: str = "experiments"
     run_name: str = "phase1_centralized_baseline"
 
+    # ── Class imbalance ──────────────────────────────────────────────────────
+    # DAIC-WOZ is ~28% positive; unweighted BCE collapses onto the majority
+    # class (F1 = 0). When true, the BCE positive class is weighted by
+    # neg/pos counted from the training split (ADR-0011).
+    class_weighting: bool = False
+
+    # ── Model selection / early stopping ─────────────────────────────────────
+    # Metric used to pick the best checkpoint and to drive early stopping.
+    selection_metric: Literal["roc_auc", "f1"] = "roc_auc"
+    # Stop after this many epochs without improvement; None disables it.
+    early_stopping_patience: int | None = Field(default=None, gt=0)
+
+    # ``auto`` selects CUDA when available, else CPU.
+    device: Literal["auto", "cpu", "cuda"] = "cpu"
+
 
 class BaselineConfig(_Strict):
     """Top-level schema for ``configs/baseline.yaml``."""
@@ -130,6 +153,23 @@ class BaselineConfig(_Strict):
     data: DataConfig
     model: ModelConfig
     train: TrainConfig
+
+
+def resolve_device(device: str) -> str:
+    """Resolve a configured device string to a concrete torch device.
+
+    Args:
+        device: ``"auto"``, ``"cpu"``, or ``"cuda"``. ``"auto"`` selects CUDA
+            when it is available and falls back to CPU otherwise.
+
+    Returns:
+        Either ``"cuda"`` or ``"cpu"``.
+    """
+    if device != "auto":
+        return device
+    import torch  # imported here so config loading stays torch-free
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def modality_input_dims(data: DataConfig) -> dict[str, int]:

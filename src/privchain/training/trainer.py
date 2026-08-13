@@ -32,6 +32,8 @@ class CentralizedTrainer:
         phq8_max: Maximum PHQ-8 score, used to normalize the regression target.
         phq_loss_weight: Weight on the PHQ-8 regression MSE term.
         device: Torch device string (default ``"cpu"``).
+        pos_weight: Optional positive-class weight for the BCE term; see
+            :func:`~privchain.training.objective.positive_class_weight`.
     """
 
     def __init__(
@@ -43,13 +45,14 @@ class CentralizedTrainer:
         phq8_max: int,
         phq_loss_weight: float,
         device: str = "cpu",
+        pos_weight: float | None = None,
     ) -> None:
         self.device = torch.device(device)
         self.model = model.to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
-        self.objective = DepressionObjective(phq8_max, phq_loss_weight)
+        self.objective = DepressionObjective(phq8_max, phq_loss_weight, pos_weight).to(self.device)
 
     def train_epoch(self, loader: DataLoader[Sample]) -> float:
         """Run one training epoch.
@@ -92,17 +95,23 @@ class CentralizedTrainer:
         *,
         epochs: int,
         run_dir: Path,
+        selection_metric: str = "roc_auc",
+        early_stopping_patience: int | None = None,
     ) -> list[dict[str, Any]]:
-        """Train for ``epochs`` epochs, logging metrics and the best checkpoint.
+        """Train for up to ``epochs`` epochs, logging metrics and the best checkpoint.
 
-        The best checkpoint (by validation ROC-AUC, falling back to F1 when AUC
-        is undefined) is saved to ``<run_dir>/best_model.pt``.
+        The best checkpoint (by ``selection_metric``, falling back to F1 when
+        that metric is undefined) is saved to ``<run_dir>/best_model.pt``.
 
         Args:
             train_loader: Training DataLoader.
             val_loader: Validation DataLoader.
-            epochs: Number of epochs.
+            epochs: Maximum number of epochs.
             run_dir: Experiment run directory for logs/checkpoints.
+            selection_metric: Validation metric used to select the best
+                checkpoint and to drive early stopping (``"roc_auc"``/``"f1"``).
+            early_stopping_patience: Stop after this many consecutive epochs
+                without improvement; ``None`` trains the full ``epochs``.
 
         Returns:
             Per-epoch history records.
@@ -110,6 +119,7 @@ class CentralizedTrainer:
         logger = JsonlMetricLogger(run_dir / "metrics.jsonl")
         history: list[dict[str, Any]] = []
         best_score = -float("inf")
+        epochs_without_improvement = 0
 
         for epoch in range(1, epochs + 1):
             train_loss = self.train_epoch(train_loader)
@@ -120,11 +130,19 @@ class CentralizedTrainer:
             logger.log(record)
             history.append(record)
 
-            selector = val_metrics["roc_auc"]
+            selector = val_metrics[selection_metric]
             if np.isnan(selector):
                 selector = val_metrics["f1"]
             if selector > best_score:
                 best_score = selector
+                epochs_without_improvement = 0
                 torch.save(self.model.state_dict(), run_dir / "best_model.pt")
+            else:
+                epochs_without_improvement += 1
+                if (
+                    early_stopping_patience is not None
+                    and epochs_without_improvement >= early_stopping_patience
+                ):
+                    break
 
         return history

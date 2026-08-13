@@ -37,11 +37,14 @@ data:
 # model config works for mock and real DAIC-WOZ features.
 model:
   encoder:
-    type: gru            # mean | gru (lightweight per-modality sequence encoder)
+    # stats: AVEC2017-style session functionals + MLP. The default for real data —
+    #        a GRU over ~3000 timesteps does not fit on 107 sessions (ADR-0012).
+    # mean | gru: projection+mean-pool, or bidirectional DPGRU.
+    type: stats
     hidden_dim: 64
     out_dim: 64
-    bidirectional: true
-    dropout: 0.1
+    bidirectional: true  # only read by the `gru` encoder
+    dropout: 0.3         # small dataset: regularize harder than the mock default
   fusion:
     type: concat         # concatenate per-modality embeddings
     hidden_dim: 128
@@ -54,11 +57,30 @@ model:
 
 # ── Training (Phase 1: centralized, no federation, no privacy) ───────────────
 train:
-  batch_size: 8
-  epochs: 5
+  # 107 real training sessions; 32 gives ~4 steps/epoch and keeps the GPU busy
+  # on the long (3000-step) sequences without starving gradient updates.
+  batch_size: 32
+  epochs: 200                # upper bound; early stopping usually ends sooner
   learning_rate: 0.001
   weight_decay: 0.0001
+  # Only used when no dedicated validation set is supplied (i.e. mock runs).
+  # Real DAIC-WOZ runs validate on the official dev split — see ADR-0011.
   val_fraction: 0.25
   num_workers: 0
   output_dir: experiments
   run_name: phase1_centralized_baseline
+
+  # DAIC-WOZ is ~28% positive; without this the BCE loss collapses onto the
+  # majority class and F1 is exactly 0. The weight (neg/pos) is counted from
+  # the training split at runtime, not hardcoded here.
+  class_weighting: true
+
+  # Model selection + early stopping. F1 is the headline DAIC-WOZ/AVEC2017
+  # metric, and selecting on ROC-AUC was actively harmful here: it kept picking
+  # epoch 1, whose F1 was 0, and stopped the run before the loss had converged
+  # (ADR-0012). Patience is generous because dev has only 34 sessions, so the
+  # per-epoch metric is noisy.
+  selection_metric: f1
+  early_stopping_patience: 40
+
+  device: auto               # auto | cpu | cuda

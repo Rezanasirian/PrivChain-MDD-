@@ -23,6 +23,8 @@ before relying on the numbers. See ADR-0002.
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -102,6 +104,49 @@ def _load_feature_matrix(
     return matrix
 
 
+def _cached_feature_matrix(
+    path: Path, cache_dir: Path | None, **options: Any
+) -> NDArray[np.float32]:
+    """Load a feature matrix, memoizing the parsed result on disk.
+
+    Parsing dominates runtime: a COVAREP file is ~36 MB and ~90k rows, and the
+    subsampling loop must read every row to keep every ``frame_stride``-th one.
+    Re-parsing on every run made experiment iteration cost minutes (ADR-0012),
+    so the subsampled matrix is written to ``cache_dir`` once.
+
+    The cache key includes all parsing options, so changing ``frame_stride``,
+    ``max_frames``, or ``standardize`` produces a different entry rather than
+    silently reusing a stale one.
+
+    Args:
+        path: Feature file path.
+        cache_dir: Directory for cached ``.npy`` files; ``None`` disables caching.
+        **options: Parsing options forwarded to :func:`_load_feature_matrix`.
+
+    Returns:
+        Float32 matrix of shape ``(T, D)``.
+    """
+    if cache_dir is None:
+        return _load_feature_matrix(path, **options)
+
+    key = json.dumps(options, sort_keys=True, default=str)
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+    cache_path = cache_dir / f"{path.stem}.{digest}.npy"
+
+    if cache_path.is_file():
+        cached: NDArray[np.float32] = np.load(cache_path)
+        return cached
+
+    matrix = _load_feature_matrix(path, **options)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    # Write via a temp file so a crash mid-write cannot leave a truncated cache
+    # entry that later runs would happily load.
+    tmp_path = cache_path.with_suffix(".tmp.npy")
+    np.save(tmp_path, matrix)
+    tmp_path.replace(cache_path)
+    return matrix
+
+
 def _read_participant_transcript(
     path: Path, *, delimiter: str, speaker_column: str, value_column: str, participant_speaker: str
 ) -> str:
@@ -133,35 +178,60 @@ def _read_participant_transcript(
 
 
 def _read_split_labels(
-    path: Path, *, participant_col: str, binary_col: str, score_col: str
+    path: Path,
+    *,
+    participant_col: str,
+    binary_col: str,
+    score_col: str,
+    exclude: frozenset[int] = frozenset(),
 ) -> list[dict[str, int]]:
     """Read a split CSV into per-participant label records.
+
+    The configured columns must actually be present in the file. The AVEC2017
+    distribution names them inconsistently across splits (``PHQ8_Binary`` in
+    train/dev vs ``PHQ_Binary`` in ``full_test_split.csv``), and a missing
+    column silently defaulting to ``0`` would zero out every test label — so a
+    mismatch is raised rather than absorbed (ADR-0010).
 
     Args:
         path: Split label CSV (e.g., ``train_split_Depression_AVEC2017.csv``).
         participant_col: Header name of the participant-ID column.
         binary_col: Header name of the PHQ-8 binary label column.
         score_col: Header name of the PHQ-8 score column.
+        exclude: Participant IDs to drop (e.g., sessions with corrupt media).
 
     Returns:
         List of ``{"pid", "label", "score"}`` records.
 
     Raises:
         FileNotFoundError: If ``path`` does not exist.
+        ValueError: If a configured label column is absent from the CSV header.
     """
     if not path.is_file():
         raise FileNotFoundError(f"DAIC-WOZ split file not found: {path}")
     records: list[dict[str, int]] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
+        header = [name.strip() for name in (reader.fieldnames or [])]
+        missing = [c for c in (participant_col, binary_col, score_col) if c not in header]
+        if missing:
+            raise ValueError(
+                f"{path.name}: configured label column(s) {missing} not found. "
+                f"Header is {header}. Fix `label_columns` (or add a "
+                f"`split_label_columns` override) in configs/daic_woz.yaml."
+            )
+
         for row in reader:
             pid_raw = (row.get(participant_col) or "").strip()
             if not pid_raw:
                 continue
+            pid = int(float(pid_raw))
+            if pid in exclude:
+                continue
             score_raw = (row.get(score_col) or "0").strip() or "0"
             records.append(
                 {
-                    "pid": int(float(pid_raw)),
+                    "pid": pid,
                     "label": int(float((row.get(binary_col) or "0").strip() or "0")),
                     "score": int(float(score_raw)),
                 }
@@ -194,14 +264,23 @@ class DaicWozDataset(Dataset[Sample]):
         self._video_cfg = config["video"]
         self._text_cfg = config["text"]
         self._dir_template = config.get("participant_dir_template", "{pid}_P")
+        # Parsed-feature memoization; set `feature_cache_dir: null` to disable.
+        cache_name = config.get("feature_cache_dir", "_feature_cache")
+        self._cache_dir = self._root / cache_name if cache_name else None
 
-        label_cols = config["label_columns"]
+        # Per-split header overrides layer on top of the defaults: the AVEC2017
+        # test split uses PHQ_Binary/PHQ_Score rather than PHQ8_* (ADR-0010).
+        label_cols = dict(config["label_columns"])
+        label_cols.update(dict(config.get("split_label_columns", {}).get(split, {})))
+        self._excluded = frozenset(int(p) for p in config.get("exclude_participants", []))
+
         split_path = self._root / config["splits"][split]
         self._records = _read_split_labels(
             split_path,
             participant_col=label_cols["participant_id"],
             binary_col=label_cols["phq_binary"],
             score_col=label_cols["phq_score"],
+            exclude=self._excluded,
         )
 
         self._vectorizer: TextVectorizer = text_vectorizer or HashingTextVectorizer(
@@ -222,8 +301,9 @@ class DaicWozDataset(Dataset[Sample]):
 
     def _load_audio(self, pid: int) -> NDArray[np.float32]:
         cfg = self._audio_cfg
-        return _load_feature_matrix(
+        return _cached_feature_matrix(
             self._file(pid, cfg["file_template"]),
+            self._cache_dir,
             delimiter=cfg.get("delimiter", ","),
             has_header=cfg.get("has_header", False),
             drop_columns=cfg.get("drop_columns", []),
@@ -234,8 +314,9 @@ class DaicWozDataset(Dataset[Sample]):
 
     def _load_video(self, pid: int) -> NDArray[np.float32]:
         cfg = self._video_cfg
-        return _load_feature_matrix(
+        return _cached_feature_matrix(
             self._file(pid, cfg["file_template"]),
+            self._cache_dir,
             delimiter=cfg.get("delimiter", ","),
             has_header=cfg.get("has_header", True),
             drop_columns=cfg.get("drop_columns", []),
