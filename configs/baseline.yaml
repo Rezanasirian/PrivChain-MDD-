@@ -41,10 +41,22 @@ model:
     #        a GRU over ~3000 timesteps does not fit on 107 sessions (ADR-0012).
     # mean | gru: projection+mean-pool, or bidirectional DPGRU.
     type: stats
-    hidden_dim: 64
-    out_dim: 64
+    # Swept over lr x hidden x dropout, 3 seeds each, on transformer text
+    # features (ADR-0014). This point ties for best mean dev F1 and was the most
+    # stable — identical F1 across all three seeds — which matters because every
+    # later phase re-runs this model many times.
+    hidden_dim: 128
+    out_dim: 128
     bidirectional: true  # only read by the `gru` encoder
     dropout: 0.3         # small dataset: regularize harder than the mock default
+
+  # Text arrives as one document-level embedding, i.e. a length-1 "sequence".
+  # Session functionals are degenerate there (mean = min = max = the vector,
+  # std = delta = 0), so `stats` would quintuple the text encoder's parameters
+  # for no extra information. A plain projection is the right pooling. ADR-0014.
+  encoder_overrides:
+    text:
+      type: mean
   fusion:
     type: concat         # concatenate per-modality embeddings
     hidden_dim: 128
@@ -61,7 +73,7 @@ train:
   # on the long (3000-step) sequences without starving gradient updates.
   batch_size: 32
   epochs: 200                # upper bound; early stopping usually ends sooner
-  learning_rate: 0.001
+  learning_rate: 0.0003      # swept; see ADR-0014
   weight_decay: 0.0001
   # Only used when no dedicated validation set is supplied (i.e. mock runs).
   # Real DAIC-WOZ runs validate on the official dev split — see ADR-0011.

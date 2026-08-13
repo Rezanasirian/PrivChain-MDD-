@@ -113,6 +113,25 @@ def test_samples_collate(daic_root: Path) -> None:
     assert batch["text_lengths"].tolist() == [1, 1]
 
 
+def test_loader_honours_the_configured_vectorizer(daic_root: Path) -> None:
+    """The `text.vectorizer` key selects the vectorizer; it used to be ignored."""
+    config = _config(daic_root)
+    config["text"]["vectorizer"] = "tfidf"  # documented once, never implemented
+
+    with pytest.raises(ValueError, match="tfidf"):
+        DaicWozDataset(config, split="train")
+
+
+def test_explicit_vectorizer_overrides_the_config(daic_root: Path) -> None:
+    """An injected vectorizer wins over the config, so tests stay offline."""
+    config = _config(daic_root)
+    config["text"]["vectorizer"] = "transformer"  # would need network weights
+
+    ds = DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))
+
+    assert ds.feature_dims["text"] == 8
+
+
 def test_feature_cache_is_written_and_reused(daic_root: Path) -> None:
     """Parsed features are memoized, and a stride change invalidates the entry."""
     config = _config(daic_root)

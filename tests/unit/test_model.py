@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import torch
 
 from privchain.config import (
@@ -93,3 +94,45 @@ def test_model_is_differentiable() -> None:
     loss.backward()
     grads = [p.grad for p in model.parameters() if p.requires_grad]
     assert any(g is not None and torch.any(g != 0) for g in grads)
+
+
+def _override_config(**kwargs: object) -> ModelConfig:
+    return ModelConfig(
+        encoder=EncoderConfig(type="stats", hidden_dim=8, out_dim=8, dropout=0.0),
+        fusion=FusionConfig(hidden_dim=16),
+        head=HeadConfig(hidden_dim=8),
+        **kwargs,  # type: ignore[arg-type]
+    )
+
+
+def test_encoder_for_returns_the_shared_config_without_overrides() -> None:
+    config = _override_config()
+    assert config.encoder_for("text") is config.encoder
+
+
+def test_encoder_for_applies_a_partial_override() -> None:
+    """An override changes only the named fields; the rest are inherited."""
+    config = _override_config(encoder_overrides={"text": {"type": "mean"}})
+
+    text_cfg = config.encoder_for("text")
+    assert text_cfg.type == "mean"
+    assert text_cfg.hidden_dim == config.encoder.hidden_dim  # inherited
+    assert config.encoder_for("audio").type == "stats"  # untouched
+
+
+def test_encoder_for_validates_the_override() -> None:
+    config = _override_config(encoder_overrides={"text": {"type": "not-an-encoder"}})
+    with pytest.raises(ValueError, match="type"):
+        config.encoder_for("text")
+
+
+def test_model_builds_a_different_encoder_per_modality() -> None:
+    """The text override reaches the constructed model, not just the config."""
+    config = _override_config(encoder_overrides={"text": {"type": "mean"}})
+    model = MultimodalDepressionModel({"audio": 5, "video": 4, "text": 9}, config)
+
+    assert model.encoders["audio"].config.type == "stats"
+    assert model.encoders["text"].config.type == "mean"
+    # `stats` projects from 5 functionals per channel, `mean` straight from the dim.
+    assert model.encoders["audio"].proj.in_features == 5 * 5
+    assert model.encoders["text"].proj.in_features == 9

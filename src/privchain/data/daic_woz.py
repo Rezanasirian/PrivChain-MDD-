@@ -34,7 +34,7 @@ from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 from privchain.data.mock_daic_woz import Sample
-from privchain.data.text_vectorizers import HashingTextVectorizer, TextVectorizer
+from privchain.data.text_vectorizers import TextVectorizer, build_text_vectorizer
 
 
 def _load_feature_matrix(
@@ -283,8 +283,11 @@ class DaicWozDataset(Dataset[Sample]):
             exclude=self._excluded,
         )
 
-        self._vectorizer: TextVectorizer = text_vectorizer or HashingTextVectorizer(
-            int(self._text_cfg["dim"]), seed=int(config.get("seed", 0))
+        # An explicitly supplied vectorizer wins (tests inject one); otherwise the
+        # `text.vectorizer` config key decides. That key used to be ignored, so a
+        # config asking for anything but hashing silently got hashing.
+        self._vectorizer: TextVectorizer = text_vectorizer or build_text_vectorizer(
+            self._text_cfg, seed=int(config.get("seed", 0))
         )
         self._cache: dict[int, Sample] | None = {} if cache else None
         self.phq8_max: int = int(config.get("phq8_max", 24))
@@ -327,14 +330,42 @@ class DaicWozDataset(Dataset[Sample]):
 
     def _load_text(self, pid: int) -> NDArray[np.float32]:
         cfg = self._text_cfg
+        path = self._file(pid, cfg["file_template"])
+
+        # Transformer embeddings cost a GPU forward pass per session, so the
+        # result is memoized like the audio/video matrices. The key covers the
+        # vectorizer identity, so switching model or back to hashing does not
+        # reuse the wrong vectors.
+        cache_path: Path | None = None
+        if self._cache_dir is not None:
+            identity = {
+                "vectorizer": cfg.get("vectorizer", "hashing"),
+                "dim": self._vectorizer.dim,
+                "options": cfg.get("transformer", {}),
+                "speaker": cfg.get("participant_speaker", "Participant"),
+            }
+            key = json.dumps(identity, sort_keys=True, default=str)
+            digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+            cache_path = self._cache_dir / f"{path.stem}.text.{digest}.npy"
+            if cache_path.is_file():
+                cached: NDArray[np.float32] = np.load(cache_path)
+                return cached
+
         document = _read_participant_transcript(
-            self._file(pid, cfg["file_template"]),
+            path,
             delimiter=cfg.get("delimiter", "\t"),
             speaker_column=cfg.get("speaker_column", "speaker"),
             value_column=cfg.get("value_column", "value"),
             participant_speaker=cfg.get("participant_speaker", "Participant"),
         )
-        return self._vectorizer.transform(document)
+        vector = self._vectorizer.transform(document)
+
+        if cache_path is not None:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)  # type: ignore[union-attr]
+            tmp_path = cache_path.with_suffix(".tmp.npy")
+            np.save(tmp_path, vector)
+            tmp_path.replace(cache_path)
+        return vector
 
     def _infer_feature_dims(self) -> dict[str, int]:
         """Infer per-modality feature dims from the first available session."""

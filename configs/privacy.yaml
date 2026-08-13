@@ -36,4 +36,9 @@ privacy:
   # per-modality target epsilon, trains DP-SGD, and records accuracy.
   sweep:
     target_epsilons: [0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
-    epochs: 3
+    # Epochs is a *privacy* parameter, not just a compute one: more steps means
+    # more mechanism applications, so the accountant calibrates more noise for
+    # the same target epsilon. The non-private baseline needed ~79 epochs to
+    # converge (ADR-0012), so 3 would have starved DP-SGD for reasons unrelated
+    # to privacy and overstated the cost of DP.
+    epochs: 60

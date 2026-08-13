@@ -108,10 +108,30 @@ class ModelConfig(_Strict):
     """Multimodal baseline-model schema (Phase 1)."""
 
     encoder: EncoderConfig
+    # Partial per-modality overrides layered onto `encoder`, e.g. giving text a
+    # different encoder type. Text arrives as a document-level embedding (a
+    # length-1 "sequence"), where session functionals are degenerate — see
+    # `encoder_for` and ADR-0014.
+    encoder_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
     fusion: FusionConfig
     head: HeadConfig
     use_phq_regression: bool = True
     phq_loss_weight: float = Field(default=0.1, ge=0.0)
+
+    def encoder_for(self, modality: str) -> EncoderConfig:
+        """Return the encoder config for one modality, applying any override.
+
+        Args:
+            modality: ``"audio"``, ``"video"``, or ``"text"``.
+
+        Returns:
+            The base encoder config, or a validated copy with the modality's
+            overrides applied.
+        """
+        override = self.encoder_overrides.get(modality)
+        if not override:
+            return self.encoder
+        return EncoderConfig.model_validate({**self.encoder.model_dump(), **override})
 
 
 class TrainConfig(_Strict):

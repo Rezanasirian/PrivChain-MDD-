@@ -37,14 +37,16 @@ class MultimodalDepressionModel(nn.Module):
     def __init__(self, input_dims: dict[str, int], config: ModelConfig) -> None:
         super().__init__()
         self.config = config
+        # Each modality may override the shared encoder config (ADR-0014).
+        encoder_configs = {modality: config.encoder_for(modality) for modality in MODALITIES}
         self.encoders = nn.ModuleDict(
             {
-                "audio": AudioEncoder(input_dims["audio"], config.encoder),
-                "video": VideoEncoder(input_dims["video"], config.encoder),
-                "text": TextEncoder(input_dims["text"], config.encoder),
+                "audio": AudioEncoder(input_dims["audio"], encoder_configs["audio"]),
+                "video": VideoEncoder(input_dims["video"], encoder_configs["video"]),
+                "text": TextEncoder(input_dims["text"], encoder_configs["text"]),
             }
         )
-        modality_dims = {modality: config.encoder.out_dim for modality in MODALITIES}
+        modality_dims = {modality: encoder_configs[modality].out_dim for modality in MODALITIES}
         self.fusion = ConcatFusion(modality_dims, config.fusion.hidden_dim, config.fusion.dropout)
 
         self.classifier = nn.Sequential(

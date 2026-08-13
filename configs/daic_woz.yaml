@@ -82,5 +82,15 @@ daic_woz:
     speaker_column: speaker
     value_column: value
     participant_speaker: Participant     # keep only the participant's turns
-    vectorizer: hashing                  # hashing (offline) | tfidf (sklearn)
-    dim: 512
+
+    # hashing: pure-NumPy bag-of-words, no downloads (used by CI and mock runs).
+    # transformer: contextual embeddings. Text is the strongest DAIC-WOZ
+    #   modality and hashing throws away word order and context, so real runs
+    #   use this — see ADR-0014.
+    vectorizer: transformer
+    dim: 512                             # hashing only; transformer uses its hidden size
+    transformer:
+      model_name: sentence-transformers/all-mpnet-base-v2
+      max_length: 384                    # tokens per chunk; the session is chunked and averaged
+      batch_size: 16
+      device: auto
