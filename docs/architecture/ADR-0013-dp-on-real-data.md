@@ -246,3 +246,44 @@ sampling rate to `q = 1` changed little once the threshold was tuned.
   is a direct argument for the federated setting (H2) where the effective
   dataset spans institutions. It must be stated as a finding, not hidden behind
   a flat curve.
+
+---
+
+## Amendment, 2026-08-13 (ADR-0020) — the decomposition is withdrawn
+
+This ADR split the cost of DP into three attributed components:
+
+```
+baseline                     0.740
+DP path, sigma=0, C=1e6      0.689   (-0.051  path structure)
+DP path, sigma=0, C=0.1      0.596   (-0.093  per-sample clipping)
+eps=8                        0.572   (-0.024  noise)
+eps=0.5                      0.480   (-0.116  noise)
+```
+
+and drew the headline that per-sample clipping costs about as much as tightening
+ε from ∞ to 0.5 — that most of the price of DP is paid before any noise is added.
+
+**The end-to-end figure stands.** 0.740 → 0.480 is a 0.26 drop, far larger than
+the 34-session noise floor, and it is the number Chapter 4 should quote for the
+cost of DP on this corpus.
+
+**The attribution does not.** Each individual step (−0.051, −0.093, −0.024) sits
+below the ±0.19 sampling uncertainty of a 34-session dev split (ADR-0020). The
+re-run confirms it directly: the DP path at σ = 0 has a 95% bootstrap interval of
+[0.378, 0.788] against the baseline's [0.526, 0.916] — heavily overlapping. Three
+numbers that each fall inside the noise cannot carry a claim about which of them
+is largest.
+
+The qualitative reading — that clipping rather than noise dominates the cost on a
+corpus this small — remains the most plausible interpretation of the evidence and
+a reasonable hypothesis to state as such. It is **not** a measurement, and it must
+not appear in Chapter 4 as one.
+
+Per the decision taken before this work, it is withdrawn rather than re-run at
+higher seed count: more seeds shrink optimization variance, which was never the
+binding constraint. Resolving this needs more *participants*, not more seeds.
+
+The clipping-norm tuning recorded above (C = 0.1, chosen because 0.01–0.5 were
+"equivalent to within the noise of a 21-session split") is unaffected — it was
+already reported as a mid-range pick rather than a fitted optimum.

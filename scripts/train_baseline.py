@@ -31,6 +31,7 @@ from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
     DepressionObjective,
+    collect_scores,
     evaluate_with_selected_threshold,
     positive_class_weight,
 )
@@ -40,6 +41,7 @@ from privchain.training.protocol import (
     format_aggregate,
     make_loader,
     repeat_over_seeds,
+    uncertainty_report,
 )
 from privchain.training.trainer import CentralizedTrainer
 
@@ -130,14 +132,20 @@ def main() -> None:
             ),
             torch.device(device),
         )
+        scores, labels = collect_scores(model, report_loader, torch.device(device))
         return RunResult(
             metrics=metrics,
             best_epoch=int(best["epoch"]),
             epochs_run=len(history),
             threshold=metrics["threshold"],
+            scores=scores,
+            labels=labels,
         )
 
     aggregate, results = repeat_over_seeds(run_once, seeds)
+    # Seed spread is optimization variance on a fixed split; this is how far the
+    # number would move on a different sample of participants (ADR-0020).
+    aggregate.update(uncertainty_report(results))
     (run_dir / "summary.json").write_text(
         json.dumps(
             {
@@ -173,6 +181,12 @@ def main() -> None:
     print(
         f"Reported on the dev split over {len(seeds)} seeds — "
         f"{format_aggregate(aggregate, REPORTED)}"
+    )
+    print(
+        f"ROC-AUC 95% bootstrap CI over participants: "
+        f"[{aggregate['roc_auc_ci_low']:.3f}, {aggregate['roc_auc_ci_high']:.3f}] "
+        f"(width {aggregate['roc_auc_ci_width']:.3f}) — the seed spread above is much "
+        f"narrower because it does not include sampling uncertainty."
     )
 
 

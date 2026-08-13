@@ -44,7 +44,12 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset
 
-from privchain.config import load_attack_config, load_baseline_config, resolve_device
+from privchain.config import (
+    load_attack_config,
+    load_baseline_config,
+    load_privacy_config,
+    resolve_device,
+)
 from privchain.data.mock_daic_woz import Sample
 from privchain.eval.session_views import (
     ModalityViews,
@@ -72,6 +77,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Per-modality re-identification risk (Phase 6).")
     parser.add_argument("--config", type=Path, default=Path("configs/baseline.yaml"))
     parser.add_argument("--attack-config", type=Path, default=Path("configs/attack.yaml"))
+    parser.add_argument("--privacy-config", type=Path, default=Path("configs/privacy.yaml"))
     parser.add_argument(
         "--daic-config",
         type=Path,
@@ -79,6 +85,17 @@ def main() -> None:
         help="Real DAIC-WOZ config; without it the mock corpus is used (smoke test).",
     )
     parser.add_argument("--seeds", type=int, nargs="+", default=None)
+    parser.add_argument(
+        "--normalization",
+        choices=("session", "corpus", "none"),
+        default=None,
+        help=(
+            "Override audio/video feature normalization (ADR-0019). `session` "
+            "z-scores within each session, deleting the absolute pitch, formant "
+            "and energy levels a speaker-identification attacker relies on — so "
+            "it makes this measurement an underestimate for audio and video."
+        ),
+    )
     parser.add_argument(
         "--skip-encoded",
         action="store_true",
@@ -88,10 +105,17 @@ def main() -> None:
 
     config = load_baseline_config(args.config)
     seg = load_attack_config(args.attack_config).attack.segments
+    privacy = load_privacy_config(args.privacy_config).privacy
+    configured_risk = {m: privacy.per_modality[m].reidentification_risk for m in MODALITIES}
     seeds = args.seeds if args.seeds else config.train.seeds
     seed_everything(config.seed)
 
-    splits, input_dims = build_splits(config, args.daic_config)
+    overrides = (
+        {m: {"normalization": args.normalization} for m in ("audio", "video")}
+        if args.normalization
+        else None
+    )
+    splits, input_dims = build_splits(config, args.daic_config, daic_overrides=overrides)
     device = torch.device(resolve_device(config.train.device))
     grouped: dict[str, Dataset[Sample]] = {
         "train": splits.train,
@@ -112,7 +136,14 @@ def main() -> None:
         cursor += size
 
     run_dir = create_run_dir(config.train.output_dir, "phase6", "phase6_reid_risk")
-    save_config(run_dir, {"baseline": config.model_dump(), "segments": seg.model_dump()})
+    save_config(
+        run_dir,
+        {
+            "baseline": config.model_dump(),
+            "segments": seg.model_dump(),
+            "daic_overrides": overrides,
+        },
+    )
 
     def views_for(modality: str, encoder: torch.nn.Module | None) -> ModalityViews:
         """Build one modality's views across all three splits as a single pool."""
@@ -242,11 +273,15 @@ def main() -> None:
             "pca_dim": seg.pca_dim,
             "seeds": list(seeds),
             "splits_pooled": list(GROUP_NAMES),
+            "normalization": args.normalization or "(config default)",
             "note": "test split untouched; no DP applied — this is the unprotected risk",
         },
         "chance_accuracy": chance,
         "feature_widths": widths,
-        "assumed_reidentification_risk": {"audio": 0.9, "video": 0.6, "text": 0.3},
+        # Read from the config rather than pinned here: these values were
+        # assumptions until ADR-0017 replaced them with measurements, and a
+        # hardcoded copy would keep reporting a baseline that no longer exists.
+        "configured_reidentification_risk": configured_risk,
         "measured": report,
         "negative_control_shuffled_labels": control,
         "skipped_subjects": skipped,
@@ -256,7 +291,7 @@ def main() -> None:
     )
     _plot(report, chance, run_dir / "reidentification_risk.png")
 
-    _print_table(report, widths, chance, control, skipped)
+    _print_table(report, widths, chance, control, skipped, configured_risk)
     print(f"\nWrote {run_dir / 'reidentification_risk.json'}")
 
 
@@ -266,6 +301,7 @@ def _print_table(
     chance: float,
     control: dict[str, float],
     skipped: dict[str, list[int]],
+    configured_risk: dict[str, float],
 ) -> None:
     """Print the measured table and the ordering it implies."""
     print(f"\nchance accuracy = {chance:.4f}  (1 / candidate pool)")
@@ -291,7 +327,11 @@ def _print_table(
         )
         if ranked:
             print(f"measured ordering ({label}): " + " > ".join(ranked))
-    print("assumed ordering (configs/privacy.yaml): audio > video > text")
+    configured_order = sorted(configured_risk, key=lambda m: -configured_risk[m])
+    print(
+        "configured ordering (configs/privacy.yaml): "
+        + " > ".join(f"{m}({configured_risk[m]:.2f})" for m in configured_order)
+    )
     print(
         "negative control (shuffled labels): "
         + "  ".join(f"{m}={a:.4f}" for m, a in control.items())

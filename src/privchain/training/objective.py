@@ -11,6 +11,7 @@ from typing import cast
 
 import numpy as np
 import torch
+from numpy.typing import NDArray
 from torch import nn
 from torch.utils.data import DataLoader
 
@@ -114,6 +115,41 @@ def evaluate_with_selected_threshold(
     """
     chosen = evaluate_model(model, selection_loader, objective, device, threshold=None)
     return evaluate_model(model, report_loader, objective, device, threshold=chosen["threshold"])
+
+
+@torch.no_grad()
+def collect_scores(
+    model: nn.Module, loader: DataLoader[Sample], device: torch.device
+) -> tuple[NDArray[np.float64], NDArray[np.int_]]:
+    """Return per-sample predicted scores and labels, in loader order.
+
+    Aggregate metrics cannot support a confidence interval; the per-sample scores
+    can. Keeping them lets a run report how far its number would move on a
+    different sample of participants, and lets two arms be compared *paired* on
+    the same sessions (ADR-0020).
+
+    The scores are positionally aligned with the split, and carry no participant
+    identifier — an artifact written from them cannot be linked back to a person.
+
+    Args:
+        model: The trained model.
+        loader: Evaluation DataLoader; must not shuffle if the order matters.
+        device: Device to run on.
+
+    Returns:
+        ``(scores, labels)``, each of shape ``(N,)``.
+    """
+    model.eval()
+    scores: list[np.ndarray] = []
+    labels: list[np.ndarray] = []
+    for raw_batch in loader:
+        batch = move_batch_to_device(raw_batch, device)
+        scores.append(torch.sigmoid(model(batch)["logit"]).cpu().numpy())
+        labels.append(batch["label"].cpu().numpy())
+    return (
+        np.concatenate(scores).astype(np.float64),
+        np.concatenate(labels).astype(np.int_),
+    )
 
 
 def positive_class_weight(loader: DataLoader[Sample]) -> float | None:

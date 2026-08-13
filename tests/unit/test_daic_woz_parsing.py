@@ -64,7 +64,7 @@ def _config(root: Path) -> dict[str, Any]:
             "delimiter": ",",
             "max_frames": 100,
             "frame_stride": 1,
-            "standardize": False,
+            "normalization": "none",
         },
         "video": {
             "file_template": "{pid}_CLNF_AUs.txt",
@@ -73,7 +73,7 @@ def _config(root: Path) -> dict[str, Any]:
             "drop_columns": ["frame", "timestamp", "confidence", "success"],
             "max_frames": 100,
             "frame_stride": 1,
-            "standardize": False,
+            "normalization": "none",
         },
         "text": {
             "file_template": "{pid}_TRANSCRIPT.csv",

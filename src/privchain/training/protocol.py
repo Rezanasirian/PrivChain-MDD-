@@ -22,17 +22,20 @@ This module owns that protocol so no script can drift from it:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
+from numpy.typing import NDArray
 from torch.utils.data import DataLoader, Dataset, Subset
 
 from privchain.config import BaselineConfig, load_yaml, modality_input_dims
 from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
 from privchain.eval.benchmark import aggregate_metrics, stratified_held_out_split
+from privchain.eval.metrics import bootstrap_auc_ci
 from privchain.training.loaders import split_dataset
 
 
@@ -58,6 +61,11 @@ class RunResult:
     Only ``metrics`` is required: :func:`repeat_over_seeds` aggregates that, and
     arms that do not train epoch-by-epoch (the DP sweep, the ablation) have no
     meaningful epoch counts to report.
+
+    ``scores``/``labels`` are the per-sample report-split predictions, kept so a
+    run can quote a bootstrap confidence interval rather than only the spread
+    over seeds (ADR-0020). They are positionally aligned with the split and carry
+    no participant identifier.
     """
 
     metrics: dict[str, float]
@@ -65,6 +73,63 @@ class RunResult:
     epochs_run: int = 0
     threshold: float = 0.0
     history: list[dict[str, float]] = field(default_factory=list)
+    scores: NDArray[np.float64] | None = None
+    labels: NDArray[np.int_] | None = None
+
+
+def uncertainty_report(
+    results: Sequence[RunResult], *, seed: int = 0, n_resamples: int = 2000
+) -> dict[str, float]:
+    """Bootstrap CI for an arm's ROC-AUC, from its pooled per-sample scores.
+
+    Averaging the seeds' scores before bootstrapping asks the right question:
+    how far would *this arm* — as a procedure, not as one lucky fit — move on a
+    different sample of participants.
+
+    Args:
+        results: The per-seed results of one arm.
+        seed: Seed for the resampling.
+        n_resamples: Bootstrap replicates.
+
+    Returns:
+        ``roc_auc_ci_low`` / ``roc_auc_ci_high`` / ``roc_auc_ci_width``, or an
+        empty mapping when the runs carry no scores.
+    """
+    try:
+        mean_scores, labels = pooled_scores(results)
+    except ValueError:
+        return {}
+    low, high = bootstrap_auc_ci(labels, mean_scores, n_resamples=n_resamples, seed=seed)
+    return {
+        "roc_auc_ci_low": low,
+        "roc_auc_ci_high": high,
+        "roc_auc_ci_width": high - low,
+    }
+
+
+def pooled_scores(results: Sequence[RunResult]) -> tuple[NDArray[np.float64], NDArray[np.int_]]:
+    """Average an arm's per-seed scores, for paired comparison against another arm.
+
+    Args:
+        results: The per-seed results of one arm.
+
+    Returns:
+        ``(mean_scores, labels)``.
+
+    Raises:
+        ValueError: If none of the runs carried scores.
+    """
+    collected: list[NDArray[np.float64]] = []
+    labels: NDArray[np.int_] | None = None
+    for result in results:
+        if result.scores is None or result.labels is None:
+            continue
+        collected.append(result.scores)
+        labels = result.labels
+    if not collected or labels is None:
+        raise ValueError("no run carried per-sample scores")
+    mean_scores: NDArray[np.float64] = np.stack(collected).mean(axis=0)
+    return mean_scores, labels
 
 
 def carve_selection_split(
@@ -177,7 +242,12 @@ def format_aggregate(aggregate: dict[str, float], keys: Sequence[str]) -> str:
     return "  ".join(parts)
 
 
-def build_splits(config: BaselineConfig, daic_config: Path | None) -> tuple[Splits, dict[str, int]]:
+def build_splits(
+    config: BaselineConfig,
+    daic_config: Path | None,
+    *,
+    daic_overrides: Mapping[str, Mapping[str, Any]] | None = None,
+) -> tuple[Splits, dict[str, int]]:
     """Build the three protocol splits and the model's input dims.
 
     Shared by every arm — the non-private baseline, the DP sweep, the ablations
@@ -190,6 +260,10 @@ def build_splits(config: BaselineConfig, daic_config: Path | None) -> tuple[Spli
     Args:
         config: Validated baseline config.
         daic_config: Real-data config path, or ``None`` for mock data.
+        daic_overrides: Per-section keys layered over the loaded real-data
+            config, e.g. ``{"audio": {"normalization": "corpus"}}``. Lets one
+            experiment sweep a data-side setting without a config file per arm,
+            while the committed YAML stays the single source of defaults.
 
     Returns:
         ``(splits, input_dims)``.
@@ -199,6 +273,18 @@ def build_splits(config: BaselineConfig, daic_config: Path | None) -> tuple[Spli
         from privchain.data.daic_woz import build_daic_woz_dataset
 
         daic_cfg = load_yaml(daic_config)
+        if daic_overrides:
+            # The overrides name modality sections (`audio`, `video`), which live
+            # under the file's top-level `daic_woz` key.
+            inner = dict(daic_cfg["daic_woz"])
+            for section, values in daic_overrides.items():
+                if section not in inner:
+                    raise KeyError(
+                        f"cannot override unknown daic_woz section {section!r}; "
+                        f"available: {sorted(inner)}"
+                    )
+                inner[section] = {**inner[section], **values}
+            daic_cfg = {**daic_cfg, "daic_woz": inner}
         train_dataset = build_daic_woz_dataset(daic_cfg, split="train")
         full_train: Dataset[Sample] = train_dataset
         report: Dataset[Sample] = build_daic_woz_dataset(daic_cfg, split="dev")

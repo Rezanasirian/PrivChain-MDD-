@@ -43,6 +43,7 @@ from typing import Any
 import torch
 
 from privchain.config import load_baseline_config, load_privacy_config, resolve_device
+from privchain.eval.metrics import paired_bootstrap_auc_difference
 from privchain.privacy.budget_allocator import (
     PerModalityBudgetAllocator,
     scale_to_participant_epsilon,
@@ -55,7 +56,9 @@ from privchain.training.protocol import (
     RunResult,
     build_splits,
     format_aggregate,
+    pooled_scores,
     repeat_over_seeds,
+    uncertainty_report,
 )
 
 MODALITIES = ("audio", "video", "text")
@@ -162,16 +165,34 @@ def main() -> None:
     # ── Train each arm under the shared protocol ─────────────────────────────
     print()
     results: dict[str, dict[str, float]] = {}
+    runs: dict[str, list[RunResult]] = {}
     for name, alloc in allocations.items():
         group_sigmas = resolve_group_sigmas(alloc.noise_multipliers())
-        aggregate, _ = repeat_over_seeds(
-            lambda seed, sigmas=group_sigmas: RunResult(  # type: ignore[misc]
-                metrics=train_dp_arm(arm, sigmas, seed)
-            ),
+        aggregate, arm_runs = repeat_over_seeds(
+            lambda seed, sigmas=group_sigmas: train_dp_arm(arm, sigmas, seed),  # type: ignore[misc]
             seeds,
         )
-        results[name] = aggregate
-        print(f"{name:14s} {format_aggregate(aggregate, REPORTED)}")
+        aggregate.update(uncertainty_report(arm_runs))
+        results[name], runs[name] = aggregate, arm_runs
+        print(
+            f"{name:14s} {format_aggregate(aggregate, REPORTED)}"
+            f"  auc95%CI=[{aggregate['roc_auc_ci_low']:.3f}, {aggregate['roc_auc_ci_high']:.3f}]"
+        )
+
+    # Each arm's own interval is wide because the dev split is small, but the arms
+    # are scored on the *same* sessions — so bootstrapping the difference with a
+    # shared resample cancels that shared luck and is far more sensitive than
+    # comparing two overlapping intervals by eye (ADR-0020).
+    paired: dict[str, dict[str, float]] = {}
+    baseline_arm = "uniform"
+    base_scores, labels = pooled_scores(runs[baseline_arm])
+    for name in runs:
+        if name == baseline_arm:
+            continue
+        arm_scores, _ = pooled_scores(runs[name])
+        paired[f"{name}_minus_{baseline_arm}"] = paired_bootstrap_auc_difference(
+            labels, arm_scores, base_scores, seed=base.seed
+        )
 
     payload: dict[str, Any] = {
         "matching": {
@@ -184,6 +205,7 @@ def main() -> None:
                 "most uneven allocation more real privacy; see ADR-0018"
             ),
         },
+        "paired_auc_differences": paired,
         "risks": risks,
         "risk_sharpness": priv.allocation.risk_sharpness,
         "seeds": list(seeds),
@@ -206,26 +228,24 @@ def main() -> None:
     )
     _plot(results, run_dir / "allocation_comparison.png", target)
 
-    _print_verdict(results)
+    _print_verdict(results, paired)
     print(f"\nWrote {run_dir / 'allocation_comparison.json'}")
 
 
-def _print_verdict(results: dict[str, dict[str, float]]) -> None:
-    """State whether the arms actually separate, judged against the seed spread."""
-    key = "roc_auc"
-    ranked = sorted(results, key=lambda name: results[name][f"{key}_mean"], reverse=True)
-    best, worst = ranked[0], ranked[-1]
-    gap = results[best][f"{key}_mean"] - results[worst][f"{key}_mean"]
-    widest_std = max(results[name][f"{key}_std"] for name in results)
-    print(f"\nordering by {key}: " + " > ".join(ranked))
-    print(
-        f"spread {gap:.3f} against a largest per-arm std of {widest_std:.3f} — "
-        + (
-            "the arms separate."
-            if gap > 2 * widest_std
-            else "NOT separable at this sample size; report as no measured difference."
+def _print_verdict(
+    results: dict[str, dict[str, float]], paired: dict[str, dict[str, float]]
+) -> None:
+    """State whether the arms separate, judged by the paired bootstrap."""
+    ranked = sorted(results, key=lambda name: results[name]["roc_auc_mean"], reverse=True)
+    print("\nordering by roc_auc: " + " > ".join(ranked))
+    print("\npaired bootstrap against `uniform` (the test that actually has power here):")
+    for comparison, stats in paired.items():
+        verdict = "SEPARATES" if stats["significant"] else "no measured difference"
+        print(
+            f"  {comparison:28s} d={stats['difference']:+.3f}  "
+            f"95%CI=[{stats['low']:+.3f}, {stats['high']:+.3f}]  "
+            f"p={stats['p_two_sided']:.3f}  -> {verdict}"
         )
-    )
 
 
 def _plot(results: dict[str, dict[str, float]], path: Path, target: float) -> None:

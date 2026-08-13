@@ -1,0 +1,126 @@
+baseline:
+  seed: 42
+  data:
+    num_sessions: 32
+    root: data/mock
+    phq8_max: 24
+    depression_cutoff: 10
+    audio:
+      min_frames: 80
+      max_frames: 200
+      n_mels: 40
+    video:
+      min_frames: 40
+      max_frames: 100
+      n_features: 49
+    text:
+      embed_dim: 64
+      min_tokens: 20
+      max_tokens: 60
+  model:
+    encoder:
+      type: gru
+      hidden_dim: 64
+      out_dim: 64
+      bidirectional: true
+      dropout: 0.1
+    fusion:
+      type: concat
+      hidden_dim: 128
+      dropout: 0.1
+    head:
+      hidden_dim: 64
+      dropout: 0.1
+    use_phq_regression: true
+    phq_loss_weight: 0.1
+  train:
+    batch_size: 8
+    epochs: 5
+    learning_rate: 0.001
+    weight_decay: 0.0001
+    val_fraction: 0.25
+    num_workers: 0
+    output_dir: experiments
+    run_name: phase1_centralized_baseline
+federated:
+  seed: 42
+  federation:
+    num_clients: 10
+    num_rounds: 20
+    clients_per_round: 10
+    local_epochs: 1
+    modality_patterns:
+    - name: full
+      capability:
+      - 1
+      - 1
+      - 1
+      fraction: 0.4
+    - name: audio_text
+      capability:
+      - 1
+      - 0
+      - 1
+      fraction: 0.3
+    - name: audio_only
+      capability:
+      - 1
+      - 0
+      - 0
+      fraction: 0.2
+    - name: text_only
+      capability:
+      - 0
+      - 0
+      - 1
+      fraction: 0.1
+  aggregation:
+    strategy: capability_aware
+    reputation_weighting: true
+    federated_distillation: true
+    byzantine_filter: false
+    byzantine_z: 2.5
+    reputation:
+      volume_weight: 0.5
+      ema_decay: 0.8
+      min_reputation: 0.05
+    distillation:
+      weight: 0.5
+      temperature: 2.0
+      apply_to: missing_modality
+privacy:
+  seed: 42
+  privacy:
+    delta: 1.0e-05
+    accountant: rdp
+    max_grad_norm: 1.0
+    allocation:
+      mode: explicit
+      total_epsilon: 14.0
+      risk_sharpness: 1.0
+    per_modality:
+      audio:
+        epsilon: 2.0
+        reidentification_risk: 0.9
+      video:
+        epsilon: 4.0
+        reidentification_risk: 0.6
+      text:
+        epsilon: 8.0
+        reidentification_risk: 0.3
+    sweep:
+      target_epsilons:
+      - 0.5
+      - 1.0
+      - 2.0
+      - 4.0
+      - 8.0
+      - 16.0
+      epochs: 3
+blockchain:
+  ledger:
+    backend: mock
+    channel: privchain-channel
+    chaincode: privchain-cc
+    gateway_url: http://localhost:8801
+    timeout_seconds: 10.0

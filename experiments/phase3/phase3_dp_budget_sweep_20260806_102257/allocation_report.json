@@ -1,0 +1,30 @@
+{
+  "accountant": "opacus-rdp",
+  "sampling": "poisson",
+  "allocation_mode": "explicit",
+  "delta": 1e-05,
+  "sample_rate": 0.3333333333333333,
+  "expected_batch_size": 8.0,
+  "planned_steps": 9,
+  "per_modality": {
+    "audio": {
+      "target_epsilon": 2.0,
+      "reidentification_risk": 0.9,
+      "noise_multiplier": 2.60009765625,
+      "consumed_epsilon": 1.9990454438190828
+    },
+    "video": {
+      "target_epsilon": 4.0,
+      "reidentification_risk": 0.6,
+      "noise_multiplier": 1.58203125,
+      "consumed_epsilon": 3.9996731685807205
+    },
+    "text": {
+      "target_epsilon": 8.0,
+      "reidentification_risk": 0.3,
+      "noise_multiplier": 1.00830078125,
+      "consumed_epsilon": 7.999739244733728
+    }
+  },
+  "participant_epsilon": 9.309645532887284
+}

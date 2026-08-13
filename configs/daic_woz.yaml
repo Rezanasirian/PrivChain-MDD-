@@ -64,7 +64,13 @@ daic_woz:
     # 100 Hz x 900 s = ~90k frames; 30 x 3000 = 90k -> full session at ~3.3 Hz.
     max_frames: 3000
     frame_stride: 30
-    standardize: true
+    # session | corpus | none  (ADR-0019). `session` z-scores each channel WITHIN
+    # the session, which forces every participant to per-channel mean 0 / std 1 and
+    # so deletes absolute pitch level, formant positions and overall energy — the
+    # cues a speaker-identification attacker uses, and among the best-attested
+    # acoustic markers of depression. `corpus` fits mean/std on the TRAIN split
+    # only and applies them everywhere, preserving between-subject differences.
+    normalization: session
 
   video:
     file_template: "{pid}_CLNF_AUs.txt"  # OpenFace action units
@@ -74,7 +80,13 @@ daic_woz:
     # 30 Hz x 900 s = ~27k frames; 10 x 3000 = 30k -> full session at 3 Hz.
     max_frames: 3000
     frame_stride: 10
-    standardize: true
+    # session | corpus | none  (ADR-0019). `session` z-scores each channel WITHIN
+    # the session, which forces every participant to per-channel mean 0 / std 1 and
+    # so deletes absolute pitch level, formant positions and overall energy — the
+    # cues a speaker-identification attacker uses, and among the best-attested
+    # acoustic markers of depression. `corpus` fits mean/std on the TRAIN split
+    # only and applies them everywhere, preserving between-subject differences.
+    normalization: session
 
   text:
     file_template: "{pid}_TRANSCRIPT.csv"

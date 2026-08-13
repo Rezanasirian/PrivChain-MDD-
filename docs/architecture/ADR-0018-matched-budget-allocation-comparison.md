@@ -178,3 +178,45 @@ is not supported and must be removed from Chapter 1's framing.
 - The obvious follow-up is not a better allocation but a cheaper mechanism: with
   clipping alone costing 0.093 ROC-AUC (ADR-0013), the leverage on this corpus is
   in reducing DP's baseline cost, not in redistributing what survives it.
+
+---
+
+## Amendment, 2026-08-13 (ADR-0020) — the null result is now properly powered
+
+This ADR called the arms "not separable" using a two-standard-deviations rule on
+the seed spread. That was the right conclusion reached by the wrong test. Redone
+with the paired bootstrap over participants:
+
+| comparison | Δ ROC-AUC | 95% CI | p |
+|---|---|---|---|
+| adaptive − uniform | +0.016 | [−0.058, +0.092] | 0.746 |
+| anti_adaptive − uniform | +0.000 | [−0.054, +0.061] | 0.928 |
+
+Two things are worth separating here.
+
+**The conclusion is unchanged and now much better supported.** Pairing shrinks the
+interval from roughly ±0.20 (each arm's own bootstrap CI, e.g. uniform
+[0.346, 0.763]) to about ±0.07, because the arms are scored on the same 34
+sessions and the shared luck of that draw cancels. So this is no longer "we
+cannot tell": the test **excludes any allocation effect larger than about ±0.09
+ROC-AUC**. That is a real bound, and a far stronger statement than the original.
+
+**The point estimate moved and the sign flipped.** The table above reported
+uniform 0.549 against adaptive 0.515, a nominal 0.034 in uniform's favour; the
+paired figure is +0.016 in *adaptive's* favour. Both are noise, but they differ
+because they are different statistics: the table averages each seed's AUC, while
+the paired test computes one AUC from the seeds' averaged scores. Neither is
+wrong; the paired one is what the significance claim rests on, and the nominal
+ordering in the table above should not be read as a ranking.
+
+**The `anti_adaptive` control is the informative part.** A deliberately inverted
+allocation differs from uniform by +0.000, p = 0.928. When the sensible and the
+deliberately-wrong allocations are equally indistinguishable from the baseline,
+the allocation axis is doing nothing to utility here — exactly as argued above,
+and now with an interval tight enough to mean it.
+
+The privacy half of the result is untouched: at matched participant ε the
+adaptive arm still gives audio and video ~1.8× tighter budgets, which is an exact
+property of the mechanism and needs no statistics. See ADR-0017's amendment,
+though, for why video's *risk rank* — and hence part of the motivation for that
+allocation — is less settled than it looked.

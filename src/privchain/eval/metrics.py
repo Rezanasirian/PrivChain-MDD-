@@ -162,3 +162,136 @@ def binary_classification_metrics(
         "roc_auc": roc_auc_score(labels, scores),
         "threshold": float(threshold),
     }
+
+
+def bootstrap_auc_ci(
+    labels: NDArray[np.int_],
+    scores: NDArray[np.float64],
+    *,
+    n_resamples: int = 2000,
+    confidence: float = 0.95,
+    seed: int = 0,
+) -> tuple[float, float]:
+    """Percentile bootstrap confidence interval for ROC-AUC.
+
+    Reported alongside the spread over seeds, because the two answer different
+    questions and only one of them is about generalization (ADR-0020). Seed
+    spread measures how stable optimization is on a *fixed* evaluation set;
+    this measures how much the estimate would move on a *different* sample of
+    participants. On 34 dev sessions the latter is roughly ten times the former,
+    which is why several earlier claims did not survive re-examination.
+
+    Args:
+        labels: Binary labels, shape ``(N,)``.
+        scores: Predicted scores, shape ``(N,)``.
+        n_resamples: Bootstrap replicates.
+        confidence: Coverage of the interval.
+        seed: Seed for the resampling.
+
+    Returns:
+        ``(low, high)``. Replicates in which a class is absent are skipped; if
+        none survive, ``(nan, nan)`` is returned rather than a fabricated bound.
+
+    Raises:
+        ValueError: If the inputs are empty or mismatched, or ``confidence`` is
+            not in ``(0, 1)``.
+    """
+    if len(labels) != len(scores):
+        raise ValueError("labels and scores must have the same length")
+    if len(labels) == 0:
+        raise ValueError("cannot bootstrap an empty sample")
+    if not 0.0 < confidence < 1.0:
+        raise ValueError(f"confidence must be in (0, 1), got {confidence}")
+
+    rng = np.random.default_rng(seed)
+    label_array = np.asarray(labels)
+    score_array = np.asarray(scores, dtype=np.float64)
+    replicates: list[float] = []
+    for _ in range(n_resamples):
+        idx = rng.integers(0, len(label_array), len(label_array))
+        resampled = label_array[idx]
+        # A replicate with only one class has no defined AUC; dropping it is
+        # honest, inventing 0.5 for it would shrink the interval toward the null.
+        if resampled.min() == resampled.max():
+            continue
+        replicates.append(roc_auc_score(resampled, score_array[idx]))
+
+    if not replicates:
+        return float("nan"), float("nan")
+    tail = (1.0 - confidence) / 2.0
+    low, high = np.quantile(replicates, [tail, 1.0 - tail])
+    return float(low), float(high)
+
+
+def paired_bootstrap_auc_difference(
+    labels: NDArray[np.int_],
+    scores_a: NDArray[np.float64],
+    scores_b: NDArray[np.float64],
+    *,
+    n_resamples: int = 2000,
+    confidence: float = 0.95,
+    seed: int = 0,
+) -> dict[str, float]:
+    """Bootstrap the AUC *difference* between two arms scored on the same sample.
+
+    Resampling the participants **once per replicate** and scoring both arms on
+    that same resample keeps the comparison paired, which is what makes a small
+    difference detectable even when each arm's own interval is wide: the two arms
+    rise and fall together with the luck of the draw, and only their gap is left.
+
+    Args:
+        labels: Binary labels shared by both arms, shape ``(N,)``.
+        scores_a: First arm's scores.
+        scores_b: Second arm's scores.
+        n_resamples: Bootstrap replicates.
+        confidence: Coverage of the interval.
+        seed: Seed for the resampling.
+
+    Returns:
+        ``difference`` (a − b on the observed sample), ``low``, ``high``, and
+        ``p_two_sided`` — the bootstrap proportion of replicates on the far side
+        of zero, doubled. ``significant`` is 1.0 when the interval excludes zero.
+
+    Raises:
+        ValueError: If the inputs are empty or their lengths disagree.
+    """
+    if not len(labels) == len(scores_a) == len(scores_b):
+        raise ValueError("labels and both score arrays must have the same length")
+    if len(labels) == 0:
+        raise ValueError("cannot bootstrap an empty sample")
+
+    label_array = np.asarray(labels)
+    array_a = np.asarray(scores_a, dtype=np.float64)
+    array_b = np.asarray(scores_b, dtype=np.float64)
+    observed = roc_auc_score(label_array, array_a) - roc_auc_score(label_array, array_b)
+
+    rng = np.random.default_rng(seed)
+    deltas: list[float] = []
+    for _ in range(n_resamples):
+        idx = rng.integers(0, len(label_array), len(label_array))
+        resampled = label_array[idx]
+        if resampled.min() == resampled.max():
+            continue
+        deltas.append(
+            roc_auc_score(resampled, array_a[idx]) - roc_auc_score(resampled, array_b[idx])
+        )
+
+    if not deltas:
+        return {
+            "difference": observed,
+            "low": float("nan"),
+            "high": float("nan"),
+            "p_two_sided": float("nan"),
+            "significant": 0.0,
+        }
+    tail = (1.0 - confidence) / 2.0
+    low, high = np.quantile(deltas, [tail, 1.0 - tail])
+    below = float(np.mean(np.asarray(deltas) <= 0.0))
+    p_two_sided = min(1.0, 2.0 * min(below, 1.0 - below))
+    return {
+        "difference": observed,
+        "low": float(low),
+        "high": float(high),
+        "p_two_sided": p_two_sided,
+        "significant": float(low > 0.0 or high < 0.0),
+    }

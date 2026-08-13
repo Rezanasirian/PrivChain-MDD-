@@ -43,11 +43,12 @@ from privchain.privacy.dp_sgd import (
 from privchain.seeding import seed_everything
 from privchain.training.objective import (
     DepressionObjective,
+    collect_scores,
     evaluate_model,
     evaluate_with_selected_threshold,
     positive_class_weight,
 )
-from privchain.training.protocol import Splits, make_loader
+from privchain.training.protocol import RunResult, Splits, make_loader
 
 
 @dataclass(frozen=True)
@@ -143,9 +144,7 @@ def build_dp_arm_config(
     )
 
 
-def train_dp_arm(
-    config: DpArmConfig, group_sigmas: dict[str, float], seed: int
-) -> dict[str, float]:
+def train_dp_arm(config: DpArmConfig, group_sigmas: dict[str, float], seed: int) -> RunResult:
     """Train one DP-SGD arm and report on the untouched split.
 
     Args:
@@ -156,8 +155,9 @@ def train_dp_arm(
         seed: Seeds initialization, the Poisson draws, and the DP noise.
 
     Returns:
-        Report-split metrics, with the decision threshold chosen on the selection
-        split.
+        The run's report-split metrics (threshold chosen on the selection split)
+        together with its per-sample scores, so the arm can quote a confidence
+        interval and be compared paired against another arm (ADR-0020).
 
     Raises:
         RuntimeError: If the step budget produced no trained epoch.
@@ -214,6 +214,8 @@ def train_dp_arm(
     if best_state is None:  # only reachable if the step budget is empty
         raise RuntimeError("no training steps ran for this DP arm")
     model.load_state_dict(best_state)
-    return evaluate_with_selected_threshold(
+    metrics = evaluate_with_selected_threshold(
         model, config.selection_loader, config.report_loader, config.objective, config.device
     )
+    scores, labels = collect_scores(model, config.report_loader, config.device)
+    return RunResult(metrics=metrics, threshold=metrics["threshold"], scores=scores, labels=labels)

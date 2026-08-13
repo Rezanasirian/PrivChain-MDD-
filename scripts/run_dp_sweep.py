@@ -44,6 +44,7 @@ from privchain.training.protocol import (
     build_splits,
     format_aggregate,
     repeat_over_seeds,
+    uncertainty_report,
 )
 
 MODALITIES = ("audio", "video", "text")
@@ -129,7 +130,7 @@ def main() -> None:
     # ε = ∞ reference: the same architecture, data, and step budget with the DP
     # mechanism switched off. Without it the curve shows absolute numbers but not
     # the *cost of privacy*, which is what Chapter 4 actually claims (ADR-0013).
-    def train_at(target_eps: float, seed: int) -> dict[str, float]:
+    def train_at(target_eps: float, seed: int) -> RunResult:
         """Train once at one budget and seed; report on the untouched split."""
         if target_eps == float("inf"):
             # σ = 0 disables the noise; clipping stays on so the only difference
@@ -151,10 +152,14 @@ def main() -> None:
     curve: list[dict[str, Any]] = []
     for target_eps in [float("inf"), *priv.sweep.target_epsilons]:
         private = target_eps != float("inf")
-        aggregate, _ = repeat_over_seeds(
-            lambda seed, eps=target_eps: RunResult(metrics=train_at(eps, seed)),  # type: ignore[misc]
+        aggregate, results = repeat_over_seeds(
+            lambda seed, eps=target_eps: train_at(eps, seed),  # type: ignore[misc]
             base.train.seeds,
         )
+        # Seed spread says how stable the fit is; the bootstrap interval says how
+        # far the number would move on a different sample of 34 participants,
+        # which is the one that bears on generalization (ADR-0020).
+        aggregate.update(uncertainty_report(results))
         consumed_eps = (
             PerModalityBudgetAllocator(
                 dict.fromkeys(MODALITIES, target_eps),
@@ -168,7 +173,11 @@ def main() -> None:
         )
         curve.append({"target_epsilon": target_eps, "consumed_epsilon": consumed_eps, **aggregate})
         label = "  inf" if not private else f"{target_eps:5.2f}"
-        print(f"eps={label} -> {format_aggregate(aggregate, ('f1', 'roc_auc', 'accuracy'))}")
+        print(
+            f"eps={label} -> {format_aggregate(aggregate, ('f1', 'roc_auc', 'accuracy'))}"
+            f"  auc95%CI=[{aggregate.get('roc_auc_ci_low', float('nan')):.3f}, "
+            f"{aggregate.get('roc_auc_ci_high', float('nan')):.3f}]"
+        )
 
     with (run_dir / "sweep_curve.jsonl").open("w", encoding="utf-8") as handle:
         for point in curve:

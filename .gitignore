@@ -37,9 +37,21 @@ venv/
 .coverage
 htmlcov/
 
-# ─── Experiment outputs (regenerated; not source of truth) ──────────────────
+# ─── Experiment outputs ─────────────────────────────────────────────────────
+# The small result files ARE the evidence behind every number in docs/architecture,
+# and the GPU box they were produced on has no persistent volume — a recycle
+# deletes them. They are aggregate metrics plus the config that produced them, hold
+# no participant identifiers, and cost a few MB, so they are kept. Checkpoints are
+# not: they are large and reproducible from the committed config.
 experiments/*
 !experiments/.gitkeep
+!experiments/**/
+!experiments/**/*.json
+!experiments/**/*.jsonl
+!experiments/**/*.yaml
+!experiments/**/*.png
+!experiments/**/*.md
+experiments/**/*.pt
 
 # ─── Go / chaincode build output ────────────────────────────────────────────
 chaincode/**/*.exe
@@ -53,3 +65,4 @@ chaincode/**/privchain-cc
 .vscode/
 .DS_Store
 Thumbs.db
+

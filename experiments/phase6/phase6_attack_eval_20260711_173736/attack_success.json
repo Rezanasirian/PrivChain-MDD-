@@ -1,0 +1,174 @@
+{
+  "num_subjects": 32,
+  "chance_accuracy": 0.03125,
+  "noise_mapping": {
+    "delta": 1e-05,
+    "sample_rate": 0.1,
+    "steps": 100
+  },
+  "reidentification": {
+    "audio": [
+      {
+        "target_epsilon": 0.5,
+        "sigma": 9.935925903320316,
+        "success_rate": 0.041666666666666664
+      },
+      {
+        "target_epsilon": 1.0,
+        "sigma": 5.1546525878906255,
+        "success_rate": 0.041666666666666664
+      },
+      {
+        "target_epsilon": 2.0,
+        "sigma": 2.7844836425781248,
+        "success_rate": 0.1875
+      },
+      {
+        "target_epsilon": 4.0,
+        "sigma": 1.63006787109375,
+        "success_rate": 0.46875
+      },
+      {
+        "target_epsilon": 8.0,
+        "sigma": 1.0698012695312502,
+        "success_rate": 0.84375
+      },
+      {
+        "target_epsilon": 16.0,
+        "sigma": 0.7629326171874999,
+        "success_rate": 0.9895833333333334
+      }
+    ],
+    "video": [
+      {
+        "target_epsilon": 0.5,
+        "sigma": 9.935925903320316,
+        "success_rate": 0.0625
+      },
+      {
+        "target_epsilon": 1.0,
+        "sigma": 5.1546525878906255,
+        "success_rate": 0.14583333333333334
+      },
+      {
+        "target_epsilon": 2.0,
+        "sigma": 2.7844836425781248,
+        "success_rate": 0.5625
+      },
+      {
+        "target_epsilon": 4.0,
+        "sigma": 1.63006787109375,
+        "success_rate": 0.9583333333333334
+      },
+      {
+        "target_epsilon": 8.0,
+        "sigma": 1.0698012695312502,
+        "success_rate": 1.0
+      },
+      {
+        "target_epsilon": 16.0,
+        "sigma": 0.7629326171874999,
+        "success_rate": 1.0
+      }
+    ],
+    "text": [
+      {
+        "target_epsilon": 0.5,
+        "sigma": 9.935925903320316,
+        "success_rate": 0.10416666666666667
+      },
+      {
+        "target_epsilon": 1.0,
+        "sigma": 5.1546525878906255,
+        "success_rate": 0.3854166666666667
+      },
+      {
+        "target_epsilon": 2.0,
+        "sigma": 2.7844836425781248,
+        "success_rate": 0.9583333333333334
+      },
+      {
+        "target_epsilon": 4.0,
+        "sigma": 1.63006787109375,
+        "success_rate": 1.0
+      },
+      {
+        "target_epsilon": 8.0,
+        "sigma": 1.0698012695312502,
+        "success_rate": 1.0
+      },
+      {
+        "target_epsilon": 16.0,
+        "sigma": 0.7629326171874999,
+        "success_rate": 1.0
+      }
+    ]
+  },
+  "adaptive_allocation": {
+    "mode": "explicit",
+    "per_modality": {
+      "audio": {
+        "epsilon": 2.0,
+        "reidentification_risk": 0.9,
+        "sigma": 2.7844836425781248,
+        "success_rate": 0.1875
+      },
+      "video": {
+        "epsilon": 4.0,
+        "reidentification_risk": 0.6,
+        "sigma": 1.63006787109375,
+        "success_rate": 0.9583333333333334
+      },
+      "text": {
+        "epsilon": 8.0,
+        "reidentification_risk": 0.3,
+        "sigma": 1.0698012695312502,
+        "success_rate": 1.0
+      }
+    }
+  },
+  "membership_inference": [
+    {
+      "target_epsilon": 0.5,
+      "sigma": 9.935925903320316,
+      "auc": 0.5729166666666667,
+      "accuracy": 0.78125,
+      "advantage": 0.14583333333333348
+    },
+    {
+      "target_epsilon": 1.0,
+      "sigma": 5.1546525878906255,
+      "auc": 0.5677083333333333,
+      "accuracy": 0.78125,
+      "advantage": 0.13541666666666652
+    },
+    {
+      "target_epsilon": 2.0,
+      "sigma": 2.7844836425781248,
+      "auc": 0.5677083333333333,
+      "accuracy": 0.78125,
+      "advantage": 0.13541666666666652
+    },
+    {
+      "target_epsilon": 4.0,
+      "sigma": 1.63006787109375,
+      "auc": 0.5520833333333333,
+      "accuracy": 0.78125,
+      "advantage": 0.10416666666666652
+    },
+    {
+      "target_epsilon": 8.0,
+      "sigma": 1.0698012695312502,
+      "auc": 0.5260416666666667,
+      "accuracy": 0.78125,
+      "advantage": 0.05208333333333348
+    },
+    {
+      "target_epsilon": 16.0,
+      "sigma": 0.7629326171874999,
+      "auc": 0.5052083333333334,
+      "accuracy": 0.78125,
+      "advantage": 0.01041666666666674
+    }
+  ]
+}

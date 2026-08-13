@@ -76,7 +76,10 @@ def test_inverse_risk_rejects_zero_risk() -> None:
 
 # ── Matching arms on the composed participant budget (ADR-0018) ──────────────
 
-_MATCH_KWARGS = {"delta": 1e-5, "sample_rate": 0.1, "steps": 200}
+# Each bisection step calibrates a sigma per modality through Opacus, so these
+# stay deliberately small: the properties under test are structural, and a
+# 200-step budget made the whole suite eight times slower for no extra coverage.
+_MATCH_KWARGS = {"delta": 1e-5, "sample_rate": 0.1, "steps": 20}
 _TARGET = 8.0
 # The three shapes compared in scripts/run_allocation_comparison.py.
 _SHAPES = {
@@ -91,27 +94,22 @@ def _participant_epsilon(epsilons: dict[str, float]) -> float:
     return allocator.participant_epsilon(_MATCH_KWARGS["steps"])
 
 
-@pytest.mark.parametrize("shape_name", list(_SHAPES))
-def test_scaling_hits_the_target_participant_budget(shape_name: str) -> None:
-    epsilons = scale_to_participant_epsilon(_SHAPES[shape_name], _TARGET, **_MATCH_KWARGS)
-    assert _participant_epsilon(epsilons) == pytest.approx(_TARGET, rel=1e-2)
-
-
-def test_scaling_preserves_the_shape() -> None:
-    shape = _SHAPES["adaptive"]
-    epsilons = scale_to_participant_epsilon(shape, _TARGET, **_MATCH_KWARGS)
-    # Only the level changes; the ratios that define the allocation do not.
-    assert epsilons["text"] / epsilons["audio"] == pytest.approx(shape["text"] / shape["audio"])
-    assert epsilons["video"] / epsilons["audio"] == pytest.approx(shape["video"] / shape["audio"])
-
-
 def test_every_arm_lands_on_the_same_budget() -> None:
     """The premise of the whole comparison: matched arms, differing allocations."""
-    achieved = {
-        name: _participant_epsilon(scale_to_participant_epsilon(shape, _TARGET, **_MATCH_KWARGS))
+    scaled = {
+        name: scale_to_participant_epsilon(shape, _TARGET, **_MATCH_KWARGS)
         for name, shape in _SHAPES.items()
     }
+    achieved = {name: _participant_epsilon(eps) for name, eps in scaled.items()}
+    for value in achieved.values():
+        assert value == pytest.approx(_TARGET, rel=1e-2)
     assert max(achieved.values()) - min(achieved.values()) < 0.01 * _TARGET
+
+    # Only the level changes; the ratios that define each allocation do not.
+    for name, shape in _SHAPES.items():
+        eps = scaled[name]
+        assert eps["text"] / eps["audio"] == pytest.approx(shape["text"] / shape["audio"])
+        assert eps["video"] / eps["audio"] == pytest.approx(shape["video"] / shape["audio"])
 
 
 def test_matching_on_the_mean_would_not_have_been_equivalent() -> None:

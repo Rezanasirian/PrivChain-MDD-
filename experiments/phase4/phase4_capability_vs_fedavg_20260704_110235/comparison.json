@@ -1,0 +1,62 @@
+{
+  "overall": {
+    "fedavg": {
+      "f1": 0.0,
+      "roc_auc": 0.16666666666666666
+    },
+    "capability_aware": {
+      "f1": 0.0,
+      "roc_auc": 0.08333333333333333
+    },
+    "delta_f1": 0.0,
+    "delta_roc_auc": -0.08333333333333333
+  },
+  "full": {
+    "fedavg": {
+      "f1": 0.0,
+      "roc_auc": 0.16666666666666666
+    },
+    "capability_aware": {
+      "f1": 0.0,
+      "roc_auc": 0.08333333333333333
+    },
+    "delta_f1": 0.0,
+    "delta_roc_auc": -0.08333333333333333
+  },
+  "audio_text": {
+    "fedavg": {
+      "f1": 0.0,
+      "roc_auc": 0.16666666666666666
+    },
+    "capability_aware": {
+      "f1": 0.0,
+      "roc_auc": 0.08333333333333333
+    },
+    "delta_f1": 0.0,
+    "delta_roc_auc": -0.08333333333333333
+  },
+  "audio_only": {
+    "fedavg": {
+      "f1": 0.0,
+      "roc_auc": 0.0
+    },
+    "capability_aware": {
+      "f1": 0.0,
+      "roc_auc": 0.0
+    },
+    "delta_f1": 0.0,
+    "delta_roc_auc": 0.0
+  },
+  "text_only": {
+    "fedavg": {
+      "f1": 0.0,
+      "roc_auc": 0.5
+    },
+    "capability_aware": {
+      "f1": 0.0,
+      "roc_auc": 0.4166666666666667
+    },
+    "delta_f1": 0.0,
+    "delta_roc_auc": -0.08333333333333331
+  }
+}

@@ -1,0 +1,88 @@
+baseline:
+  seed: 42
+  data:
+    num_sessions: 32
+    root: data/mock
+    phq8_max: 24
+    depression_cutoff: 10
+    audio:
+      min_frames: 80
+      max_frames: 200
+      n_mels: 40
+    video:
+      min_frames: 40
+      max_frames: 100
+      n_features: 49
+    text:
+      embed_dim: 64
+      min_tokens: 20
+      max_tokens: 60
+  model:
+    encoder:
+      type: gru
+      hidden_dim: 64
+      out_dim: 64
+      bidirectional: true
+      dropout: 0.1
+    fusion:
+      type: concat
+      hidden_dim: 128
+      dropout: 0.1
+    head:
+      hidden_dim: 64
+      dropout: 0.1
+    use_phq_regression: true
+    phq_loss_weight: 0.1
+  train:
+    batch_size: 8
+    epochs: 5
+    learning_rate: 0.001
+    weight_decay: 0.0001
+    val_fraction: 0.25
+    num_workers: 0
+    output_dir: experiments
+    run_name: phase1_centralized_baseline
+privacy:
+  delta: 1.0e-05
+  accountant: rdp
+  max_grad_norm: 1.0
+  allocation:
+    mode: explicit
+    total_epsilon: 14.0
+    risk_sharpness: 1.0
+  per_modality:
+    audio:
+      epsilon: 2.0
+      reidentification_risk: 0.9
+    video:
+      epsilon: 4.0
+      reidentification_risk: 0.6
+    text:
+      epsilon: 8.0
+      reidentification_risk: 0.3
+  sweep:
+    target_epsilons:
+    - 0.5
+    - 1.0
+    - 2.0
+    - 4.0
+    - 8.0
+    - 16.0
+    epochs: 3
+attack:
+  num_views: 6
+  enroll_views: 3
+  jitter: 0.15
+  noise_scale: 0.1
+  delta: 1.0e-05
+  sample_rate: 0.1
+  steps: 100
+  target_epsilons:
+  - 0.5
+  - 1.0
+  - 2.0
+  - 4.0
+  - 8.0
+  - 16.0
+  membership_inference:
+    enabled: true

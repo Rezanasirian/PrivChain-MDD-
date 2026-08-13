@@ -1,0 +1,3 @@
+{"round": 1, "num_clients": 8, "num_aggregated": 8, "num_byzantine_flagged": 0, "val_accuracy": 0.75, "val_precision": 0.75, "val_recall": 1.0, "val_f1": 0.8571428571428571, "val_roc_auc": 0.3333333333333333, "val_loss": 0.7063764333724976}
+{"round": 2, "num_clients": 8, "num_aggregated": 8, "num_byzantine_flagged": 0, "val_accuracy": 0.75, "val_precision": 0.75, "val_recall": 1.0, "val_f1": 0.8571428571428571, "val_roc_auc": 0.3333333333333333, "val_loss": 0.6987707614898682}
+{"round": 3, "num_clients": 8, "num_aggregated": 8, "num_byzantine_flagged": 0, "val_accuracy": 0.75, "val_precision": 0.75, "val_recall": 1.0, "val_f1": 0.8571428571428571, "val_roc_auc": 0.4166666666666667, "val_loss": 0.6913675665855408}

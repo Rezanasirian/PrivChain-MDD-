@@ -1,0 +1,6 @@
+{"target_epsilon": 0.5, "reid_audio": 1.0, "reid_video": 1.0, "reid_text": 1.0}
+{"target_epsilon": 1.0, "reid_audio": 1.0, "reid_video": 1.0, "reid_text": 1.0}
+{"target_epsilon": 2.0, "reid_audio": 1.0, "reid_video": 1.0, "reid_text": 1.0}
+{"target_epsilon": 4.0, "reid_audio": 1.0, "reid_video": 1.0, "reid_text": 1.0}
+{"target_epsilon": 8.0, "reid_audio": 1.0, "reid_video": 1.0, "reid_text": 1.0}
+{"target_epsilon": 16.0, "reid_audio": 1.0, "reid_video": 1.0, "reid_text": 1.0}

@@ -1,0 +1,47 @@
+seed: 42
+data:
+  num_sessions: 32
+  root: data/mock
+  phq8_max: 24
+  depression_cutoff: 10
+  audio:
+    min_frames: 80
+    max_frames: 200
+    n_mels: 40
+  video:
+    min_frames: 40
+    max_frames: 100
+    n_features: 49
+  text:
+    embed_dim: 64
+    min_tokens: 20
+    max_tokens: 60
+model:
+  encoder:
+    type: gru
+    hidden_dim: 64
+    out_dim: 64
+    bidirectional: true
+    dropout: 0.1
+  fusion:
+    type: concat
+    hidden_dim: 128
+    dropout: 0.1
+  head:
+    hidden_dim: 64
+    dropout: 0.1
+  use_phq_regression: true
+  phq_loss_weight: 0.1
+train:
+  batch_size: 32
+  epochs: 60
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  val_fraction: 0.25
+  num_workers: 0
+  output_dir: experiments
+  run_name: phase1_centralized_baseline
+  class_weighting: true
+  selection_metric: roc_auc
+  early_stopping_patience: 10
+  device: auto

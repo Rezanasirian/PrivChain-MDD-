@@ -111,3 +111,60 @@ Chapter 4 argument, not a footnote.
   modalities are useless — session-level functionals may simply be too lossy.
   Segment-level modelling (ADR-0012's deferred option) is the obvious test. The
   claim here is about *these features*, not about audio and video in principle.
+
+---
+
+## Amendment, 2026-08-13 (ADR-0019, ADR-0020) — two of three findings withdrawn
+
+This ADR reported `mean ± std` over seeds and read it as though it bounded the
+estimate. It does not: it is optimization variance on a fixed 34-session split,
+roughly a tenth of the sampling uncertainty that actually applies (ADR-0020).
+Re-running with paired bootstrap intervals, and under the three feature
+normalization schemes of ADR-0019, changes what may be claimed.
+
+### Finding 3 is withdrawn: "the weak modalities still contribute in combination"
+
+It rested on text-alone 0.710 → all-three 0.740, reported as ±0.010 and ±0.016.
+The paired bootstrap on the same sessions:
+
+| comparison | Δ ROC-AUC | 95% CI | p |
+|---|---|---|---|
+| all three − text | +0.032 | [−0.102, +0.190] | 0.712 |
+| all three − audio+text | +0.032 | [−0.027, +0.110] | 0.359 |
+| all three − video+text | +0.020 | [−0.106, +0.161] | 0.793 |
+
+**No measured difference**, and the same under `corpus` (p = 0.533) and `none`
+(p = 0.491) normalization. Adding audio and video to text cannot be shown to help.
+
+### Finding 1 is withdrawn as stated: "audio carries no usable signal"
+
+Audio alone was 0.503 under `session` normalization. ADR-0019 showed that setting
+z-scores each channel *within* a session, deleting absolute pitch, formant and
+energy levels. Without it audio alone reaches **0.619**.
+
+That does not make audio useful — its interval, [0.392, 0.808], still contains
+chance. It makes the original claim unsupported: the experiment had normalized
+away the information it then reported as absent. The defensible statement is that
+**this corpus cannot resolve what audio carries**, not that audio carries nothing.
+
+Video moved the other way (0.494 → 0.335 under `none`), and text was identical to
+three decimals across all three schemes — the control confirming the manipulation
+was specific.
+
+### Finding 2 stands: text dominates
+
+| comparison | Δ ROC-AUC | 95% CI | p |
+|---|---|---|---|
+| all three − audio | +0.249 | [+0.010, +0.479] | 0.043 |
+| all three − audio+video | +0.221 | [+0.011, +0.439] | 0.041 |
+
+Both separate. Text is where the diagnostic signal is, and dropping it costs
+something measurable — which is the one thing here large enough for 34 sessions
+to resolve.
+
+### What survives for H1
+
+The section "This resolves ADR-0016's discomfort" below must be read with
+ADR-0017's own amendment: video's risk rank is not stable under normalization
+either. The surviving claim is narrow — **text carries the most utility and the
+least identity, and audio the reverse** — and it is directional, not quantitative.

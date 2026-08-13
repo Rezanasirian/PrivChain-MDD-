@@ -1,0 +1,6 @@
+{"target_epsilon": 0.5, "sigma": 9.935925903320316, "reid_audio": 0.041666666666666664, "reid_video": 0.0625, "reid_text": 0.10416666666666667}
+{"target_epsilon": 1.0, "sigma": 5.1546525878906255, "reid_audio": 0.041666666666666664, "reid_video": 0.14583333333333334, "reid_text": 0.3854166666666667}
+{"target_epsilon": 2.0, "sigma": 2.7844836425781248, "reid_audio": 0.1875, "reid_video": 0.5625, "reid_text": 0.9583333333333334}
+{"target_epsilon": 4.0, "sigma": 1.63006787109375, "reid_audio": 0.46875, "reid_video": 0.9583333333333334, "reid_text": 1.0}
+{"target_epsilon": 8.0, "sigma": 1.0698012695312502, "reid_audio": 0.84375, "reid_video": 1.0, "reid_text": 1.0}
+{"target_epsilon": 16.0, "sigma": 0.7629326171874999, "reid_audio": 0.9895833333333334, "reid_video": 1.0, "reid_text": 1.0}

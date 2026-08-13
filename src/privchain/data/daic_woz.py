@@ -11,8 +11,9 @@ the mock dataset, so the Phase 1 model/trainer run unchanged on real data:
 
 To keep memory and IO bounded over ~15-minute interviews, feature rows are
 subsampled (``frame_stride``) and truncated (``max_frames``), then optionally
-z-score standardized per feature. All paths/columns/limits come from a config
-dict (``configs/daic_woz.yaml``) — nothing is hardcoded.
+normalized under the configured scheme (``session``/``corpus``/``none``, see
+:func:`apply_normalization` and ADR-0019). All paths/columns/limits come from a
+config dict (``configs/daic_woz.yaml``) — nothing is hardcoded.
 
 The file templates and column names in ``configs/daic_woz.yaml`` were verified
 against the real AVEC2017 distribution on 2026-08-13 (see ADR-0010 for what the
@@ -45,9 +46,12 @@ def _load_feature_matrix(
     drop_columns: list[str],
     max_frames: int,
     frame_stride: int,
-    standardize: bool,
 ) -> NDArray[np.float32]:
     """Stream a CSV/TXT feature file into a subsampled ``(T, D)`` matrix.
+
+    Returns the values **as recorded**. Normalization is applied afterwards by
+    :func:`apply_normalization`, so switching normalization mode does not force a
+    re-parse of the 36 MB COVAREP files (ADR-0019).
 
     Args:
         path: Feature file path.
@@ -58,7 +62,6 @@ def _load_feature_matrix(
             ``has_header``).
         max_frames: Maximum number of (subsampled) frames to keep.
         frame_stride: Keep every ``frame_stride``-th row.
-        standardize: Z-score each feature column over time.
 
     Returns:
         Float32 matrix of shape ``(T, D)`` with ``T >= 1``.
@@ -96,12 +99,49 @@ def _load_feature_matrix(
     if not rows:
         raise ValueError(f"No usable feature rows parsed from {path}")
 
-    matrix = np.asarray(rows, dtype=np.float32)
-    if standardize:
+    return np.asarray(rows, dtype=np.float32)
+
+
+def apply_normalization(
+    matrix: NDArray[np.float32],
+    mode: str,
+    corpus_stats: tuple[NDArray[np.float32], NDArray[np.float32]] | None = None,
+) -> NDArray[np.float32]:
+    """Normalize a session's feature matrix under the configured scheme.
+
+    The choice is not cosmetic (ADR-0019). ``session`` z-scores each channel
+    *within* the session, which forces every participant's features to per-channel
+    mean 0 and std 1 — deleting absolute pitch level, formant positions and
+    overall energy. Those are exactly the cues a speaker-identification attacker
+    uses, and among the best-attested acoustic markers of depression, so the mode
+    silently bounds both the utility and the leakage this project measures.
+
+    Args:
+        matrix: Raw ``(T, D)`` features as recorded.
+        mode: ``"session"``, ``"corpus"`` or ``"none"``.
+        corpus_stats: ``(mean, std)`` of shape ``(1, D)``, fitted on the training
+            split only. Required for ``"corpus"``.
+
+    Returns:
+        The normalized matrix (a new array unless ``mode`` is ``"none"``).
+
+    Raises:
+        ValueError: If ``mode`` is unknown, or ``corpus`` is requested without
+            statistics.
+    """
+    if mode == "none":
+        return matrix
+    if mode == "session":
         mean = matrix.mean(axis=0, keepdims=True)
         std = matrix.std(axis=0, keepdims=True)
-        matrix = (matrix - mean) / (std + 1e-6)
-    return matrix
+    elif mode == "corpus":
+        if corpus_stats is None:
+            raise ValueError("corpus normalization requires statistics fitted on the train split")
+        mean, std = corpus_stats
+    else:
+        raise ValueError(f"unknown normalization mode {mode!r}; expected session, corpus or none")
+    normalized: NDArray[np.float32] = ((matrix - mean) / (std + 1e-6)).astype(np.float32)
+    return normalized
 
 
 def _cached_feature_matrix(
@@ -115,7 +155,7 @@ def _cached_feature_matrix(
     so the subsampled matrix is written to ``cache_dir`` once.
 
     The cache key includes all parsing options **and the source file's size and
-    mtime**, so changing ``frame_stride``/``max_frames``/``standardize`` — or
+    mtime**, so changing ``frame_stride``/``max_frames`` — or
     re-extracting the corpus — produces a different entry rather than silently
     reusing a stale one.
 
@@ -331,8 +371,108 @@ class DaicWozDataset(Dataset[Sample]):
             self._text_cfg, seed=int(config.get("seed", 0))
         )
         self._cache: dict[int, Sample] | None = {} if cache else None
+        # Corpus normalization statistics are fitted on the *train* split, whatever
+        # split this dataset is, and memoized per modality (ADR-0019).
+        self._corpus_stats: dict[str, tuple[NDArray[np.float32], NDArray[np.float32]]] = {}
         self.phq8_max: int = int(config.get("phq8_max", 24))
         self.feature_dims: dict[str, int] = self._infer_feature_dims()
+
+    def _parse_options(self, cfg: dict[str, Any], *, default_header: bool) -> dict[str, Any]:
+        """Parsing options for one modality, shared by loading and stat-fitting."""
+        return {
+            "delimiter": cfg.get("delimiter", ","),
+            "has_header": cfg.get("has_header", default_header),
+            "drop_columns": cfg.get("drop_columns", []),
+            "max_frames": int(cfg["max_frames"]),
+            "frame_stride": int(cfg.get("frame_stride", 1)),
+        }
+
+    def _corpus_statistics(
+        self, modality: str, cfg: dict[str, Any], options: dict[str, Any]
+    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+        """Per-channel mean/std over the training split, for corpus normalization.
+
+        Fitted on **train only** and reused for dev and test, so normalization
+        never carries information from an evaluation split back into training.
+
+        Args:
+            modality: Modality name, for the cache key.
+            cfg: That modality's config section.
+            options: Parsing options, so a stride change invalidates the stats.
+
+        Returns:
+            ``(mean, std)``, each of shape ``(1, D)``.
+
+        Raises:
+            RuntimeError: If no training session could be read.
+        """
+        if modality in self._corpus_stats:
+            return self._corpus_stats[modality]
+
+        digest = hashlib.sha256(
+            json.dumps({**options, "modality": modality}, sort_keys=True, default=str).encode()
+        ).hexdigest()[:12]
+        cache_path = (
+            self._cache_dir / f"corpus_stats.{modality}.{digest}.npz" if self._cache_dir else None
+        )
+        if cache_path is not None and cache_path.is_file():
+            cached = np.load(cache_path)
+            stats = (cached["mean"], cached["std"])
+            self._corpus_stats[modality] = stats
+            return stats
+
+        label_cols = dict(self._cfg["label_columns"])
+        label_cols.update(dict(self._cfg.get("split_label_columns", {}).get("train", {})))
+        train_records = _read_split_labels(
+            self._root / self._cfg["splits"]["train"],
+            participant_col=label_cols["participant_id"],
+            binary_col=label_cols["phq_binary"],
+            score_col=label_cols["phq_score"],
+            exclude=self._excluded,
+        )
+
+        total = count = 0.0
+        sums: NDArray[np.float64] | None = None
+        squares: NDArray[np.float64] | None = None
+        for record in train_records:
+            try:
+                matrix = _cached_feature_matrix(
+                    self._file(record["pid"], cfg["file_template"]), self._cache_dir, **options
+                ).astype(np.float64)
+            except (FileNotFoundError, ValueError):
+                continue  # a session missing this modality contributes nothing
+            sums = matrix.sum(axis=0) if sums is None else sums + matrix.sum(axis=0)
+            squares = (
+                (matrix**2).sum(axis=0) if squares is None else squares + (matrix**2).sum(axis=0)
+            )
+            count += matrix.shape[0]
+            total += 1
+
+        if sums is None or squares is None or count == 0:
+            raise RuntimeError(f"no readable training sessions for corpus stats of {modality!r}")
+
+        mean = (sums / count).astype(np.float32)[None, :]
+        variance = np.maximum(squares / count - (sums / count) ** 2, 0.0)
+        std = np.sqrt(variance).astype(np.float32)[None, :]
+        if cache_path is not None and self._cache_dir is not None:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
+            tmp_path = cache_path.with_suffix(".tmp.npz")
+            np.savez(tmp_path, mean=mean, std=std)
+            tmp_path.replace(cache_path)
+        self._corpus_stats[modality] = (mean, std)
+        return mean, std
+
+    def _load_normalized(
+        self, pid: int, modality: str, cfg: dict[str, Any], *, default_header: bool
+    ) -> NDArray[np.float32]:
+        """Load one modality's raw matrix and apply the configured normalization."""
+        options = self._parse_options(cfg, default_header=default_header)
+        matrix = _cached_feature_matrix(
+            self._file(pid, cfg["file_template"]), self._cache_dir, **options
+        )
+        mode = str(cfg.get("normalization", "session"))
+        stats = self._corpus_statistics(modality, cfg, options) if mode == "corpus" else None
+        return apply_normalization(matrix, mode, stats)
 
     def _participant_dir(self, pid: int) -> Path:
         """Return the participant's directory path."""
@@ -344,30 +484,10 @@ class DaicWozDataset(Dataset[Sample]):
         return self._participant_dir(pid) / template.format(pid=pid)
 
     def _load_audio(self, pid: int) -> NDArray[np.float32]:
-        cfg = self._audio_cfg
-        return _cached_feature_matrix(
-            self._file(pid, cfg["file_template"]),
-            self._cache_dir,
-            delimiter=cfg.get("delimiter", ","),
-            has_header=cfg.get("has_header", False),
-            drop_columns=cfg.get("drop_columns", []),
-            max_frames=int(cfg["max_frames"]),
-            frame_stride=int(cfg.get("frame_stride", 1)),
-            standardize=cfg.get("standardize", True),
-        )
+        return self._load_normalized(pid, "audio", self._audio_cfg, default_header=False)
 
     def _load_video(self, pid: int) -> NDArray[np.float32]:
-        cfg = self._video_cfg
-        return _cached_feature_matrix(
-            self._file(pid, cfg["file_template"]),
-            self._cache_dir,
-            delimiter=cfg.get("delimiter", ","),
-            has_header=cfg.get("has_header", True),
-            drop_columns=cfg.get("drop_columns", []),
-            max_frames=int(cfg["max_frames"]),
-            frame_stride=int(cfg.get("frame_stride", 1)),
-            standardize=cfg.get("standardize", True),
-        )
+        return self._load_normalized(pid, "video", self._video_cfg, default_header=True)
 
     def _text_cache_path(self, path: Path, kind: str) -> Path | None:
         """Cache path for a text vector, or ``None`` when caching is disabled.

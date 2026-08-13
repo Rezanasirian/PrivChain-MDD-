@@ -1,0 +1,142 @@
+{
+  "centralized": {
+    "cv": {
+      "num_folds": 5.0,
+      "accuracy_num_valid_folds": 5.0,
+      "accuracy_mean": 0.7266666666666667,
+      "accuracy_std": 0.052281290471193766,
+      "f1_num_valid_folds": 5.0,
+      "f1_mean": 0.8406349206349206,
+      "f1_std": 0.03514502223009027,
+      "loss_num_valid_folds": 5.0,
+      "loss_mean": 0.6579634547233582,
+      "loss_std": 0.025325212841619326,
+      "precision_num_valid_folds": 5.0,
+      "precision_mean": 0.7266666666666667,
+      "precision_std": 0.052281290471193766,
+      "recall_num_valid_folds": 5.0,
+      "recall_mean": 1.0,
+      "recall_std": 0.0,
+      "roc_auc_num_valid_folds": 5.0,
+      "roc_auc_mean": 0.5,
+      "roc_auc_std": 0.3791437722025775
+    },
+    "held_out": {
+      "f1": 0.8333333333333333,
+      "roc_auc": 0.9,
+      "accuracy": 0.7142857142857143
+    }
+  },
+  "fedavg": {
+    "cv": {
+      "num_folds": 5.0,
+      "accuracy_num_valid_folds": 5.0,
+      "accuracy_mean": 0.5933333333333334,
+      "accuracy_std": 0.2130727575266252,
+      "f1_num_valid_folds": 5.0,
+      "f1_mean": 0.5873015873015873,
+      "f1_std": 0.35944583758014376,
+      "loss_num_valid_folds": 5.0,
+      "loss_mean": 0.72301265001297,
+      "loss_std": 0.00933021717848681,
+      "precision_num_valid_folds": 5.0,
+      "precision_mean": 0.5599999999999999,
+      "precision_std": 0.29899832775452106,
+      "recall_num_valid_folds": 5.0,
+      "recall_mean": 0.65,
+      "recall_std": 0.43588989435406733,
+      "roc_auc_num_valid_folds": 5.0,
+      "roc_auc_mean": 0.5916666666666666,
+      "roc_auc_std": 0.2505549396395485
+    },
+    "held_out": {
+      "f1": 0.0,
+      "roc_auc": 0.1,
+      "accuracy": 0.2857142857142857
+    }
+  },
+  "personalized": {
+    "cv": {
+      "num_folds": 5.0,
+      "accuracy_num_valid_folds": 5.0,
+      "accuracy_mean": 0.5933333333333334,
+      "accuracy_std": 0.2130727575266252,
+      "f1_num_valid_folds": 5.0,
+      "f1_mean": 0.5873015873015873,
+      "f1_std": 0.35944583758014376,
+      "loss_num_valid_folds": 5.0,
+      "loss_mean": 0.7230721950531006,
+      "loss_std": 0.009427748422379112,
+      "precision_num_valid_folds": 5.0,
+      "precision_mean": 0.5599999999999999,
+      "precision_std": 0.29899832775452106,
+      "recall_num_valid_folds": 5.0,
+      "recall_mean": 0.65,
+      "recall_std": 0.43588989435406733,
+      "roc_auc_num_valid_folds": 5.0,
+      "roc_auc_mean": 0.5916666666666666,
+      "roc_auc_std": 0.2505549396395485
+    },
+    "held_out": {
+      "f1": 0.0,
+      "roc_auc": 0.2,
+      "accuracy": 0.2857142857142857
+    }
+  },
+  "proposed": {
+    "cv": {
+      "num_folds": 5.0,
+      "accuracy_num_valid_folds": 5.0,
+      "accuracy_mean": 0.5933333333333334,
+      "accuracy_std": 0.2130727575266252,
+      "f1_num_valid_folds": 5.0,
+      "f1_mean": 0.5873015873015873,
+      "f1_std": 0.35944583758014376,
+      "loss_num_valid_folds": 5.0,
+      "loss_mean": 0.7230871558189392,
+      "loss_std": 0.009413184814576024,
+      "precision_num_valid_folds": 5.0,
+      "precision_mean": 0.5599999999999999,
+      "precision_std": 0.29899832775452106,
+      "recall_num_valid_folds": 5.0,
+      "recall_mean": 0.65,
+      "recall_std": 0.43588989435406733,
+      "roc_auc_num_valid_folds": 5.0,
+      "roc_auc_mean": 0.5916666666666666,
+      "roc_auc_std": 0.2505549396395485
+    },
+    "held_out": {
+      "f1": 0.0,
+      "roc_auc": 0.2,
+      "accuracy": 0.2857142857142857
+    }
+  },
+  "proposed_no_reputation": {
+    "cv": {
+      "num_folds": 5.0,
+      "accuracy_num_valid_folds": 5.0,
+      "accuracy_mean": 0.5933333333333334,
+      "accuracy_std": 0.2130727575266252,
+      "f1_num_valid_folds": 5.0,
+      "f1_mean": 0.5873015873015873,
+      "f1_std": 0.35944583758014376,
+      "loss_num_valid_folds": 5.0,
+      "loss_mean": 0.7233344435691833,
+      "loss_std": 0.009474774044884603,
+      "precision_num_valid_folds": 5.0,
+      "precision_mean": 0.5599999999999999,
+      "precision_std": 0.29899832775452106,
+      "recall_num_valid_folds": 5.0,
+      "recall_mean": 0.65,
+      "recall_std": 0.43588989435406733,
+      "roc_auc_num_valid_folds": 5.0,
+      "roc_auc_mean": 0.5666666666666667,
+      "roc_auc_std": 0.2758824226207808
+    },
+    "held_out": {
+      "f1": 0.0,
+      "roc_auc": 0.2,
+      "accuracy": 0.2857142857142857
+    }
+  }
+}

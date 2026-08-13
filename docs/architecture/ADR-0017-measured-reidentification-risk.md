@@ -184,3 +184,46 @@ would very likely push audio higher.
   reads a mock run as evidence again.
 - `ReidentificationAttacker` gained `predict()` so callers can score subsets of
   the probes; `attack()` is now a thin wrapper over it.
+
+---
+
+## Amendment, 2026-08-13 (ADR-0019, ADR-0020) — the ordering is preprocessing-dependent
+
+This ADR measured re-identification with `normalization: session` in force,
+without noticing that the setting existed. ADR-0019 re-ran the same attack with
+normalization removed:
+
+| raw_pca (matched width) | session | none |
+|---|---|---|
+| audio | 0.158 (22.2×) | 0.075 (**10.6×**) |
+| video | 0.153 (21.6×) | 0.036 (**5.1×**) |
+| text | 0.046 (6.6×) | 0.046 (6.6×) |
+
+**What stands.** Audio is the most re-identifying modality under both schemes.
+Text sits at 6.6× under both — unchanged, because text embeddings never pass
+through this code path, which makes that column an internal control confirming
+the manipulation was specific. The negative control remains at chance in both
+runs. The statistical basis is also unaffected by ADR-0020: 423 probe trials give
+SE ≈ 0.017, so these gaps are real in a way the 34-session utility numbers are not.
+
+**What does not stand.** The claim that audio and video are jointly the
+high-risk modalities. Video ranks second under `session` and **last — below
+text — under `none`**. Its position is an artifact of a preprocessing choice, not
+a property of the modality.
+
+**What that means for the budget.** `configs/privacy.yaml`'s measured risks
+(1.00 / 0.97 / 0.29) were read off the `session` run. The audio-versus-text
+ordering they encode survives; the audio-versus-video near-equality does not, and
+this ADR's own conclusion that "the audio > video gap does not survive" turns out
+to have been right for a different reason than stated — video is not
+indistinguishable from audio, it is unstable.
+
+Nothing downstream breaks, because ADR-0018 found the allocation makes no
+measurable difference to utility either way. But no Chapter 3 argument may rest
+on video's rank until the measurement is repeated on a representation chosen for
+the attacker rather than inherited from the classifier.
+
+**Also noted:** the `raw_pca` control is transductive — the projection is fitted
+on the enrollment rows of the same subjects being identified. It is applied
+identically to all three modalities, so the comparison is fair, but the absolute
+`raw_pca` rates are mildly optimistic.

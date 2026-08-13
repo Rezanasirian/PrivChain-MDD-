@@ -1,0 +1,6 @@
+{"target_epsilon": 0.5, "consumed_epsilon": 0.4996681543390412, "accuracy": 0.25, "f1": 0.0, "roc_auc": 0.6666666666666666}
+{"target_epsilon": 1.0, "consumed_epsilon": 0.9991150471806279, "accuracy": 0.25, "f1": 0.0, "roc_auc": 0.6666666666666666}
+{"target_epsilon": 2.0, "consumed_epsilon": 1.9990454438190828, "accuracy": 0.25, "f1": 0.0, "roc_auc": 0.6666666666666666}
+{"target_epsilon": 4.0, "consumed_epsilon": 3.9996731685807205, "accuracy": 0.25, "f1": 0.0, "roc_auc": 0.6666666666666666}
+{"target_epsilon": 8.0, "consumed_epsilon": 7.999739244733728, "accuracy": 0.25, "f1": 0.0, "roc_auc": 0.6666666666666666}
+{"target_epsilon": 16.0, "consumed_epsilon": 15.999232841253358, "accuracy": 0.25, "f1": 0.0, "roc_auc": 0.6666666666666666}
