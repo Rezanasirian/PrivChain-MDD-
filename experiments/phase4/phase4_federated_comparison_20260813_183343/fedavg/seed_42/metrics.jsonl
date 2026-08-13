@@ -1,0 +1,6 @@
+{"round": 1, "num_clients": 10, "val_accuracy": 0.25, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 1.0, "val_threshold": 0.5, "val_loss": 0.7311090230941772}
+{"round": 2, "num_clients": 10, "val_accuracy": 0.25, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 1.0, "val_threshold": 0.5, "val_loss": 0.725824773311615}
+{"round": 3, "num_clients": 10, "val_accuracy": 0.25, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 1.0, "val_threshold": 0.5, "val_loss": 0.7207450270652771}
+{"round": 4, "num_clients": 10, "val_accuracy": 0.25, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 1.0, "val_threshold": 0.5, "val_loss": 0.7153529524803162}
+{"round": 5, "num_clients": 10, "val_accuracy": 0.25, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 1.0, "val_threshold": 0.5, "val_loss": 0.7103087306022644}
+{"round": 6, "num_clients": 10, "val_accuracy": 0.5, "val_precision": 1.0, "val_recall": 0.3333333333333333, "val_f1": 0.5, "val_roc_auc": 1.0, "val_threshold": 0.5, "val_loss": 0.7055382132530212}

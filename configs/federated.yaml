@@ -1,13 +1,23 @@
 # Federated-learning configuration (Phases 2 & 4).
-# Placeholders for now; consumed once Flower orchestration lands.
 
 seed: 42
 
 federation:
   num_clients: 10            # assumption (see ADR-0001): >= 10 simulated clients
-  num_rounds: 20
+  # One round with local_epochs=1 is roughly one epoch of data spread over the
+  # clients. The centralized baseline needs ~36 epochs to converge (ADR-0012), so
+  # the previous budget of 20 rounds starved every federated arm and understated
+  # all of them. Early stopping on the selection split means the extra rounds are
+  # free when an arm converges sooner (ADR-0021).
+  num_rounds: 120
   clients_per_round: 10
   local_epochs: 1
+  early_stopping_patience: 40   # matches the centralized baseline's patience
+
+  # How the training split is divided across clients.
+  partition:
+    mode: iid                 # {iid, dirichlet}
+    dirichlet_alpha: 0.5      # only used when mode = dirichlet; smaller = more skew
 
   # Heterogeneous modality-access patterns across the client population.
   # one-hot capability vector order: [audio, video, text]

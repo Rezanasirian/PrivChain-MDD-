@@ -10,6 +10,7 @@ mode the Phase 4 protocol is designed to fix.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -96,8 +97,69 @@ def partition_indices(num_items: int, num_clients: int, seed: int) -> list[list[
     return [sorted(int(i) for i in shard) for shard in np.array_split(shuffled, num_clients)]
 
 
+def partition_indices_dirichlet(
+    labels: Sequence[int], num_clients: int, alpha: float, seed: int
+) -> list[list[int]]:
+    """Split indices so each client sees a *different* class mix (non-IID).
+
+    IID sharding gives every client roughly the corpus-wide prevalence, which is
+    the easiest case for federated averaging and the least like real clinical
+    federation: sites differ in referral pattern and severity mix. Drawing each
+    client's class proportions from a Dirichlet makes that skew explicit, and it
+    is the regime where capability-aware aggregation has the most to prove.
+
+    ``alpha`` controls the skew: small values (0.1) give clients dominated by one
+    class, large values approach the IID split.
+
+    Args:
+        labels: Binary label per item, index-aligned with the dataset.
+        num_clients: Number of clients.
+        alpha: Dirichlet concentration; must be positive.
+        seed: Seed for the draw.
+
+    Returns:
+        ``num_clients`` index lists, together covering every index exactly once.
+        Every list is non-empty.
+
+    Raises:
+        ValueError: If ``alpha`` is not positive, or there are fewer items than
+            clients.
+    """
+    if alpha <= 0.0:
+        raise ValueError(f"alpha must be positive, got {alpha}")
+    if len(labels) < num_clients:
+        raise ValueError(f"cannot partition {len(labels)} items across {num_clients} clients")
+
+    rng = np.random.default_rng(seed)
+    shards: list[list[int]] = [[] for _ in range(num_clients)]
+    for label in sorted(set(labels)):
+        members = [i for i, value in enumerate(labels) if value == label]
+        rng.shuffle(members)
+        proportions = rng.dirichlet([alpha] * num_clients)
+        # Cut points along the shuffled class members, so each client takes a
+        # different share of this class.
+        cuts = (np.cumsum(proportions) * len(members)).astype(int)[:-1]
+        for client, chunk in enumerate(np.split(np.asarray(members), cuts)):
+            shards[client].extend(int(i) for i in chunk)
+
+    # A Dirichlet draw can leave a client with nothing, which would crash client
+    # construction. Move one item from the largest shard rather than silently
+    # dropping the client, so the requested population size is honoured.
+    for client, shard in enumerate(shards):
+        if shard:
+            continue
+        donor = max(range(num_clients), key=lambda c: len(shards[c]))
+        shards[client].append(shards[donor].pop())
+
+    return [sorted(shard) for shard in shards]
+
+
 def build_client_partitions(
-    num_items: int, federation: FederationConfig, seed: int
+    num_items: int,
+    federation: FederationConfig,
+    seed: int,
+    *,
+    labels: Sequence[int] | None = None,
 ) -> list[ClientPartition]:
     """Build per-client partitions (indices + capability) for the population.
 
@@ -105,12 +167,24 @@ def build_client_partitions(
         num_items: Number of dataset items to distribute.
         federation: Federation configuration.
         seed: Base seed for capability assignment and index partition.
+        labels: Binary label per item, required when
+            ``federation.partition.mode`` is ``dirichlet``.
 
     Returns:
         A list of :class:`ClientPartition`, one per client.
+
+    Raises:
+        ValueError: If a label-skewed partition is requested without labels.
     """
     capabilities = assign_capabilities(federation, seed)
-    shards = partition_indices(num_items, federation.num_clients, seed + 1)
+    if federation.partition.mode == "dirichlet":
+        if labels is None:
+            raise ValueError("dirichlet partitioning needs per-item labels")
+        shards = partition_indices_dirichlet(
+            labels, federation.num_clients, federation.partition.dirichlet_alpha, seed + 1
+        )
+    else:
+        shards = partition_indices(num_items, federation.num_clients, seed + 1)
     return [
         ClientPartition(client_id=cid, pattern_name=name, capability=cap, indices=shard)
         for cid, ((name, cap), shard) in enumerate(zip(capabilities, shards, strict=True))

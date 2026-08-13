@@ -1,0 +1,10 @@
+{"round": 1, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4666666666666667, "val_threshold": 0.5, "val_loss": 0.6905253529548645}
+{"round": 2, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4111111111111111, "val_threshold": 0.5, "val_loss": 0.6813157200813293}
+{"round": 3, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4, "val_threshold": 0.5, "val_loss": 0.6735110878944397}
+{"round": 4, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4666666666666667, "val_threshold": 0.5, "val_loss": 0.6659499406814575}
+{"round": 5, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4777777777777778, "val_threshold": 0.5, "val_loss": 0.6593427658081055}
+{"round": 6, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.5, "val_threshold": 0.5, "val_loss": 0.6527385711669922}
+{"round": 7, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.5, "val_threshold": 0.5, "val_loss": 0.6467694640159607}
+{"round": 8, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.5222222222222223, "val_threshold": 0.5, "val_loss": 0.6406435370445251}
+{"round": 9, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.5111111111111111, "val_threshold": 0.5, "val_loss": 0.6353553533554077}
+{"round": 10, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.5222222222222223, "val_threshold": 0.5, "val_loss": 0.6303111910820007}

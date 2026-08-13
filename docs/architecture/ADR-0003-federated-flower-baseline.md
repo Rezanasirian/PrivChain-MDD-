@@ -70,3 +70,33 @@ Each round, the aggregated global model is evaluated on a held-out
 - `scripts/run_federated.py` runs either backend (`--backend sim|flower`).
 - The same `FederatedClient` carries into Phase 4, where aggregation/weighting is
   swapped out for the capability-aware protocol.
+
+---
+
+## Amendment, 2026-08-13 (ADR-0021) — Flower has now been executed
+
+This ADR recorded that the Flower adapter was written but could not be run
+offline, and that the in-house simulator would produce the Phase 2 results. That
+gap is now closed: `scripts/run_flower_parity.py` runs both backends on identical
+splits, partitions, initial parameters and seed, and the two **agree** (F1 and
+accuracy identical, ROC-AUC within 0.022 against a 0.05 tolerance fixed in
+advance).
+
+Getting there required fixing three real defects in the adapter and one in the
+harness — all invisible to inspection, all only reachable by running it:
+
+- clients were constructed in the parent process, so Ray pickled CUDA tensors
+  into every worker; they are now built inside `client_fn`;
+- Ray workers were granted no GPU, so a CUDA client could not deserialize;
+- Flower's `History` does not carry the final global parameters, so the caller
+  was evaluating the untrained initial model.
+
+Each of these failed **silently**: Flower logs `received 0 results and N
+failures` and continues with the initial parameters, which reads as a converged
+run. The lesson generalises beyond Flower — an integration that has never been
+executed should be described as untested, never as working.
+
+`flwr` also constrains the environment: 1.12 uses `np.float_` and cannot coexist
+with the NumPy 2.x that torch and scipy require. Version 1.33 works, and is
+installed into a separate directory placed on `PYTHONPATH` only for the parity
+check, so it cannot perturb the main environment's dependency set again.

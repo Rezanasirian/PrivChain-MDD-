@@ -66,7 +66,8 @@ def clip_rows(embeddings: NDArray[np.float64], max_norm: float) -> NDArray[np.fl
     matrix = np.asarray(embeddings, dtype=np.float64)
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     scale = np.minimum(1.0, max_norm / np.where(norms > 0.0, norms, 1.0))
-    return matrix * scale
+    clipped: NDArray[np.float64] = matrix * scale
+    return clipped
 
 
 def release_embeddings_dp(
@@ -109,7 +110,8 @@ def _l2_normalize(matrix: NDArray[np.float64]) -> NDArray[np.float64]:
     """Row-wise L2-normalize, guarding against zero-norm rows."""
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     norms = np.where(norms > 0.0, norms, 1.0)
-    return matrix / norms
+    normalized: NDArray[np.float64] = matrix / norms
+    return normalized
 
 
 class ReidentificationAttacker:

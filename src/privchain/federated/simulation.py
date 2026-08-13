@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import copy
 from collections import OrderedDict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,47 @@ from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
 from privchain.training.experiment import JsonlMetricLogger
 from privchain.training.objective import DepressionObjective, evaluate_model
+
+
+@dataclass
+class _BestRoundTracker:
+    """Track the best round on the selection split, and when to stop.
+
+    Federated arms were previously trained for a fixed round budget while the
+    centralized baseline stopped at its best epoch. Comparing them then charged
+    federation for a difference in schedule rather than in method (the same trap
+    ADR-0013 found in the DP arm), so every arm now stops on the same rule.
+
+    Args:
+        patience: Rounds without improvement before stopping; ``None`` disables.
+    """
+
+    patience: int | None
+    best_score: float = -float("inf")
+    best_round: int = 0
+    stale: int = 0
+
+    def update(self, score: float, round_num: int) -> bool:
+        """Record a round's selection score.
+
+        Args:
+            score: The selection-split metric for this round.
+            round_num: 1-based round index.
+
+        Returns:
+            ``True`` when this round is the new best (the caller should
+            checkpoint), ``False`` otherwise.
+        """
+        if score > self.best_score:
+            self.best_score, self.best_round, self.stale = score, round_num, 0
+            return True
+        self.stale += 1
+        return False
+
+    @property
+    def should_stop(self) -> bool:
+        """Whether patience has been exhausted."""
+        return self.patience is not None and self.stale >= self.patience
 
 
 def build_federated_clients(
@@ -113,6 +155,7 @@ def run_simulation(
     run_dir: Path,
     seed: int,
     device: str = "cpu",
+    early_stopping_patience: int | None = None,
 ) -> list[dict[str, Any]]:
     """Run FedAvg for ``num_rounds`` rounds, logging per-round global metrics.
 
@@ -127,6 +170,8 @@ def run_simulation(
         run_dir: Experiment run directory for ``metrics.jsonl`` / checkpoints.
         seed: Base seed for per-round client sampling.
         device: Torch device string.
+        early_stopping_patience: Rounds without a selection-split improvement
+            before stopping; ``None`` runs the full budget.
 
     Returns:
         Per-round history records.
@@ -142,7 +187,7 @@ def run_simulation(
     objective = DepressionObjective(phq8_max, phq_loss_weight)
     logger = JsonlMetricLogger(run_dir / "metrics.jsonl")
     history: list[dict[str, Any]] = []
-    best_score = -float("inf")
+    tracker = _BestRoundTracker(early_stopping_patience)
 
     global_state: OrderedDict[str, torch.Tensor] = OrderedDict(
         (k, v.detach().cpu().clone()) for k, v in global_model.state_dict().items()
@@ -173,9 +218,10 @@ def run_simulation(
         selector = metrics["roc_auc"]
         if np.isnan(selector):
             selector = metrics["f1"]
-        if selector > best_score:
-            best_score = selector
+        if tracker.update(selector, round_num):
             torch.save(global_state, run_dir / "best_global_model.pt")
+        elif tracker.should_stop:
+            break
 
     return history
 
@@ -254,6 +300,7 @@ def run_capability_aware_simulation(
     ledger: LedgerClient | None = None,
     budget_allocator: PerModalityBudgetAllocator | None = None,
     device: str = "cpu",
+    early_stopping_patience: int | None = None,
 ) -> list[dict[str, Any]]:
     """Run the Phase 4 capability-aware protocol (objectives H2, and H3 wiring).
 
@@ -285,6 +332,8 @@ def run_capability_aware_simulation(
         budget_allocator: Optional DP allocator; when set (with a ledger), the
             per-modality consumed ε is logged each round.
         device: Torch device string.
+        early_stopping_patience: Rounds without a selection-split improvement
+            before stopping; ``None`` runs the full budget.
 
     Returns:
         Per-round history records.
@@ -311,7 +360,7 @@ def run_capability_aware_simulation(
             param.requires_grad_(False)
 
     history: list[dict[str, Any]] = []
-    best_score = -float("inf")
+    tracker_best = _BestRoundTracker(early_stopping_patience)
 
     global_state: OrderedDict[str, torch.Tensor] = OrderedDict(
         (k, v.detach().cpu().clone()) for k, v in global_model.state_dict().items()
@@ -388,8 +437,9 @@ def run_capability_aware_simulation(
         selector = metrics["roc_auc"]
         if np.isnan(selector):
             selector = metrics["f1"]
-        if selector > best_score:
-            best_score = selector
+        if tracker_best.update(selector, round_num):
             torch.save(global_state, run_dir / "best_global_model.pt")
+        elif tracker_best.should_stop:
+            break
 
     return history

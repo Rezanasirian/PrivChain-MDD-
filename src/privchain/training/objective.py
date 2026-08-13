@@ -7,7 +7,7 @@ plus an optional (normalized) PHQ-8 regression term.
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -140,8 +140,8 @@ def collect_scores(
         ``(scores, labels)``, each of shape ``(N,)``.
     """
     model.eval()
-    scores: list[np.ndarray] = []
-    labels: list[np.ndarray] = []
+    scores: list[NDArray[Any]] = []
+    labels: list[NDArray[Any]] = []
     for raw_batch in loader:
         batch = move_batch_to_device(raw_batch, device)
         scores.append(torch.sigmoid(model(batch)["logit"]).cpu().numpy())
@@ -200,8 +200,8 @@ def evaluate_model(
         Metric mapping including ``f1``, ``roc_auc``, ``accuracy``, ``loss``.
     """
     model.eval()
-    all_scores: list[np.ndarray] = []
-    all_labels: list[np.ndarray] = []
+    all_scores: list[NDArray[Any]] = []
+    all_labels: list[NDArray[Any]] = []
     total_loss = 0.0
     count = 0
     for raw_batch in loader:

@@ -286,8 +286,13 @@ def paired_bootstrap_auc_difference(
         }
     tail = (1.0 - confidence) / 2.0
     low, high = np.quantile(deltas, [tail, 1.0 - tail])
-    below = float(np.mean(np.asarray(deltas) <= 0.0))
-    p_two_sided = min(1.0, 2.0 * min(below, 1.0 - below))
+    # Count ties on *both* sides. Using `1 - P(delta <= 0)` instead would report
+    # p = 0 for two arms whose scores are identical — the strongest possible
+    # evidence of a difference, for the one case where there is demonstrably none.
+    replicates = np.asarray(deltas)
+    at_or_below = float(np.mean(replicates <= 0.0))
+    at_or_above = float(np.mean(replicates >= 0.0))
+    p_two_sided = min(1.0, 2.0 * min(at_or_below, at_or_above))
     return {
         "difference": observed,
         "low": float(low),

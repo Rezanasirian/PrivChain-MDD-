@@ -54,6 +54,10 @@ def test_an_arm_compared_against_itself_shows_exactly_no_difference() -> None:
     assert result["difference"] == 0.0
     assert result["low"] == 0.0 and result["high"] == 0.0
     assert not result["significant"]
+    # Ties must count on both sides. Reporting p = 0 here would call two identical
+    # arms maximally different — and two arms really can score identically when
+    # the report split is small enough that weight differences do not change ranks.
+    assert result["p_two_sided"] == 1.0
 
 
 def test_a_real_difference_is_detected() -> None:

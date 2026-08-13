@@ -304,6 +304,21 @@ class ModalityPattern(_Strict):
         return value
 
 
+class PartitionConfig(_Strict):
+    """How the training split is divided across clients (Phase 2, ADR-0021).
+
+    ``iid`` gives every client roughly the corpus-wide class prevalence — the
+    easiest case for averaging, and the least like real clinical federation.
+    ``dirichlet`` draws each client's class mix from a Dirichlet, making the
+    heterogeneity the protocol claims to handle actually present.
+    """
+
+    mode: Literal["iid", "dirichlet"] = "iid"
+    # Concentration: small values (0.1) give clients dominated by one class,
+    # large values approach the IID split.
+    dirichlet_alpha: float = Field(default=0.5, gt=0.0)
+
+
 class FederationConfig(_Strict):
     """Federated-population schema (Phase 2)."""
 
@@ -312,6 +327,11 @@ class FederationConfig(_Strict):
     clients_per_round: int = Field(gt=0)
     local_epochs: int = Field(gt=0)
     modality_patterns: list[ModalityPattern]
+    partition: PartitionConfig = Field(default_factory=PartitionConfig)
+    # Rounds without a selection-split improvement before stopping. Federated arms
+    # previously ran a fixed budget while the centralized baseline stopped at its
+    # best epoch, which charged federation for a difference in schedule.
+    early_stopping_patience: int | None = Field(default=None, gt=0)
 
 
 class ReputationConfig(_Strict):

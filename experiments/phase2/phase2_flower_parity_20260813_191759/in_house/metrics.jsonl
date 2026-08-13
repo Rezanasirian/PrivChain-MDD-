@@ -1,0 +1,10 @@
+{"round": 1, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4666666666666667, "val_threshold": 0.5, "val_loss": 0.6905636787414551}
+{"round": 2, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.35555555555555557, "val_threshold": 0.5, "val_loss": 0.6816238164901733}
+{"round": 3, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.3888888888888889, "val_threshold": 0.5, "val_loss": 0.6738891005516052}
+{"round": 4, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4777777777777778, "val_threshold": 0.5, "val_loss": 0.6664137840270996}
+{"round": 5, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.5111111111111111, "val_threshold": 0.5, "val_loss": 0.6592736840248108}
+{"round": 6, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.5, "val_threshold": 0.5, "val_loss": 0.6526688933372498}
+{"round": 7, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4666666666666667, "val_threshold": 0.5, "val_loss": 0.6461060643196106}
+{"round": 8, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4666666666666667, "val_threshold": 0.5, "val_loss": 0.6399973034858704}
+{"round": 9, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4888888888888889, "val_threshold": 0.5, "val_loss": 0.6345342397689819}
+{"round": 10, "num_clients": 10, "val_accuracy": 0.7142857142857143, "val_precision": 0.0, "val_recall": 0.0, "val_f1": 0.0, "val_roc_auc": 0.4777777777777778, "val_threshold": 0.5, "val_loss": 0.6292943358421326}
