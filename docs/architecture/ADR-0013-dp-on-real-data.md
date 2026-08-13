@@ -183,18 +183,51 @@ model", and it is answerable — clipping to `C = 1.0` was inherited from the mo
 config and never tuned, and a fixed 240-step budget denies DP the early stopping
 the baseline gets.
 
+## Where the cost actually goes
+
+Both suspects from the previous revision — an untuned clipping norm and a
+missing early-stopping rule — were tested and are **not** the explanation.
+
+`C` was tuned on the selection split. `C = 1.0`, inherited from the mock config,
+is consistently the worst value, but everything from 0.01 to 0.5 is equivalent
+to within the noise of a 21-session split; `C = 0.1` is now configured. Adding
+the baseline's early stopping to the DP arm changed ε = ∞ ROC-AUC from 0.582 to
+0.596. Together the two fixes bought ~0.01 AUC against a 0.14 gap.
+
+So the gap was decomposed directly, by running the DP code path with the noise
+off and the clipping effectively disabled (`C = 10⁶`, far above any real
+per-sample gradient norm). Same splits, same seeds, same report split:
+
+| Arm | report ROC-AUC | Δ | attributable to |
+|---|---|---|---|
+| Baseline (shuffled batches, no clipping) | 0.740 | — | — |
+| DP path, σ = 0, no clipping | 0.689 | **−0.051** | Poisson subsampling + fixed step budget + per-sample-gradient machinery |
+| DP path, σ = 0, `C = 0.1` | 0.596 | **−0.093** | per-sample clipping |
+| DP path, ε = 8 | 0.572 | −0.024 | the privacy noise |
+| DP path, ε = 0.5 | 0.480 | −0.116 | the privacy noise |
+
+**Per-sample clipping costs about as much as tightening ε from ∞ all the way to
+0.5.** That is the headline. Clipping is not a tuning failure to be fixed — it is
+what bounds each participant's influence, and therefore what makes any DP
+guarantee possible; the diagnostic `C = 10⁶` arm is a control, not a usable
+configuration (with noise on, a larger `C` scales the noise as σ·C).
+
+The result reframes the privacy-utility story for small clinical corpora:
+**most of the cost of DP here is paid before a single unit of noise is added.**
+Reporting only "utility at ε" would hide that, and would make the mechanism look
+cheaper than the deployment actually is.
+
 ## What to try next, in order
 
-1. **Tune the clipping norm `C`** against real gradient magnitudes; it is still
-   1.0, inherited from the mock configuration. The lever sweep hinted `C = 0.1`
-   is slightly better for AUC. This is now the single biggest lever.
-2. **Give the DP arm the baseline's early stopping.** It currently trains a
-   fixed step budget; the baseline stops at its best epoch. Some of the
-   ε = ∞ gap is that difference, not clipping.
-3. **Read ADR-0016 first.** Essentially all utility lives in the text modality;
-   the noise applied to the audio and video encoders is close to pure cost, and
-   the configured allocation protects them *most*.
-4. **Only then** report the curve.
+1. **Read ADR-0016 first.** Essentially all utility lives in the text modality,
+   yet the configured allocation protects audio and video *most*. Noise on those
+   two encoders is close to pure cost, so the allocation policy — not the
+   mechanism — is the next real lever.
+2. **Measure per-modality re-identification risk (Phase 6)** against the current
+   features. Until that exists, no allocation is justifiable and the ε values in
+   `configs/privacy.yaml` remain placeholders.
+3. **Then** regenerate and report the curve, with the decomposition above beside
+   it rather than the bare ε axis.
 
 Two hypotheses from the first draft of this ADR were tested and **rejected**:
 shrinking the model did not help (wider was consistently better), and raising the

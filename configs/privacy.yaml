@@ -11,7 +11,16 @@ seed: 42
 privacy:
   delta: 1.0e-5             # target (epsilon, delta)-DP failure probability
   accountant: rdp          # Renyi DP accountant (alternative: gdp)
-  max_grad_norm: 1.0       # per-sample gradient clipping bound C
+  # Per-sample gradient clipping bound C. NOT a privacy parameter: the guarantee
+  # depends on the noise multiplier sigma, and the injected noise scales as
+  # sigma*C against a signal bounded by C, so C only trades clipping bias against
+  # noise-to-signal and can be tuned freely.
+  #
+  # Tuned on the selection split (ADR-0013): C = 1.0, inherited from the mock
+  # config, was consistently the worst value (selection AUC 0.659 at eps=inf,
+  # 0.681 at eps=8). Everything from 0.01 to 0.5 was equivalent to within the
+  # noise of a 21-session split, so 0.1 is a mid-range pick, not a fitted optimum.
+  max_grad_norm: 0.1
 
   # How per-modality target budgets epsilon_m are derived.
   allocation:

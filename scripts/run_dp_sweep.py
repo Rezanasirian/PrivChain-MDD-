@@ -208,7 +208,14 @@ def main() -> None:
         # Selection runs over trained epochs only. Including a pre-training
         # evaluation would let an untrained model win, which silently reported
         # the initial weights' metrics identically at every epsilon.
+        # Early stopping too, on the same patience as the baseline. Without it
+        # the DP arm trained a fixed step budget while the baseline stopped at
+        # its best epoch, and part of the "cost of DP" was really that
+        # difference. Stopping early spends *fewer* mechanism applications than
+        # `planned_steps`, so the reported ε stays a valid upper bound.
         steps_per_epoch = max(1, len(batches) // priv.sweep.epochs)
+        patience = base.train.early_stopping_patience
+        stale = 0
         best_selector = -float("inf")
         best_state: dict[str, torch.Tensor] | None = None
         for start in range(0, len(batches), steps_per_epoch):
@@ -235,6 +242,11 @@ def main() -> None:
             if selector > best_selector:
                 best_selector = selector
                 best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                stale = 0
+            else:
+                stale += 1
+                if patience is not None and stale >= patience:
+                    break
 
         if best_state is None:  # only reachable if the step budget is empty
             raise RuntimeError(f"no training steps ran at target epsilon {target_eps}")
