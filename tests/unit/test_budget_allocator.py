@@ -8,6 +8,7 @@ from privchain.config import AllocationConfig, ModalityPrivacy
 from privchain.privacy.budget_allocator import (
     PerModalityBudgetAllocator,
     allocate_target_epsilons,
+    scale_to_participant_epsilon,
 )
 
 _PER_MODALITY = {
@@ -71,3 +72,74 @@ def test_inverse_risk_rejects_zero_risk() -> None:
     bad = {"audio": ModalityPrivacy(epsilon=2.0, reidentification_risk=0.0)}
     with pytest.raises(ValueError):
         allocate_target_epsilons(AllocationConfig(mode="inverse_risk"), bad)
+
+
+# ── Matching arms on the composed participant budget (ADR-0018) ──────────────
+
+_MATCH_KWARGS = {"delta": 1e-5, "sample_rate": 0.1, "steps": 200}
+_TARGET = 8.0
+# The three shapes compared in scripts/run_allocation_comparison.py.
+_SHAPES = {
+    "uniform": {"audio": 1.0, "video": 1.0, "text": 1.0},
+    "adaptive": {"audio": 1.0, "video": 1.0 / 0.97, "text": 1.0 / 0.29},
+    "anti_adaptive": {"audio": 1.0, "video": 0.97, "text": 0.29},
+}
+
+
+def _participant_epsilon(epsilons: dict[str, float]) -> float:
+    allocator = PerModalityBudgetAllocator(epsilons, dict.fromkeys(epsilons, 0.5), **_MATCH_KWARGS)
+    return allocator.participant_epsilon(_MATCH_KWARGS["steps"])
+
+
+@pytest.mark.parametrize("shape_name", list(_SHAPES))
+def test_scaling_hits_the_target_participant_budget(shape_name: str) -> None:
+    epsilons = scale_to_participant_epsilon(_SHAPES[shape_name], _TARGET, **_MATCH_KWARGS)
+    assert _participant_epsilon(epsilons) == pytest.approx(_TARGET, rel=1e-2)
+
+
+def test_scaling_preserves_the_shape() -> None:
+    shape = _SHAPES["adaptive"]
+    epsilons = scale_to_participant_epsilon(shape, _TARGET, **_MATCH_KWARGS)
+    # Only the level changes; the ratios that define the allocation do not.
+    assert epsilons["text"] / epsilons["audio"] == pytest.approx(shape["text"] / shape["audio"])
+    assert epsilons["video"] / epsilons["audio"] == pytest.approx(shape["video"] / shape["audio"])
+
+
+def test_every_arm_lands_on_the_same_budget() -> None:
+    """The premise of the whole comparison: matched arms, differing allocations."""
+    achieved = {
+        name: _participant_epsilon(scale_to_participant_epsilon(shape, _TARGET, **_MATCH_KWARGS))
+        for name, shape in _SHAPES.items()
+    }
+    assert max(achieved.values()) - min(achieved.values()) < 0.01 * _TARGET
+
+
+def test_matching_on_the_mean_would_not_have_been_equivalent() -> None:
+    """Why the scaling exists: equal mean epsilon is not equal privacy.
+
+    The uneven (adaptive) allocation is dominated by its loosest mechanism, so at
+    equal *mean* budget it spends strictly more participant epsilon than the
+    uniform arm — silently favouring the hypothesis under test.
+    """
+    uniform = dict.fromkeys(_SHAPES["adaptive"], 1.0)
+    adaptive = _SHAPES["adaptive"]
+    mean_adaptive = sum(adaptive.values()) / len(adaptive)
+
+    matched_on_mean_uniform = dict.fromkeys(uniform, mean_adaptive)
+    assert _participant_epsilon(adaptive) > _participant_epsilon(matched_on_mean_uniform)
+
+
+def test_more_budget_means_a_larger_composed_epsilon() -> None:
+    """Monotonicity, which is what makes the bisection valid."""
+    small = scale_to_participant_epsilon(_SHAPES["uniform"], 4.0, **_MATCH_KWARGS)
+    large = scale_to_participant_epsilon(_SHAPES["uniform"], 12.0, **_MATCH_KWARGS)
+    assert small["audio"] < large["audio"]
+
+
+@pytest.mark.parametrize(
+    ("weights", "target"),
+    [({}, 8.0), ({"audio": 0.0}, 8.0), ({"audio": 1.0}, 0.0)],
+)
+def test_scaling_rejects_degenerate_input(weights: dict[str, float], target: float) -> None:
+    with pytest.raises(ValueError):
+        scale_to_participant_epsilon(weights, target, **_MATCH_KWARGS)

@@ -28,18 +28,38 @@ privacy:
                            # inverse_risk: epsilon_m = total * r_m^-gamma / sum_k r_k^-gamma
     total_epsilon: 14.0    # used only when mode = inverse_risk
     risk_sharpness: 1.0    # gamma; 0 = uniform, larger = more risk-sensitive
+    # Budget every arm of scripts/run_allocation_comparison.py is scaled to. It
+    # is the RDP *composition* over the three encoders plus the shared head --
+    # what a participant contributing every modality actually spends (ADR-0009)
+    # -- not the sum or mean of the per-modality budgets. Matching arms on that
+    # mean would hand more real privacy to the most uneven allocation, which is
+    # the hypothesis under test (ADR-0018).
+    total_participant_epsilon: 8.0
 
-  # Base privacy budget and assumed re-identification risk per modality.
+  # Base privacy budget and per-modality re-identification risk.
+  #
+  # The risks are MEASURED, not assumed (ADR-0017): 141 participants, six
+  # disjoint within-session stretches each, nearest-centroid attacker at matched
+  # feature width, three seeds, shuffled-label control at chance. Normalised
+  # against the riskiest modality. The earlier 0.9 / 0.6 / 0.3 were placeholders.
+  #
+  # What the measurement changed: text's 0.3 was almost exactly right (0.29), but
+  # audio and video came out indistinguishable (22.2x vs 21.6x chance), so the
+  # old 0.9 / 0.6 asserted a 1.5x separation the data does not support.
+  #
+  # The epsilon values below are unchanged and remain the Phase 3 sweep's
+  # reference points; deriving them from these risks means switching `mode` to
+  # inverse_risk, which is a deliberate change, not a side effect of measuring.
   per_modality:
     audio:
       epsilon: 2.0         # highest risk -> tightest budget
-      reidentification_risk: 0.9
+      reidentification_risk: 1.00   # measured 22.2x chance
     video:
       epsilon: 4.0
-      reidentification_risk: 0.6
+      reidentification_risk: 0.97   # measured 21.6x chance
     text:
       epsilon: 8.0         # lowest risk -> loosest budget
-      reidentification_risk: 0.3
+      reidentification_risk: 0.29   # measured 6.6x chance
 
   # Accuracy-vs-epsilon sweep (Phase 3 DoD): each value sets a uniform
   # per-modality target epsilon, trains DP-SGD, and records accuracy.

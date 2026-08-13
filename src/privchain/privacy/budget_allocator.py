@@ -21,6 +21,7 @@ Formalization (the math destined for Chapter 3):
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from privchain.config import AllocationConfig, ModalityPrivacy
@@ -62,6 +63,115 @@ def allocate_target_epsilons(
         modality: allocation.total_epsilon * weight / total_weight
         for modality, weight in inv_weights.items()
     }
+
+
+def scale_to_participant_epsilon(
+    weights: Mapping[str, float],
+    target_participant_epsilon: float,
+    *,
+    delta: float,
+    sample_rate: float,
+    steps: int,
+    include_shared: bool = True,
+    tolerance: float = 1.0e-3,
+    max_iterations: int = 60,
+) -> dict[str, float]:
+    """Scale a budget *shape* until its composed participant ``ε`` hits a target.
+
+    Comparing two allocations only means something if they cost the same
+    privacy, and the obvious way to match them — giving both the same sum or
+    mean of per-modality ``ε`` — does **not**. A participant contributing every
+    modality is exposed to every mechanism, so what they actually spend is the
+    RDP *composition* (:meth:`PerModalityBudgetAllocator.participant_epsilon`,
+    ADR-0009), which is dominated by the loosest mechanism and is not linear in
+    the individual budgets. Matching on the mean therefore hands more real
+    privacy to whichever allocation is most uneven — in this project's case, the
+    adaptive one, i.e. the hypothesis under test (ADR-0018).
+
+    Composed ``ε`` is strictly increasing in the scale factor, so a bisection
+    finds the multiplier that puts any shape on the same participant budget.
+
+    Args:
+        weights: Relative budget per modality; only the ratios matter.
+        target_participant_epsilon: The composed budget every arm must spend.
+        delta: Target ``δ``.
+        sample_rate: Poisson sampling rate ``q``.
+        steps: Planned steps ``T``.
+        include_shared: Whether the shared fusion/head group counts toward the
+            composition, matching how the arms are actually trained.
+        tolerance: Relative accuracy of the match.
+        max_iterations: Bisection cap.
+
+    Returns:
+        Mapping ``{modality: epsilon}`` whose composed participant ``ε`` equals
+        ``target_participant_epsilon`` to within ``tolerance``.
+
+    Raises:
+        ValueError: If ``weights`` is empty, any weight is non-positive, or the
+            target is non-positive.
+        RuntimeError: If no bracket containing the target can be found.
+    """
+    if not weights:
+        raise ValueError("weights must be non-empty")
+    if any(weight <= 0.0 for weight in weights.values()):
+        raise ValueError(f"every weight must be positive, got {dict(weights)}")
+    if target_participant_epsilon <= 0.0:
+        raise ValueError("target_participant_epsilon must be positive")
+
+    # Normalize so the largest budget equals the scale factor; the composition is
+    # then bounded below by the scale, which makes the initial bracket easy.
+    largest = max(weights.values())
+    shape = {modality: weight / largest for modality, weight in weights.items()}
+
+    def composed(scale: float) -> float:
+        allocator = PerModalityBudgetAllocator(
+            {modality: scale * weight for modality, weight in shape.items()},
+            dict.fromkeys(shape, 0.0),
+            delta=delta,
+            sample_rate=sample_rate,
+            steps=steps,
+        )
+        return allocator.participant_epsilon(steps, include_shared=include_shared)
+
+    # Every per-modality budget is at most `scale` and composing several
+    # mechanisms costs more than any one of them, so `scale = target` is an upper
+    # bracket up to the accountant's own slack. Expand either end until the
+    # target is genuinely straddled rather than assuming it.
+    high = target_participant_epsilon
+    for _ in range(max_iterations):
+        if composed(high) >= target_participant_epsilon:
+            break
+        high *= 2.0
+    else:
+        raise RuntimeError(
+            f"could not bracket participant epsilon {target_participant_epsilon} "
+            f"from above for shape {shape}"
+        )
+
+    low = high / 2.0
+    for _ in range(max_iterations):
+        if composed(low) < target_participant_epsilon:
+            break
+        low /= 2.0
+    else:
+        raise RuntimeError(
+            f"could not bracket participant epsilon {target_participant_epsilon} "
+            f"from below for shape {shape}"
+        )
+
+    for _ in range(max_iterations):
+        middle = 0.5 * (low + high)
+        value = composed(middle)
+        if abs(value - target_participant_epsilon) <= tolerance * target_participant_epsilon:
+            break
+        if value < target_participant_epsilon:
+            low = middle
+        else:
+            high = middle
+    else:
+        middle = 0.5 * (low + high)
+
+    return {modality: middle * weight for modality, weight in shape.items()}
 
 
 @dataclass(frozen=True)

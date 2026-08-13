@@ -388,6 +388,10 @@ class AllocationConfig(_Strict):
     mode: Literal["explicit", "inverse_risk"] = "explicit"
     total_epsilon: float = Field(default=14.0, gt=0.0)
     risk_sharpness: float = Field(default=1.0, ge=0.0)  # gamma
+    # The budget the allocation comparison matches its arms on: the RDP
+    # composition a participant contributing every modality actually spends
+    # (ADR-0009), not the sum of the per-modality budgets (ADR-0018).
+    total_participant_epsilon: float = Field(default=8.0, gt=0.0)
 
 
 class PrivacySweepConfig(_Strict):

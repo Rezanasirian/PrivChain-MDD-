@@ -34,29 +34,15 @@ from privchain.config import (
     load_privacy_config,
     resolve_device,
 )
-from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
-from privchain.privacy.dp_sgd import (
-    dp_train_steps,
-    map_parameter_groups,
-    poisson_batches,
-    resolve_group_sigmas,
-    steps_for_epochs,
-    wrap_for_per_sample_grads,
-)
+from privchain.privacy.dp_sgd import resolve_group_sigmas
+from privchain.privacy.dp_training import build_dp_arm_config, train_dp_arm
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
-from privchain.training.objective import (
-    DepressionObjective,
-    evaluate_model,
-    evaluate_with_selected_threshold,
-    positive_class_weight,
-)
 from privchain.training.protocol import (
     RunResult,
     build_splits,
     format_aggregate,
-    make_loader,
     repeat_over_seeds,
 )
 
@@ -83,37 +69,16 @@ def main() -> None:
     # Exactly the splits the non-private baseline uses, from the same helper, so
     # the two arms differ only in the privacy mechanism (ADR-0015).
     splits, input_dims = build_splits(base, args.daic_config)
-    train_subset = splits.train
-    selection_loader = make_loader(
-        splits.selection, batch_size=base.train.batch_size, shuffle=False
-    )
-    report_loader = make_loader(splits.report, batch_size=base.train.batch_size, shuffle=False)
-
-    batch_size = base.train.batch_size
-    n_train = len(train_subset)  # type: ignore[arg-type]
-    # Poisson subsampling: each sample enters a step with probability q, which is
-    # exactly the assumption the RDP accountant makes (ADR-0004).
-    sample_rate = min(1.0, batch_size / n_train)
-    expected_batch_size = sample_rate * n_train
     device = torch.device(resolve_device(base.train.device))
-
-    # Match the non-private baseline's objective, including class weighting, so
-    # the privacy-utility curve isolates the cost of DP (ADR-0013). Note the
-    # weighting is largely neutralized by per-sample clipping — see ADR-0013 —
-    # but it is kept identical across arms rather than silently differing.
-    pos_weight = None
-    if base.train.class_weighting:
-        weight_loader = make_loader(train_subset, batch_size=batch_size, shuffle=False)
-        pos_weight = positive_class_weight(weight_loader)
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight, pos_weight).to(
-        device
-    )
+    # The DP arm itself lives in privchain.privacy.dp_training so the sweep, the
+    # allocation comparison and the attacker harness cannot drift apart.
+    arm = build_dp_arm_config(base, priv, splits, input_dims, device)
+    sample_rate, planned_steps = arm.sample_rate, arm.planned_steps
 
     run_dir = create_run_dir(base.train.output_dir, "phase3", "phase3_dp_budget_sweep")
     save_config(run_dir, {"baseline": base.model_dump(), "privacy": priv.model_dump()})
 
     # ── 1. Per-modality allocation report (configured allocation) ────────────
-    planned_steps = steps_for_epochs(n_train, batch_size, priv.sweep.epochs)
     configured = PerModalityBudgetAllocator.from_config(
         priv.allocation,
         priv.per_modality,
@@ -127,16 +92,16 @@ def main() -> None:
         "accountant": "opacus-rdp",
         "sampling": "poisson",
         "dataset": "daic_woz" if args.daic_config is not None else "mock",
-        "n_train": n_train,
+        "n_train": arm.n_train,
         "n_selection": len(splits.selection),  # type: ignore[arg-type]
         "n_report": len(splits.report),  # type: ignore[arg-type]
         "seeds": list(base.train.seeds),
         "device": str(device),
-        "pos_weight": pos_weight,
+        "pos_weight": arm.pos_weight,
         "allocation_mode": priv.allocation.mode,
         "delta": priv.delta,
         "sample_rate": sample_rate,
-        "expected_batch_size": expected_batch_size,
+        "expected_batch_size": arm.expected_batch_size,
         "planned_steps": planned_steps,
         "per_modality": {
             m: {
@@ -166,95 +131,22 @@ def main() -> None:
     # the *cost of privacy*, which is what Chapter 4 actually claims (ADR-0013).
     def train_at(target_eps: float, seed: int) -> dict[str, float]:
         """Train once at one budget and seed; report on the untouched split."""
-        seed_everything(seed)
-        private = target_eps != float("inf")
-        if private:
+        if target_eps == float("inf"):
+            # σ = 0 disables the noise; clipping stays on so the only difference
+            # from the private runs is the perturbation itself.
+            group_sigmas = resolve_group_sigmas(dict.fromkeys(MODALITIES, 0.0))
+        else:
             allocator = PerModalityBudgetAllocator(
-                {m: target_eps for m in MODALITIES},
+                dict.fromkeys(MODALITIES, target_eps),
                 {m: priv.per_modality[m].reidentification_risk for m in MODALITIES}
                 if all(m in priv.per_modality for m in MODALITIES)
-                else {m: 0.5 for m in MODALITIES},
+                else dict.fromkeys(MODALITIES, 0.5),
                 delta=priv.delta,
                 sample_rate=sample_rate,
                 steps=planned_steps,
             )
             group_sigmas = resolve_group_sigmas(allocator.noise_multipliers())
-        else:
-            # σ = 0 disables the noise; clipping stays on so the only difference
-            # from the private runs is the perturbation itself.
-            group_sigmas = resolve_group_sigmas(dict.fromkeys(MODALITIES, 0.0))
-
-        model = MultimodalDepressionModel(input_dims, base.model).to(device)
-        dp_model = wrap_for_per_sample_grads(model)
-        groups = map_parameter_groups(dp_model)
-        # Adam, matching the non-private baseline. The "SGD" in DP-SGD refers to
-        # the noised, per-sample-clipped *gradient*, not to the optimizer that
-        # consumes it; plain SGD at the baseline's lr does not move this model at
-        # all, which showed up as F1 = 0 even at ε = ∞ (ADR-0013).
-        optimizer = torch.optim.Adam(
-            dp_model.parameters(),
-            lr=base.train.learning_rate,
-            weight_decay=base.train.weight_decay,
-        )
-        generator = torch.Generator(device=device).manual_seed(seed)
-
-        batches = poisson_batches(n_train, sample_rate, planned_steps, generator)
-
-        # Evaluate every epoch and keep the best, matching the non-private
-        # baseline's model-selection protocol. Comparing the baseline's *best*
-        # epoch against DP's *last* epoch would charge DP for a difference in
-        # protocol rather than in privacy (ADR-0013). Evaluating a released model
-        # is post-processing, so it costs no additional privacy budget.
-        # Selection runs over trained epochs only. Including a pre-training
-        # evaluation would let an untrained model win, which silently reported
-        # the initial weights' metrics identically at every epsilon.
-        # Early stopping too, on the same patience as the baseline. Without it
-        # the DP arm trained a fixed step budget while the baseline stopped at
-        # its best epoch, and part of the "cost of DP" was really that
-        # difference. Stopping early spends *fewer* mechanism applications than
-        # `planned_steps`, so the reported ε stays a valid upper bound.
-        steps_per_epoch = max(1, len(batches) // priv.sweep.epochs)
-        patience = base.train.early_stopping_patience
-        stale = 0
-        best_selector = -float("inf")
-        best_state: dict[str, torch.Tensor] | None = None
-        for start in range(0, len(batches), steps_per_epoch):
-            dp_train_steps(
-                dp_model,
-                train_subset,
-                batches[start : start + steps_per_epoch],
-                objective,
-                groups=groups,
-                group_sigmas=group_sigmas,
-                max_grad_norm=priv.max_grad_norm,
-                expected_batch_size=expected_batch_size,
-                optimizer=optimizer,
-                device=device,
-                generator=generator,
-            )
-            # Epoch chosen on the selection split, exactly as the baseline does.
-            # threshold=None here only affects which epoch wins; the reported
-            # threshold is re-derived on the same split below.
-            epoch_metrics = evaluate_model(
-                model, selection_loader, objective, device, threshold=None
-            )
-            selector = epoch_metrics[base.train.selection_metric]
-            if selector > best_selector:
-                best_selector = selector
-                best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
-                stale = 0
-            else:
-                stale += 1
-                if patience is not None and stale >= patience:
-                    break
-
-        if best_state is None:  # only reachable if the step budget is empty
-            raise RuntimeError(f"no training steps ran at target epsilon {target_eps}")
-        model.load_state_dict(best_state)
-        # Threshold picked on `selection`, metrics read off the untouched split.
-        return evaluate_with_selected_threshold(
-            model, selection_loader, report_loader, objective, device
-        )
+        return train_dp_arm(arm, group_sigmas, seed)
 
     curve: list[dict[str, Any]] = []
     for target_eps in [float("inf"), *priv.sweep.target_epsilons]:

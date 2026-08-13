@@ -61,7 +61,11 @@ from privchain.federated.simulation import (
     run_simulation,
 )
 from privchain.fusion.baseline_model import MultimodalDepressionModel
-from privchain.privacy.budget_allocator import PerModalityBudgetAllocator, allocate_target_epsilons
+from privchain.privacy.budget_allocator import (
+    PerModalityBudgetAllocator,
+    allocate_target_epsilons,
+    scale_to_participant_epsilon,
+)
 from privchain.privacy.dp_sgd import (
     dp_train_steps,
     map_parameter_groups,
@@ -125,19 +129,28 @@ def _eval_centralized_dp(
     device = torch.device("cpu")
     objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight)
 
-    adaptive = allocate_target_epsilons(priv.allocation, priv.per_modality)
-    if mode == "uniform":
-        uniform_eps = sum(adaptive.values()) / len(MODALITIES)  # same total budget
-        targets = {m: uniform_eps for m in MODALITIES}
-    else:
-        targets = adaptive
     risks = {m: priv.per_modality[m].reidentification_risk for m in MODALITIES}
-
     batch_size = base.train.batch_size
     n_train = len(train_idx)
     sample_rate = min(1.0, batch_size / n_train)
     expected_batch_size = sample_rate * n_train
     steps = steps_for_epochs(n_train, batch_size, epochs)
+
+    # Both arms are scaled to the same *composed participant* epsilon. This used
+    # to match them on the arithmetic mean of the per-modality budgets, which is
+    # not the same privacy cost: composition is dominated by the loosest
+    # mechanism, so the mean quietly gave the (uneven) adaptive arm more real
+    # privacy than the uniform one -- biasing the comparison toward the
+    # hypothesis under test. See ADR-0018.
+    adaptive = allocate_target_epsilons(priv.allocation, priv.per_modality)
+    shape = dict.fromkeys(MODALITIES, 1.0) if mode == "uniform" else adaptive
+    targets = scale_to_participant_epsilon(
+        shape,
+        priv.allocation.total_participant_epsilon,
+        delta=priv.delta,
+        sample_rate=sample_rate,
+        steps=steps,
+    )
     allocator = PerModalityBudgetAllocator(
         targets, risks, delta=priv.delta, sample_rate=sample_rate, steps=steps
     )
