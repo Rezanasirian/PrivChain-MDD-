@@ -1,0 +1,60 @@
+{
+  "rounds_published": 3,
+  "sample_client": {
+    "client_id": "2",
+    "capability": [
+      1,
+      1,
+      1
+    ],
+    "budget_history": {
+      "audio": [
+        {
+          "round": 1,
+          "epsilon_spent": 1.0950531331204274
+        },
+        {
+          "round": 2,
+          "epsilon_spent": 1.599405720156618
+        },
+        {
+          "round": 3,
+          "epsilon_spent": 1.9995396030352524
+        }
+      ],
+      "video": [
+        {
+          "round": 1,
+          "epsilon_spent": 2.1597322686358598
+        },
+        {
+          "round": 2,
+          "epsilon_spent": 3.180016477043212
+        },
+        {
+          "round": 3,
+          "epsilon_spent": 3.999915870572258
+        }
+      ],
+      "text": [
+        {
+          "round": 1,
+          "epsilon_spent": 4.21944852747735
+        },
+        {
+          "round": 2,
+          "epsilon_spent": 6.296562887805909
+        },
+        {
+          "round": 3,
+          "epsilon_spent": 7.999074593718454
+        }
+      ]
+    },
+    "reputation": {
+      "audio": 0.8832868313789368,
+      "video": 0.946758062839508,
+      "text": 0.8101154065132141
+    }
+  }
+}
