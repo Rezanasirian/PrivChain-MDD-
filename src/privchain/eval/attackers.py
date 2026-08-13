@@ -147,6 +147,31 @@ class ReidentificationAttacker:
         self._subjects = subjects
         self._centroids = _l2_normalize(centroids.astype(np.float64))
 
+    def predict(self, probes: NDArray[np.float64]) -> NDArray[np.int_]:
+        """Return the nearest-template subject for each probe embedding.
+
+        Exposed separately from :meth:`attack` so callers can score subsets of
+        the probes — the real-data harness reports subjects the encoder was
+        fitted on apart from unseen ones (ADR-0017).
+
+        Args:
+            probes: Probe embeddings, shape ``(M, D)``.
+
+        Returns:
+            Predicted subject id per probe, shape ``(M,)``.
+
+        Raises:
+            RuntimeError: If called before :meth:`enroll`.
+            ValueError: If ``probes`` is empty.
+        """
+        if self._centroids is None or self._subjects is None:
+            raise RuntimeError("attacker must be enrolled before attacking")
+        if len(probes) == 0:
+            raise ValueError("cannot attack on empty probes")
+        similarities = _l2_normalize(probes.astype(np.float64)) @ self._centroids.T
+        predicted: NDArray[np.int_] = self._subjects[np.argmax(similarities, axis=1)]
+        return predicted
+
     def attack(self, probes: NDArray[np.float64], subject_ids: NDArray[np.int_]) -> float:
         """Return the top-1 re-identification accuracy on probe embeddings.
 
@@ -161,15 +186,9 @@ class ReidentificationAttacker:
             RuntimeError: If called before :meth:`enroll`.
             ValueError: If inputs are empty or mismatched.
         """
-        if self._centroids is None or self._subjects is None:
-            raise RuntimeError("attacker must be enrolled before attacking")
         if len(probes) != len(subject_ids):
             raise ValueError("probes and subject_ids must have the same length")
-        if len(probes) == 0:
-            raise ValueError("cannot attack on empty probes")
-        similarities = _l2_normalize(probes.astype(np.float64)) @ self._centroids.T
-        predicted = self._subjects[np.argmax(similarities, axis=1)]
-        return float(np.mean(predicted == subject_ids))
+        return float(np.mean(self.predict(probes) == subject_ids))
 
     @staticmethod
     def chance_accuracy(num_subjects: int) -> float:

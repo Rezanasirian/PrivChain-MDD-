@@ -35,3 +35,16 @@ attack:
 
   membership_inference:
     enabled: true
+
+  # Real DAIC-WOZ protocol (scripts/run_reid_risk.py, ADR-0017). Each participant
+  # appears in exactly one session, so the attacker's views are disjoint
+  # contiguous stretches of that session — frame spans for audio/video, spans of
+  # transcript turns for text — instead of the jittered copies used above.
+  segments:
+    num_segments: 6         # contiguous views carved from each session
+    enroll_segments: 3      # views building the template; the rest are probed
+    # Raw feature widths differ per modality (audio 74x5=370, video 20x5=100,
+    # text 768) and nearest-centroid accuracy grows with width. The matched-width
+    # row projects every modality to this many PCA components, fitted on the
+    # enrollment rows only.
+    pca_dim: 64

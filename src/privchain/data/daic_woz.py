@@ -14,10 +14,9 @@ subsampled (``frame_stride``) and truncated (``max_frames``), then optionally
 z-score standardized per feature. All paths/columns/limits come from a config
 dict (``configs/daic_woz.yaml``) — nothing is hardcoded.
 
-NOTE: This loader is written against the documented DAIC-WOZ layout but has not
-been executed against the real 300 GB corpus in this environment. Validate the
-file templates / column names in ``configs/daic_woz.yaml`` against your download
-before relying on the numbers. See ADR-0002.
+The file templates and column names in ``configs/daic_woz.yaml`` were verified
+against the real AVEC2017 distribution on 2026-08-13 (see ADR-0010 for what the
+download turned up, including the corrupt archive for participant 440).
 """
 
 from __future__ import annotations
@@ -35,6 +34,7 @@ from torch.utils.data import Dataset
 
 from privchain.data.mock_daic_woz import Sample
 from privchain.data.text_vectorizers import TextVectorizer, build_text_vectorizer
+from privchain.segmentation import contiguous_spans
 
 
 def _load_feature_matrix(
@@ -153,6 +153,42 @@ def _cached_feature_matrix(
     return matrix
 
 
+def _read_participant_turns(
+    path: Path, *, delimiter: str, speaker_column: str, value_column: str, participant_speaker: str
+) -> list[str]:
+    """Read the participant's transcript turns in chronological order.
+
+    DAIC-WOZ transcripts are written in time order, so file order is turn order;
+    no timestamp parsing is needed to slice a session into contiguous stretches.
+
+    Args:
+        path: Transcript file path.
+        delimiter: Field delimiter (DAIC-WOZ transcripts are tab-separated).
+        speaker_column: Header name of the speaker column.
+        value_column: Header name of the utterance-text column.
+        participant_speaker: Speaker label identifying the participant's turns.
+
+    Returns:
+        The participant's non-empty utterances, in chronological order.
+
+    Raises:
+        FileNotFoundError: If ``path`` does not exist.
+    """
+    if not path.is_file():
+        raise FileNotFoundError(f"DAIC-WOZ transcript not found: {path}")
+    turns: list[str] = []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter=delimiter)
+        for row in reader:
+            speaker = (row.get(speaker_column) or "").strip()
+            if speaker != participant_speaker:
+                continue
+            value = (row.get(value_column) or "").strip()
+            if value:
+                turns.append(value)
+    return turns
+
+
 def _read_participant_transcript(
     path: Path, *, delimiter: str, speaker_column: str, value_column: str, participant_speaker: str
 ) -> str:
@@ -171,16 +207,15 @@ def _read_participant_transcript(
     Raises:
         FileNotFoundError: If ``path`` does not exist.
     """
-    if not path.is_file():
-        raise FileNotFoundError(f"DAIC-WOZ transcript not found: {path}")
-    parts: list[str] = []
-    with path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter=delimiter)
-        for row in reader:
-            speaker = (row.get(speaker_column) or "").strip()
-            if speaker == participant_speaker:
-                parts.append((row.get(value_column) or "").strip())
-    return " ".join(p for p in parts if p)
+    return " ".join(
+        _read_participant_turns(
+            path,
+            delimiter=delimiter,
+            speaker_column=speaker_column,
+            value_column=value_column,
+            participant_speaker=participant_speaker,
+        )
+    )
 
 
 def _read_split_labels(
@@ -271,7 +306,7 @@ class DaicWozDataset(Dataset[Sample]):
         self._text_cfg = config["text"]
         self._dir_template = config.get("participant_dir_template", "{pid}_P")
         # Parsed-feature memoization; set `feature_cache_dir: null` to disable.
-        cache_name = config.get("feature_cache_dir", "_feature_cache")
+        cache_name: str | None = config.get("feature_cache_dir", "_feature_cache")
         self._cache_dir = self._root / cache_name if cache_name else None
 
         # Per-split header overrides layer on top of the defaults: the AVEC2017
@@ -334,44 +369,105 @@ class DaicWozDataset(Dataset[Sample]):
             standardize=cfg.get("standardize", True),
         )
 
-    def _load_text(self, pid: int) -> NDArray[np.float32]:
+    def _text_cache_path(self, path: Path, kind: str) -> Path | None:
+        """Cache path for a text vector, or ``None`` when caching is disabled.
+
+        The key covers the vectorizer identity, so switching model — or back to
+        hashing — does not reuse the wrong vectors.
+
+        Args:
+            path: The transcript this vector was derived from.
+            kind: Distinguishes the whole-session vector from the segmented one.
+
+        Returns:
+            The ``.npy`` path, or ``None``.
+        """
+        if self._cache_dir is None:
+            return None
         cfg = self._text_cfg
-        path = self._file(pid, cfg["file_template"])
+        identity = {
+            "vectorizer": cfg.get("vectorizer", "hashing"),
+            "dim": self._vectorizer.dim,
+            "options": cfg.get("transformer", {}),
+            "speaker": cfg.get("participant_speaker", "Participant"),
+        }
+        key = json.dumps(identity, sort_keys=True, default=str)
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+        return self._cache_dir / f"{path.stem}.{kind}.{digest}.npy"
 
-        # Transformer embeddings cost a GPU forward pass per session, so the
-        # result is memoized like the audio/video matrices. The key covers the
-        # vectorizer identity, so switching model or back to hashing does not
-        # reuse the wrong vectors.
-        cache_path: Path | None = None
-        if self._cache_dir is not None:
-            identity = {
-                "vectorizer": cfg.get("vectorizer", "hashing"),
-                "dim": self._vectorizer.dim,
-                "options": cfg.get("transformer", {}),
-                "speaker": cfg.get("participant_speaker", "Participant"),
-            }
-            key = json.dumps(identity, sort_keys=True, default=str)
-            digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
-            cache_path = self._cache_dir / f"{path.stem}.text.{digest}.npy"
-            if cache_path.is_file():
-                cached: NDArray[np.float32] = np.load(cache_path)
-                return cached
+    def _write_text_cache(self, cache_path: Path | None, array: NDArray[np.float32]) -> None:
+        """Memoize a text vector, writing via a temp file so a crash cannot truncate it."""
+        if cache_path is None or self._cache_dir is None:
+            return
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        tmp_path = cache_path.with_suffix(".tmp.npy")
+        np.save(tmp_path, array)
+        tmp_path.replace(cache_path)
 
-        document = _read_participant_transcript(
-            path,
+    def _participant_turns(self, pid: int) -> list[str]:
+        """Read one participant's utterances in chronological order."""
+        cfg = self._text_cfg
+        return _read_participant_turns(
+            self._file(pid, cfg["file_template"]),
             delimiter=cfg.get("delimiter", "\t"),
             speaker_column=cfg.get("speaker_column", "speaker"),
             value_column=cfg.get("value_column", "value"),
             participant_speaker=cfg.get("participant_speaker", "Participant"),
         )
-        vector = self._vectorizer.transform(document)
 
-        if cache_path is not None:
-            self._cache_dir.mkdir(parents=True, exist_ok=True)  # type: ignore[union-attr]
-            tmp_path = cache_path.with_suffix(".tmp.npy")
-            np.save(tmp_path, vector)
-            tmp_path.replace(cache_path)
+    def _load_text(self, pid: int) -> NDArray[np.float32]:
+        cfg = self._text_cfg
+        path = self._file(pid, cfg["file_template"])
+
+        # Transformer embeddings cost a GPU forward pass per session, so the
+        # result is memoized like the audio/video matrices.
+        cache_path = self._text_cache_path(path, "text")
+        if cache_path is not None and cache_path.is_file():
+            cached: NDArray[np.float32] = np.load(cache_path)
+            return cached
+
+        vector = self._vectorizer.transform(" ".join(self._participant_turns(pid)))
+        self._write_text_cache(cache_path, vector)
         return vector
+
+    def text_segment_vectors(self, index: int, num_segments: int) -> NDArray[np.float32]:
+        """Embed ``num_segments`` contiguous stretches of one participant's speech.
+
+        The re-identification attacker needs several views per subject, and each
+        DAIC-WOZ participant appears in exactly one session (ADR-0017). Audio and
+        video get their views by slicing the frame matrix; text gets them by
+        slicing the turn list and embedding each stretch on its own, so all three
+        modalities are attacked under the same enrol/probe protocol.
+
+        Args:
+            index: Session index in ``[0, len(self))``.
+            num_segments: Number of contiguous stretches to embed.
+
+        Returns:
+            Array of shape ``(num_segments, dim)``, one row per stretch, in
+            chronological order.
+
+        Raises:
+            ValueError: If the participant has fewer turns than ``num_segments``.
+        """
+        pid = self._records[index]["pid"]
+        path = self._file(pid, self._text_cfg["file_template"])
+        cache_path = self._text_cache_path(path, f"textseg{num_segments}")
+        if cache_path is not None and cache_path.is_file():
+            cached: NDArray[np.float32] = np.load(cache_path)
+            return cached
+
+        turns = self._participant_turns(pid)
+        try:
+            spans = contiguous_spans(len(turns), num_segments)
+        except ValueError as error:
+            raise ValueError(f"participant {pid}: {error}") from error
+
+        vectors = np.stack(
+            [self._vectorizer.transform(" ".join(turns[start:stop])) for start, stop in spans]
+        ).astype(np.float32)
+        self._write_text_cache(cache_path, vectors)
+        return vectors
 
     def _infer_feature_dims(self) -> dict[str, int]:
         """Infer per-modality feature dims from the first available session."""

@@ -482,6 +482,38 @@ class MembershipInferenceConfig(_Strict):
     enabled: bool = True
 
 
+class SegmentViewsConfig(_Strict):
+    """Real-data view construction for the re-identification attacker (ADR-0017).
+
+    Every DAIC-WOZ participant appears in exactly one session, so the attacker's
+    views are disjoint contiguous stretches of that session rather than the
+    jittered copies the mock corpus uses.
+    """
+
+    num_segments: int = Field(default=6, gt=1)
+    enroll_segments: int = Field(default=3, gt=0)
+    # Common width for the dimensionality-matched control: raw feature widths
+    # differ per modality (audio 74x5, video 20x5, text 768) and nearest-centroid
+    # accuracy grows with width, so the ordering claim needs a matched row.
+    pca_dim: int = Field(default=64, gt=0)
+
+    def validated(self) -> SegmentViewsConfig:
+        """Return self after checking ``enroll_segments < num_segments``.
+
+        Returns:
+            The same instance, once validated.
+
+        Raises:
+            ValueError: If no segments would be left to probe.
+        """
+        if self.enroll_segments >= self.num_segments:
+            raise ValueError(
+                f"enroll_segments ({self.enroll_segments}) must be < "
+                f"num_segments ({self.num_segments})"
+            )
+        return self
+
+
 class AttackSettings(_Strict):
     """The ``attack`` block of ``configs/attack.yaml``.
 
@@ -511,6 +543,9 @@ class AttackSettings(_Strict):
     membership_inference: MembershipInferenceConfig = Field(
         default_factory=MembershipInferenceConfig
     )
+    # Real-data protocol, kept apart from the mock jitter knobs above so the two
+    # cannot be confused for one another.
+    segments: SegmentViewsConfig = Field(default_factory=SegmentViewsConfig)
 
     @field_validator("target_epsilons")
     @classmethod
@@ -535,6 +570,7 @@ class AttackSettings(_Strict):
             raise ValueError(
                 f"enroll_views ({self.enroll_views}) must be < num_views ({self.num_views})"
             )
+        self.segments.validated()
         return self
 
 
