@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# "Building" a CCaaS package just means keeping its connection details: the
+# chaincode is already running as its own process, so there is nothing to compile.
+# Args: $1 = CHAINCODE_SOURCE_DIR, $2 = CHAINCODE_METADATA_DIR, $3 = BUILD_OUTPUT_DIR
+set -euo pipefail
+cp "$1/connection.json" "$3/connection.json"
+if [ -d "$1/metadata" ]; then cp -a "$1/metadata" "$3/metadata"; fi

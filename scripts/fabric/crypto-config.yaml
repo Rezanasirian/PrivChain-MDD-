@@ -1,0 +1,30 @@
+# Crypto material for the local PrivChain Fabric network (Phase 5, ADR-0022).
+#
+# Generated with `cryptogen`, which issues the MSP and TLS certificates directly
+# rather than running a Fabric CA server — one less long-lived process for a
+# single-org development network.
+#
+# EVERYTHING THIS PRODUCES IS SECRET AND GIT-IGNORED (CLAUDE.md §7). The setup
+# script regenerates it from scratch; no key or certificate is ever committed.
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: privchain.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost
+          - 127.0.0.1
+
+PeerOrgs:
+  - Name: Org1
+    Domain: org1.privchain.local
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 1

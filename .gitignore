@@ -55,7 +55,12 @@ experiments/**/*.pt
 
 # ─── Go / chaincode build output ────────────────────────────────────────────
 chaincode/**/*.exe
-chaincode/**/privchain-cc
+# The compiled binary only. This was `chaincode/**/privchain-cc`, which also
+# matched the *directory* of the same name — so every source file added after the
+# rule (identity.go, go.sum) was silently skipped by `git add`, and the chaincode
+# could not compile from a clean checkout. Files added before the rule stayed
+# tracked, which is what hid it. See ADR-0022.
+chaincode/privchain-cc/privchain-cc
 
 # ─── Notebooks scratch ──────────────────────────────────────────────────────
 .ipynb_checkpoints/
@@ -66,3 +71,6 @@ chaincode/**/privchain-cc
 .DS_Store
 Thumbs.db
 
+
+# ─── Fabric local network (generated: MSP material, TLS keys, ledger data) ───
+.fabric/

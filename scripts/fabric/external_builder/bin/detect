@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Claim only Chaincode-as-a-Service packages (ADR-0022).
+# Args: $1 = CHAINCODE_SOURCE_DIR, $2 = CHAINCODE_METADATA_DIR
+set -euo pipefail
+METADIR="$2"
+if grep -q '"type"[[:space:]]*:[[:space:]]*"ccaas"' "$METADIR/metadata.json"; then
+  exit 0
+fi
+exit 1

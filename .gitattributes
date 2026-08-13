@@ -11,3 +11,8 @@ go.sum   text eol=lf
 *.yml    text eol=lf
 *.md     text eol=lf
 *.toml   text eol=lf
+
+# Shell scripts and the external builder must keep LF endings: a CR before
+# `pipefail` makes bash reject the option, and Fabric execs the builder directly.
+*.sh text eol=lf
+scripts/fabric/external_builder/bin/* text eol=lf

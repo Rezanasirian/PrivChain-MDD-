@@ -38,9 +38,16 @@ def record_round(
             client is registered exactly once across rounds.
     """
     for client_id, capability in participants:
-        if client_id not in registered:
+        if client_id in registered:
+            continue
+        # The `registered` set only knows what *this process* has done, but a real
+        # ledger outlives the process: a client registered by an earlier run is
+        # still registered, and the chaincode rightly refuses to register it
+        # twice. Checking the ledger makes the audit trail re-runnable instead of
+        # failing on the second run against a live network (ADR-0022).
+        if ledger.get_client(client_id) is None:
             ledger.register_client(client_id, capability)
-            registered.add(client_id)
+        registered.add(client_id)
 
     ledger.publish_subgraph(round_num, [client_id for client_id, _ in participants])
 

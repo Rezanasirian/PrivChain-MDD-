@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Hand the peer the address to dial for this chaincode.
+# Args: $1 = BUILD_OUTPUT_DIR, $2 = RELEASE_DIR
+set -euo pipefail
+if [ -f "$1/connection.json" ]; then
+  mkdir -p "$2/chaincode/server"
+  cp "$1/connection.json" "$2/chaincode/server/connection.json"
+fi
+if [ -d "$1/metadata" ]; then cp -a "$1/metadata" "$2/"; fi

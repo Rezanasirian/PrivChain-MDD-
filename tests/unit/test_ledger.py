@@ -10,7 +10,14 @@ from __future__ import annotations
 
 import pytest
 
-from privchain.chain_client import LedgerError, LedgerIdentity, MockLedger, build_ledger
+from privchain.chain_client import (
+    Capability,
+    LedgerError,
+    LedgerIdentity,
+    MockLedger,
+    build_ledger,
+    record_round,
+)
 from privchain.config import LedgerConfig
 
 CLIENT_0 = LedgerIdentity("ClientOrgMSP", "client-0-cert")
@@ -159,3 +166,22 @@ def test_build_ledger_selects_backend() -> None:
     # fabric_rest constructs without a live network (calls would fail, not init).
     fabric = build_ledger(LedgerConfig(backend="fabric_rest", gateway_url="http://localhost:9"))
     assert fabric.__class__.__name__ == "FabricRestLedger"
+
+
+def test_registration_is_idempotent_against_a_persistent_ledger() -> None:
+    """A second run must not fail on clients an earlier run already registered.
+
+    ``record_round`` tracks registrations in a set, but that set is per-process
+    while the ledger is not. Against the real Fabric network the chaincode
+    rejects a duplicate ``RegisterClient``, so the second audited run aborted
+    with an endorsement failure (ADR-0022).
+    """
+    ledger = MockLedger()
+    participants: list[tuple[str, Capability]] = [("0", (1, 0, 1)), ("1", (1, 1, 1))]
+
+    record_round(ledger, round_num=1, participants=participants, registered=set())
+    # A fresh set is exactly what a newly started process brings.
+    record_round(ledger, round_num=2, participants=participants, registered=set())
+
+    assert ledger.get_client("0") is not None
+    assert ledger.get_client("1") is not None
