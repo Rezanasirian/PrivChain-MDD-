@@ -31,12 +31,30 @@ Verify with `ruff check src scripts tests`, `mypy --strict src`, `pytest -q`.
 
 ## 2. Data
 
-Download and extract per `docs/runbook/server-scripts/download_daic.sh` and
-`extract_daic.sh`. Participant 440's archive is truncated at source and is
-excluded in `configs/daic_woz.yaml` (ADR-0010).
+```bash
+bash docs/runbook/server-scripts/download_daic.sh   # ~119 GB, 6 parallel streams
+bash docs/runbook/server-scripts/extract_daic.sh
+```
 
-The feature cache rebuilds itself on the first run of any real-data script. The
-slow part is the transformer text embeddings; everything else is CSV parsing.
+The manifest (`daic_files.txt`, 197 entries) sits beside the script and is
+committed — it previously existed only at `/workspace/daic_files.txt`, so
+destroying the instance would have destroyed the list of what to download.
+No credentials are needed; the USC host serves the archive directly.
+
+Participant 440's archive is truncated at source and is excluded in
+`configs/daic_woz.yaml` (ADR-0010).
+
+**Restore the text embeddings before the first run** — they are the only cached
+artifact that costs GPU time and the only one that survives a re-download:
+
+```bash
+mkdir -p data/daic_woz/_feature_cache
+cp docs/runbook/text-embedding-cache/*.npy data/daic_woz/_feature_cache/
+```
+
+The audio/video cache is deliberately not kept: its key includes each source
+file's mtime, so a fresh download invalidates it anyway. It rebuilds on first use
+from CPU-bound CSV parsing.
 
 ## 3. Reproducing the results
 
