@@ -12,10 +12,12 @@ Usage:
     python scripts/run_dp_sweep.py --config configs/baseline.yaml \
         --privacy-config configs/privacy.yaml
 
-On real data the protocol matches the non-private Phase 1 baseline (ADR-0012):
-training on the official train split, evaluation on the official dev split, and
-the same class-weighted objective — otherwise the privacy-utility gap would
-conflate the cost of DP with a change of protocol.
+Every arm here follows the shared evaluation protocol
+(:mod:`privchain.training.protocol`, ADR-0015) — the same splits, the same
+epoch/threshold selection on a held-back slice of train, the same reporting on
+the untouched dev split, and the same seeds — as the non-private baseline. Any
+other arrangement would charge DP for a difference in protocol rather than in
+privacy, which is exactly what earlier revisions of this script did.
 """
 
 from __future__ import annotations
@@ -23,18 +25,15 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 import torch
-from torch.utils.data import DataLoader
 
 from privchain.config import (
     load_baseline_config,
     load_privacy_config,
-    load_yaml,
-    modality_input_dims,
     resolve_device,
 )
-from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
 from privchain.privacy.dp_sgd import (
@@ -47,11 +46,18 @@ from privchain.privacy.dp_sgd import (
 )
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
-from privchain.training.loaders import split_dataset
 from privchain.training.objective import (
     DepressionObjective,
     evaluate_model,
+    evaluate_with_selected_threshold,
     positive_class_weight,
+)
+from privchain.training.protocol import (
+    RunResult,
+    build_splits,
+    format_aggregate,
+    make_loader,
+    repeat_over_seeds,
 )
 
 MODALITIES = ("audio", "video", "text")
@@ -74,25 +80,14 @@ def main() -> None:
     priv = load_privacy_config(args.privacy_config).privacy
     seed_everything(base.seed)
 
-    if args.daic_config is not None:
-        # Imported lazily so the mock path has no real-data dependencies.
-        from privchain.data.daic_woz import build_daic_woz_dataset
-
-        daic_cfg = load_yaml(args.daic_config)
-        train_subset: torch.utils.data.Dataset[Sample] = build_daic_woz_dataset(
-            daic_cfg, split="train"
-        )
-        val_subset: torch.utils.data.Dataset[Sample] = build_daic_woz_dataset(daic_cfg, split="dev")
-        # Real feature dims are inferred from the corpus, as in Phase 1.
-        input_dims = train_subset.feature_dims
-    else:
-        full = MockDaicWozDataset(base.data, seed=base.seed)
-        train_subset, val_subset = split_dataset(full, base.train.val_fraction, base.seed)
-        input_dims = modality_input_dims(base.data)
-
-    val_loader: DataLoader[Sample] = DataLoader(
-        val_subset, batch_size=base.train.batch_size, shuffle=False, collate_fn=collate_fn
+    # Exactly the splits the non-private baseline uses, from the same helper, so
+    # the two arms differ only in the privacy mechanism (ADR-0015).
+    splits, input_dims = build_splits(base, args.daic_config)
+    train_subset = splits.train
+    selection_loader = make_loader(
+        splits.selection, batch_size=base.train.batch_size, shuffle=False
     )
+    report_loader = make_loader(splits.report, batch_size=base.train.batch_size, shuffle=False)
 
     batch_size = base.train.batch_size
     n_train = len(train_subset)  # type: ignore[arg-type]
@@ -103,16 +98,16 @@ def main() -> None:
     device = torch.device(resolve_device(base.train.device))
 
     # Match the non-private baseline's objective, including class weighting, so
-    # the privacy-utility curve isolates the cost of DP (ADR-0013).
+    # the privacy-utility curve isolates the cost of DP (ADR-0013). Note the
+    # weighting is largely neutralized by per-sample clipping — see ADR-0013 —
+    # but it is kept identical across arms rather than silently differing.
     pos_weight = None
     if base.train.class_weighting:
-        weight_loader: DataLoader[Sample] = DataLoader(
-            train_subset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn
-        )
+        weight_loader = make_loader(train_subset, batch_size=batch_size, shuffle=False)
         pos_weight = positive_class_weight(weight_loader)
-    objective = DepressionObjective(
-        base.data.phq8_max, base.model.phq_loss_weight, pos_weight
-    ).to(device)
+    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight, pos_weight).to(
+        device
+    )
 
     run_dir = create_run_dir(base.train.output_dir, "phase3", "phase3_dp_budget_sweep")
     save_config(run_dir, {"baseline": base.model_dump(), "privacy": priv.model_dump()})
@@ -133,7 +128,9 @@ def main() -> None:
         "sampling": "poisson",
         "dataset": "daic_woz" if args.daic_config is not None else "mock",
         "n_train": n_train,
-        "n_eval": len(val_subset),  # type: ignore[arg-type]
+        "n_selection": len(splits.selection),  # type: ignore[arg-type]
+        "n_report": len(splits.report),  # type: ignore[arg-type]
+        "seeds": list(base.train.seeds),
         "device": str(device),
         "pos_weight": pos_weight,
         "allocation_mode": priv.allocation.mode,
@@ -167,9 +164,9 @@ def main() -> None:
     # ε = ∞ reference: the same architecture, data, and step budget with the DP
     # mechanism switched off. Without it the curve shows absolute numbers but not
     # the *cost of privacy*, which is what Chapter 4 actually claims (ADR-0013).
-    curve: list[dict[str, float]] = []
-    for target_eps in [float("inf"), *priv.sweep.target_epsilons]:
-        seed_everything(base.seed)
+    def train_at(target_eps: float, seed: int) -> dict[str, float]:
+        """Train once at one budget and seed; report on the untouched split."""
+        seed_everything(seed)
         private = target_eps != float("inf")
         if private:
             allocator = PerModalityBudgetAllocator(
@@ -199,7 +196,7 @@ def main() -> None:
             lr=base.train.learning_rate,
             weight_decay=base.train.weight_decay,
         )
-        generator = torch.Generator(device=device).manual_seed(base.seed)
+        generator = torch.Generator(device=device).manual_seed(seed)
 
         batches = poisson_batches(n_train, sample_rate, planned_steps, generator)
 
@@ -212,7 +209,8 @@ def main() -> None:
         # evaluation would let an untrained model win, which silently reported
         # the initial weights' metrics identically at every epsilon.
         steps_per_epoch = max(1, len(batches) // priv.sweep.epochs)
-        metrics: dict[str, float] | None = None
+        best_selector = -float("inf")
+        best_state: dict[str, torch.Tensor] | None = None
         for start in range(0, len(batches), steps_per_epoch):
             dp_train_steps(
                 dp_model,
@@ -227,30 +225,46 @@ def main() -> None:
                 device=device,
                 generator=generator,
             )
-            # threshold=None: clipping normalizes away the class weighting, so a
-            # fixed 0.5 cut reports F1 = 0 for models that rank perfectly well.
-            # Picking the cut is post-processing and costs no budget (ADR-0013).
-            epoch_metrics = evaluate_model(model, val_loader, objective, device, threshold=None)
-            selector = base.train.selection_metric
-            if metrics is None or epoch_metrics[selector] > metrics[selector]:
-                metrics = epoch_metrics
-        assert metrics is not None  # at least one epoch always runs
+            # Epoch chosen on the selection split, exactly as the baseline does.
+            # threshold=None here only affects which epoch wins; the reported
+            # threshold is re-derived on the same split below.
+            epoch_metrics = evaluate_model(
+                model, selection_loader, objective, device, threshold=None
+            )
+            selector = epoch_metrics[base.train.selection_metric]
+            if selector > best_selector:
+                best_selector = selector
+                best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+
+        if best_state is None:  # only reachable if the step budget is empty
+            raise RuntimeError(f"no training steps ran at target epsilon {target_eps}")
+        model.load_state_dict(best_state)
+        # Threshold picked on `selection`, metrics read off the untouched split.
+        return evaluate_with_selected_threshold(
+            model, selection_loader, report_loader, objective, device
+        )
+
+    curve: list[dict[str, Any]] = []
+    for target_eps in [float("inf"), *priv.sweep.target_epsilons]:
+        private = target_eps != float("inf")
+        aggregate, _ = repeat_over_seeds(
+            lambda seed, eps=target_eps: RunResult(metrics=train_at(eps, seed)),  # type: ignore[misc]
+            base.train.seeds,
+        )
         consumed_eps = (
-            allocator.consumed_epsilon(planned_steps)["audio"] if private else float("inf")
+            PerModalityBudgetAllocator(
+                dict.fromkeys(MODALITIES, target_eps),
+                {m: priv.per_modality[m].reidentification_risk for m in MODALITIES},
+                delta=priv.delta,
+                sample_rate=sample_rate,
+                steps=planned_steps,
+            ).consumed_epsilon(planned_steps)["audio"]
+            if private
+            else float("inf")
         )
-        point = {
-            "target_epsilon": target_eps,
-            "consumed_epsilon": consumed_eps,
-            "accuracy": metrics["accuracy"],
-            "f1": metrics["f1"],
-            "roc_auc": metrics["roc_auc"],
-        }
-        curve.append(point)
+        curve.append({"target_epsilon": target_eps, "consumed_epsilon": consumed_eps, **aggregate})
         label = "  inf" if not private else f"{target_eps:5.2f}"
-        print(
-            f"eps={label} -> acc={metrics['accuracy']:.3f}  "
-            f"F1={metrics['f1']:.3f}  ROC-AUC={metrics['roc_auc']:.3f}"
-        )
+        print(f"eps={label} -> {format_aggregate(aggregate, ('f1', 'roc_auc', 'accuracy'))}")
 
     with (run_dir / "sweep_curve.jsonl").open("w", encoding="utf-8") as handle:
         for point in curve:
@@ -278,10 +292,18 @@ def _plot_curve(curve: list[dict[str, float]], path: Path) -> None:
     eps = [p["target_epsilon"] for p in finite]
     fig, ax = plt.subplots(figsize=(6, 4))
     for key, label in (("accuracy", "Accuracy"), ("f1", "F1"), ("roc_auc", "ROC-AUC")):
-        line = ax.plot(eps, [p[key] for p in finite], marker="o", label=label)[0]
+        means = [p[f"{key}_mean"] for p in finite]
+        stds = [p[f"{key}_std"] for p in finite]
+        # Error bars over seeds: on a 34-session report split the spread is the
+        # difference between a trend and a coincidence (ADR-0015).
+        line = ax.errorbar(eps, means, yerr=stds, marker="o", capsize=3, label=label)[0]
         if non_private is not None:
             ax.axhline(
-                non_private[key], color=line.get_color(), linestyle=":", linewidth=1, alpha=0.7
+                non_private[f"{key}_mean"],
+                color=line.get_color(),
+                linestyle=":",
+                linewidth=1,
+                alpha=0.7,
             )
     ax.set_xscale("log")
     ax.set_xlabel("Privacy budget ε (per modality, log scale)")

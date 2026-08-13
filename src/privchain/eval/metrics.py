@@ -82,21 +82,33 @@ def best_f1_threshold(scores: NDArray[np.float64], labels: NDArray[np.int_]) -> 
     """
     scores = np.asarray(scores, dtype=np.float64)
     labels = np.asarray(labels)
-    # Candidate cuts sit between adjacent distinct scores, plus the extremes.
-    unique = np.unique(scores)
-    candidates = np.concatenate([[0.0], (unique[:-1] + unique[1:]) / 2.0, [1.0]])
+    positives = int((labels == 1).sum())
+    if positives == 0:
+        return 0.5  # no threshold yields F1 > 0; keep the conventional cut
 
-    best_threshold, best_score = 0.5, -1.0
-    for threshold in candidates:
-        preds = (scores >= threshold).astype(int)
-        tp = int(((preds == 1) & (labels == 1)).sum())
-        fp = int(((preds == 1) & (labels == 0)).sum())
-        fn = int(((preds == 0) & (labels == 1)).sum())
-        denominator = 2 * tp + fp + fn
-        f1 = (2 * tp / denominator) if denominator > 0 else 0.0
-        if f1 > best_score:
-            best_threshold, best_score = float(threshold), f1
-    return best_threshold
+    # Sweep every distinct cut at once. Sorting descending, the prefix of length
+    # i is exactly the set predicted positive at a threshold just below
+    # scores[i-1], so cumulative sums give TP/FP for all cuts in one pass.
+    order = np.argsort(-scores, kind="mergesort")
+    sorted_scores = scores[order]
+    true_positives = np.cumsum(labels[order] == 1)
+    predicted = np.arange(1, len(scores) + 1)
+    f1_at_cut = 2 * true_positives / (predicted + positives)
+
+    # Only the last index of each run of equal scores is a realisable cut.
+    realisable = np.append(sorted_scores[1:] != sorted_scores[:-1], True)
+    f1_at_cut = np.where(realisable, f1_at_cut, -1.0)
+
+    best = int(np.argmax(f1_at_cut))
+    if f1_at_cut[best] <= 0.0:
+        return 0.5
+
+    # Sit midway between the last included score and the first excluded one.
+    # The threshold is applied to a *different* split (ADR-0015), so landing
+    # exactly on an observed score would make the cut needlessly brittle.
+    if best + 1 < len(sorted_scores):
+        return float((sorted_scores[best] + sorted_scores[best + 1]) / 2.0)
+    return float(sorted_scores[best])
 
 
 def binary_classification_metrics(

@@ -101,6 +101,12 @@ text   risk=0.30  target_eps=8.00  sigma= 3.092  consumed_eps=8.000
 composed participant epsilon: 10.043
 ```
 
+> **Superseded below.** The table that follows was produced before the shared
+> evaluation protocol (ADR-0015) existed: it tuned the DP arm's threshold while
+> the baseline used a fixed 0.5, and reported single-seed numbers selected on the
+> split they were read from. It is kept as the record of the intermediate state.
+> The corrected results are in "Under the shared protocol" below.
+
 Utility, after the threshold fix (single seed, dev split, n=34):
 
 | ε | dev F1 | dev ROC-AUC | dev accuracy |
@@ -138,17 +144,56 @@ is much wider than the F1 gap, which is consistent with the threshold tuning
 propping up F1 on a model whose ranking has genuinely degraded. Reporting only F1
 here would flatter DP considerably — Chapter 4 must report both.
 
+## Under the shared protocol (current)
+
+Re-run with ADR-0015 in force: identical splits, selection, threshold policy and
+seeds as the non-private baseline; three seeds; reported on the untouched dev
+split.
+
+| ε | dev F1 | dev ROC-AUC |
+|---|---|---|
+| 0.5 | 0.278 ± 0.016 | 0.487 ± 0.091 |
+| 1 | 0.364 ± 0.115 | 0.489 ± 0.103 |
+| 2 | 0.331 ± 0.053 | 0.509 ± 0.085 |
+| 4 | 0.395 ± 0.077 | 0.530 ± 0.077 |
+| 8 | 0.420 ± 0.082 | 0.570 ± 0.055 |
+| 16 | 0.383 ± 0.054 | 0.573 ± 0.034 |
+| ∞ (clip only, no noise) | 0.395 ± 0.087 | **0.582 ± 0.015** |
+| *non-private baseline* | *0.541 ± 0.021* | ***0.740 ± 0.016*** |
+
+Both earlier complaints resolve, and the picture changes:
+
+* **The ε = ∞ control is now coherent** — it has the highest ROC-AUC of the DP
+  arm, as it must. The incoherence in the previous table was an artifact of
+  single-seed best-of-N selection, exactly as suspected.
+* **The apparent monotonic F1 curve was largely noise.** With error bars, the
+  F1 column is flat to within its spread. The ROC-AUC trend (0.487 → 0.573) is
+  real but modest.
+
+**The dominant cost is not the privacy noise.** Going from the baseline to
+ε = ∞ — no noise at all, only per-sample clipping, Poisson subsampling and a
+fixed step budget without early stopping — costs ROC-AUC 0.740 → 0.582. Adding
+noise on top, all the way down to ε = 0.5, costs a further 0.582 → 0.487. The
+DP-SGD *machinery* is roughly twice as expensive here as the privacy guarantee
+it enables.
+
+That reframes the Phase 3 story: the interesting engineering question is not
+"how much noise can we afford" but "why does clipping cost so much on this
+model", and it is answerable — clipping to `C = 1.0` was inherited from the mock
+config and never tuned, and a fixed 240-step budget denies DP the early stopping
+the baseline gets.
+
 ## What to try next, in order
 
-1. **Repeat every point over ≥3 seeds** and report mean ± spread. Nothing else
-   is worth tuning until the error bars are visible; (a) and (b) above may both
-   dissolve into noise.
-2. **Fix the selection bias.** Either evaluate at a fixed step budget rather
-   than best-of-N, or hold out a separate split for the epoch choice, so the
-   private and non-private arms are selected identically.
-3. **Tune the clipping norm `C`** against real gradient magnitudes; it is still
+1. **Tune the clipping norm `C`** against real gradient magnitudes; it is still
    1.0, inherited from the mock configuration. The lever sweep hinted `C = 0.1`
-   is slightly better for AUC.
+   is slightly better for AUC. This is now the single biggest lever.
+2. **Give the DP arm the baseline's early stopping.** It currently trains a
+   fixed step budget; the baseline stops at its best epoch. Some of the
+   ε = ∞ gap is that difference, not clipping.
+3. **Read ADR-0016 first.** Essentially all utility lives in the text modality;
+   the noise applied to the audio and video encoders is close to pure cost, and
+   the configured allocation protects them *most*.
 4. **Only then** report the curve.
 
 Two hypotheses from the first draft of this ADR were tested and **rejected**:

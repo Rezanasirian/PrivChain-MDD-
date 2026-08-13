@@ -85,6 +85,37 @@ class DepressionObjective:
         return loss
 
 
+def evaluate_with_selected_threshold(
+    model: nn.Module,
+    selection_loader: DataLoader[Sample],
+    report_loader: DataLoader[Sample],
+    objective: DepressionObjective,
+    device: torch.device,
+) -> dict[str, float]:
+    """Pick the decision threshold on one split, then report on another.
+
+    Choosing the F1-maximizing threshold on the same data the F1 is reported on
+    is circular and inflates the result. This selects on ``selection_loader``
+    and applies that fixed threshold to ``report_loader``.
+
+    Both the private and non-private arms must call this, or their F1 values are
+    not comparable: a tuned threshold against a fixed 0.5 favours whichever arm
+    got the tuning (ADR-0015).
+
+    Args:
+        model: The trained model.
+        selection_loader: Split the threshold is chosen on (never reported).
+        report_loader: Split the returned metrics describe.
+        objective: The loss object (for the reported ``loss``).
+        device: Device to run on.
+
+    Returns:
+        Metrics on ``report_loader`` at the selected threshold.
+    """
+    chosen = evaluate_model(model, selection_loader, objective, device, threshold=None)
+    return evaluate_model(model, report_loader, objective, device, threshold=chosen["threshold"])
+
+
 def positive_class_weight(loader: DataLoader[Sample]) -> float | None:
     """Compute ``n_negative / n_positive`` over a loader's labels.
 

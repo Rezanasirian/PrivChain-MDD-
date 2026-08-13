@@ -114,9 +114,10 @@ def _cached_feature_matrix(
     Re-parsing on every run made experiment iteration cost minutes (ADR-0012),
     so the subsampled matrix is written to ``cache_dir`` once.
 
-    The cache key includes all parsing options, so changing ``frame_stride``,
-    ``max_frames``, or ``standardize`` produces a different entry rather than
-    silently reusing a stale one.
+    The cache key includes all parsing options **and the source file's size and
+    mtime**, so changing ``frame_stride``/``max_frames``/``standardize`` — or
+    re-extracting the corpus — produces a different entry rather than silently
+    reusing a stale one.
 
     Args:
         path: Feature file path.
@@ -129,7 +130,12 @@ def _cached_feature_matrix(
     if cache_dir is None:
         return _load_feature_matrix(path, **options)
 
-    key = json.dumps(options, sort_keys=True, default=str)
+    stat = path.stat()
+    key = json.dumps(
+        {**options, "_size": stat.st_size, "_mtime_ns": stat.st_mtime_ns},
+        sort_keys=True,
+        default=str,
+    )
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
     cache_path = cache_dir / f"{path.stem}.{digest}.npy"
 

@@ -14,6 +14,10 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# Modality order used project-wide (capability vectors, encoder overrides, DP
+# parameter groups). Defined here because schemas below validate against it.
+CAPABILITY_MODALITIES: tuple[str, str, str] = ("audio", "video", "text")
+
 
 class _Strict(BaseModel):
     """Base model that forbids unknown keys so config typos fail loudly."""
@@ -118,6 +122,22 @@ class ModelConfig(_Strict):
     use_phq_regression: bool = True
     phq_loss_weight: float = Field(default=0.1, ge=0.0)
 
+    @field_validator("encoder_overrides")
+    @classmethod
+    def _known_modalities_only(cls, value: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Reject overrides for unknown modalities.
+
+        Without this a typo (``txet:``) is silently ignored and the run quietly
+        uses the shared encoder instead of the intended one.
+        """
+        unknown = sorted(set(value) - set(CAPABILITY_MODALITIES))
+        if unknown:
+            raise ValueError(
+                f"encoder_overrides has unknown modalities {unknown}; "
+                f"expected any of {list(CAPABILITY_MODALITIES)}"
+            )
+        return value
+
     def encoder_for(self, modality: str) -> EncoderConfig:
         """Return the encoder config for one modality, applying any override.
 
@@ -164,6 +184,23 @@ class TrainConfig(_Strict):
 
     # ``auto`` selects CUDA when available, else CPU.
     device: Literal["auto", "cpu", "cuda"] = "cpu"
+
+    # ── Evaluation protocol (ADR-0015) ───────────────────────────────────────
+    # Share of the training split reserved for choosing the epoch and the
+    # decision threshold. Keeping selection off the reported split is what makes
+    # the reported number an estimate rather than a best-of-N.
+    selection_fraction: float = Field(default=0.2, gt=0.0, lt=1.0)
+    # A 34-session report split moves ~0.03 F1 on one flipped prediction, so a
+    # single seed is not a result. Every real-data figure is a mean ± std.
+    seeds: list[int] = Field(default_factory=lambda: [42])
+
+    @field_validator("seeds")
+    @classmethod
+    def _non_empty_seeds(cls, value: list[int]) -> list[int]:
+        """Require at least one seed."""
+        if not value:
+            raise ValueError("seeds must be non-empty")
+        return value
 
 
 class BaselineConfig(_Strict):
@@ -245,9 +282,6 @@ def load_baseline_config(path: str | Path) -> BaselineConfig:
 
 
 # ── Federated configuration (Phase 2) ────────────────────────────────────────
-
-# Capability-vector order used project-wide.
-CAPABILITY_MODALITIES: tuple[str, str, str] = ("audio", "video", "text")
 
 
 class ModalityPattern(_Strict):

@@ -96,3 +96,9 @@ train:
   early_stopping_patience: 40
 
   device: auto               # auto | cpu | cuda
+
+  # Evaluation protocol (ADR-0015). The epoch and the decision threshold are
+  # chosen on a slice carved out of train; the dev split is reported on and
+  # never selected against. Every arm in the Chapter-4 comparison uses this.
+  selection_fraction: 0.2
+  seeds: [42, 7, 2024]
