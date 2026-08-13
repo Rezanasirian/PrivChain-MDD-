@@ -116,6 +116,7 @@ def evaluate_model(
     loader: DataLoader[Sample],
     objective: DepressionObjective,
     device: torch.device,
+    threshold: float | None = 0.5,
 ) -> dict[str, float]:
     """Evaluate a model, returning classification metrics plus mean loss.
 
@@ -124,6 +125,9 @@ def evaluate_model(
         loader: Evaluation DataLoader.
         objective: The loss object (for the reported ``loss``).
         device: Device to run on.
+        threshold: Decision threshold, or ``None`` to pick the F1-maximizing one
+            from the scores. See
+            :func:`~privchain.eval.metrics.best_f1_threshold`.
 
     Returns:
         Metric mapping including ``f1``, ``roc_auc``, ``accuracy``, ``loss``.
@@ -141,6 +145,8 @@ def evaluate_model(
         all_scores.append(torch.sigmoid(outputs["logit"]).cpu().numpy())
         all_labels.append(batch["label"].cpu().numpy())
 
-    metrics = binary_classification_metrics(np.concatenate(all_scores), np.concatenate(all_labels))
+    metrics = binary_classification_metrics(
+        np.concatenate(all_scores), np.concatenate(all_labels), threshold=threshold
+    )
     metrics["loss"] = total_loss / max(count, 1)
     return metrics

@@ -65,57 +65,95 @@ target ε. But 3 epochs (≈12 steps) would have starved DP-SGD for reasons
 unrelated to privacy and overstated the cost of DP. The non-private baseline
 needs ~29 epochs to reach its best.
 
+### 6. The decision threshold is tuned, not fixed at 0.5
+
+The single most important fix. Under DP-SGD, **per-sample clipping normalizes
+away the class weighting**: `pos_weight` works by scaling the positive class's
+loss and therefore its gradient magnitude, but clipping every per-sample gradient
+to the same norm `C` erases exactly that magnitude. The model then ranks cases
+correctly while placing every score below 0.5, and a fixed threshold reports
+`F1 = 0`.
+
+A lever diagnostic made this unmistakable. Sweeping sampling rate x clipping norm
+x width at ε = 8 gave `F1 = 0.000` in all eight cells while **ROC-AUC ranged
+0.54–0.60 — above chance in every one**. The models were learning; the metric
+was not seeing it.
+
+`binary_classification_metrics` now accepts `threshold=None` to select the
+F1-maximizing cut from the scores, and reports which cut it used. This is
+post-processing of a released model's outputs, so it adds nothing to the privacy
+budget. It is standard practice for imbalanced classification and is applied to
+the private and non-private arms alike.
+
+The same diagnostic also disposed of one hypothesis: **shrinking the model did
+not help.** `hidden = 128` beat `hidden = 32` on AUC in every pairing, so the
+`√(#parameters)` noise-norm argument is not the binding constraint here.
+
 ## Result — and why it is not yet reportable
+
+Accounting (unchanged, and sound — σ calibrated per modality, consumed ε matches
+target, participant budget composed per ADR-0009):
 
 ```
 audio  risk=0.90  target_eps=2.00  sigma=10.068  consumed_eps=1.999
 video  risk=0.60  target_eps=4.00  sigma= 5.485  consumed_eps=3.999
 text   risk=0.30  target_eps=8.00  sigma= 3.092  consumed_eps=8.000
 composed participant epsilon: 10.043
-
-eps=  inf -> acc=0.735  F1=0.400  ROC-AUC=0.545
-eps= 0.50 -> acc=0.676  F1=0.000  ROC-AUC=0.387
-eps= 1.00 -> acc=0.676  F1=0.000  ROC-AUC=0.387
-eps= 2.00 -> acc=0.676  F1=0.000  ROC-AUC=0.387
-eps= 4.00 -> acc=0.676  F1=0.000  ROC-AUC=0.387
-eps= 8.00 -> acc=0.676  F1=0.000  ROC-AUC=0.395
-eps=16.00 -> acc=0.676  F1=0.000  ROC-AUC=0.395
 ```
 
-The accounting side is sound: σ is calibrated per modality, consumed ε matches
-its target, and the composed participant budget is reported (ADR-0009). **The
-utility side is not usable**, for two distinct reasons:
+Utility, after the threshold fix (single seed, dev split, n=34):
 
-**(a) Clipping and Poisson subsampling alone cost more than half the F1.** At
-ε = ∞ — no noise whatsoever — the model reaches F1 = 0.400 / AUC = 0.545 against
-the baseline's 0.640 / 0.767.
+| ε | dev F1 | dev ROC-AUC | dev accuracy |
+|---|---|---|---|
+| 0.5 | 0.489 | 0.387 | 0.324 |
+| 1 | 0.512 | 0.506 | 0.382 |
+| 2 | 0.537 | 0.494 | 0.441 |
+| 4 | 0.595 | 0.553 | 0.559 |
+| 8 | 0.611 | 0.577 | 0.588 |
+| 16 | 0.611 | 0.581 | 0.588 |
+| ∞ (clip only, no noise) | 0.564 | 0.510 | 0.500 |
+| *non-private baseline* | *0.640* | *0.767* | *0.735* |
 
-**(b) Any finite ε collapses the model completely.** F1 = 0 and ROC-AUC below
-chance at every budget from 0.5 to 16, essentially flat. A curve that does not
-move with ε is not a privacy-utility trade-off curve; it is a broken operating
-point.
+**F1 now rises monotonically with ε and saturates around ε ≈ 8.** That is a
+privacy-utility trade-off curve, where before there was a flat line at zero. The
+progression from the earlier state is entirely attributable to the fixes above,
+not to any change in the privacy mechanism.
 
-The likely mechanism for (b) is a signal-to-noise argument, not a bug. Gaussian
-noise is added per coordinate with standard deviation `σ·C / E[batch]`, while the
-useful signal is an average of per-sample gradients each clipped to `C`. The
-noise **vector** therefore grows as `√(#parameters)` while the signal norm stays
-bounded by `C`. With ~200k parameters, `C = 1`, and `E[batch] = 32`, the noise
-norm exceeds the signal norm by more than an order of magnitude even at ε = 16.
-DP-SGD needs many samples per parameter; 107 participants is far from that.
+**It is still not a Chapter 4 number,** for two reasons:
+
+**(a) The ε = ∞ control is *below* the private runs** (F1 0.564 vs 0.611 at
+ε = 8). Removing noise cannot genuinely help less than adding it; something is
+wrong with the comparison, not with DP. The likely cause is selection bias:
+taking the best of 60 epochs on a 34-session dev set is optimistic, and *noisier*
+runs benefit more because they visit more diverse checkpoints and so get more
+chances at a lucky one. Until the control behaves coherently, the curve's levels
+cannot be trusted even though its shape is plausible.
+
+**(b) Every point is single-seed.** With 34 dev sessions, one flipped prediction
+moves F1 by ~0.03; the whole spread from ε = 4 to ε = 16 is about that size.
+
+The privacy cost, read off the saturated end, is roughly **F1 0.640 → 0.611 and
+ROC-AUC 0.767 → 0.581**: modest in F1, large in ranking quality. Note the AUC gap
+is much wider than the F1 gap, which is consistent with the threshold tuning
+propping up F1 on a model whose ranking has genuinely degraded. Reporting only F1
+here would flatter DP considerably — Chapter 4 must report both.
 
 ## What to try next, in order
 
-1. **Raise the sampling rate.** With only 107 training samples, full-batch
-   DP-GD (`q = 1`) maximises signal per step. Fewer, stronger steps is the
-   standard regime for tiny datasets.
-2. **Shrink the private model.** The text branch alone is ~98k parameters
-   (768 × 128). Projecting the frozen embeddings down before the trainable layer
-   would cut the noise norm roughly as `√(#parameters)` without touching the
-   privacy analysis — the projection is data-independent post-processing of a
-   frozen encoder.
-3. **Tune the clipping norm `C`.** It is currently 1.0, inherited from the mock
-   configuration and never tuned against real gradient magnitudes.
+1. **Repeat every point over ≥3 seeds** and report mean ± spread. Nothing else
+   is worth tuning until the error bars are visible; (a) and (b) above may both
+   dissolve into noise.
+2. **Fix the selection bias.** Either evaluate at a fixed step budget rather
+   than best-of-N, or hold out a separate split for the epoch choice, so the
+   private and non-private arms are selected identically.
+3. **Tune the clipping norm `C`** against real gradient magnitudes; it is still
+   1.0, inherited from the mock configuration. The lever sweep hinted `C = 0.1`
+   is slightly better for AUC.
 4. **Only then** report the curve.
+
+Two hypotheses from the first draft of this ADR were tested and **rejected**:
+shrinking the model did not help (wider was consistently better), and raising the
+sampling rate to `q = 1` changed little once the threshold was tuned.
 
 ## Consequences
 

@@ -227,7 +227,10 @@ def main() -> None:
                 device=device,
                 generator=generator,
             )
-            epoch_metrics = evaluate_model(model, val_loader, objective, device)
+            # threshold=None: clipping normalizes away the class weighting, so a
+            # fixed 0.5 cut reports F1 = 0 for models that rank perfectly well.
+            # Picking the cut is post-processing and costs no budget (ADR-0013).
+            epoch_metrics = evaluate_model(model, val_loader, objective, device, threshold=None)
             selector = base.train.selection_metric
             if metrics is None or epoch_metrics[selector] > metrics[selector]:
                 metrics = epoch_metrics
