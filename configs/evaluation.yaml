@@ -11,8 +11,20 @@ seed: 42
 evaluation:
   k_folds: 10             # 10-fold cross-validation (thesis protocol)
   held_out_fraction: 0.2  # held-out test fold reserved before CV
-  epochs: 3               # centralized / DP-SGD training epochs
+
+  # Upper bound on the centralized arm, not a fixed count. Each fold carves a
+  # selection split out of its training data and early-stops on it (ADR-0015),
+  # matching scripts/train_baseline.py, so the ceiling is only reached when the
+  # model is still improving. The non-private baseline converged in ~79 epochs
+  # on real data (ADR-0012); the old fixed `epochs: 3` trained every Chapter-4
+  # row to a small fraction of that and is why the table needed regenerating.
+  epochs: 200
   rounds: 5               # federated rounds per fold
+
+  # DP-SGD cannot use early stopping: epochs are a privacy parameter, so cutting
+  # training short does not refund the budget the accountant already charged.
+  # Fixed at the Phase 3 sweep's value so the two are directly comparable.
+  dp_epochs: 60
 
   # Inference-latency "compute budget" axis.
   latency_batch_sizes: [1, 2, 4, 8, 16]

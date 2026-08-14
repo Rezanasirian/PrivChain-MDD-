@@ -24,8 +24,17 @@ privacy:
 
   # How per-modality target budgets epsilon_m are derived.
   allocation:
-    mode: explicit         # explicit: use per_modality.epsilon directly
-                           # inverse_risk: epsilon_m = total * r_m^-gamma / sum_k r_k^-gamma
+    # inverse_risk: epsilon_m = total * r_m^-gamma / sum_k r_k^-gamma
+    # (alternative: explicit, which uses per_modality.epsilon directly)
+    #
+    # Switched from `explicit` on 2026-08-14 (ADR-0023). The hand-set 2/4/8 gave
+    # video twice audio's budget, a 2x separation the Phase 6 measurement did not
+    # support (risk 1.00 vs 0.97). Deriving the budgets from the measured risks
+    # makes the allocation a *result* rather than an assumption, at the cost of
+    # the audio > video ordering asserted in Chapter 1. Both arms are rescaled to
+    # `total_participant_epsilon` afterwards, so what actually changes is the
+    # shape: audio:video:text goes from 1:2:4 to 1:1.03:3.45.
+    mode: inverse_risk
     total_epsilon: 14.0    # used only when mode = inverse_risk
     risk_sharpness: 1.0    # gamma; 0 = uniform, larger = more risk-sensitive
     # Budget every arm of scripts/run_allocation_comparison.py is scaled to. It

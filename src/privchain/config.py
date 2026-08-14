@@ -632,7 +632,15 @@ class EvaluationSettings(_Strict):
 
     k_folds: int = Field(default=10, ge=2)
     held_out_fraction: float = Field(default=0.2, gt=0.0, lt=1.0)
-    epochs: int = Field(default=3, gt=0)  # centralized / DP-SGD epochs
+    # Ceiling for the centralized arm, not a fixed count: training early-stops on
+    # the fold's selection split (ADR-0015), so this only bounds the worst case.
+    epochs: int = Field(default=3, gt=0)
+    # DP-SGD epochs are a *privacy* parameter, not just a compute one: more steps
+    # means more mechanism applications, so the accountant calibrates more noise
+    # for the same target epsilon. Early stopping cannot be used to cut them
+    # short without invalidating the budget, so this is separate from `epochs`
+    # and must be large enough for DP-SGD to converge (ADR-0012).
+    dp_epochs: int = Field(default=3, gt=0)
     rounds: int = Field(default=5, gt=0)  # federated rounds
     latency_batch_sizes: list[int]
     latency_repeats: int = Field(default=20, gt=0)
