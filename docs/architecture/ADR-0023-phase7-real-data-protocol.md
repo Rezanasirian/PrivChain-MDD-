@@ -109,6 +109,57 @@ Four defects, none of which would have failed loudly:
 4. **No `pos_weight`**, despite `class_weighting: true`, on a corpus with a 0.291
    positive rate.
 
+## What the run measured, including the parts that do not support the thesis
+
+Run `experiments/phase7/phase7_final_evaluation_20260814_083048`, 141 pooled
+sessions, positive rate 0.291, 10 folds, RTX 4090.
+
+| method | CV ROC-AUC | CV F1 | official test ROC-AUC |
+|---|---|---|---|
+| centralized | 0.680 ± 0.149 | 0.494 ± 0.138 | **0.709 ± 0.052** |
+| fedavg | 0.584 ± 0.239 | 0.401 ± 0.166 | 0.422 ± 0.009 |
+| personalized | 0.573 ± 0.256 | 0.382 ± 0.161 | 0.464 ± 0.012 |
+| proposed | 0.580 ± 0.260 | 0.386 ± 0.164 | 0.462 ± 0.011 |
+| proposed − reputation | 0.574 ± 0.255 | 0.386 ± 0.164 | 0.467 ± 0.014 |
+
+The centralized arm reproduces the Phase 1 baseline (0.740), which is the check
+that the protocol is what it claims to be. Three results do **not** support the
+thesis and are recorded here rather than tuned away:
+
+1. **The proposed framework is indistinguishable from plain FedAvg.** CV ROC-AUC
+   spans 0.573–0.584 across all four federated arms while the fold-to-fold
+   standard deviation is ±0.25. Removing reputation moves the mean by 0.006.
+   Phase 4 reached the same conclusion on the dev split with a paired test
+   (ADR-0021); Phase 7 does not overturn it. **H2 is not demonstrated on this
+   corpus.**
+
+2. **The DP allocation axis does nothing measurable.** The adaptive and uniform
+   arms return *identical* F1, ROC-AUC and accuracy — only `loss_mean` differs
+   (0.6901457 vs 0.6901366), the signature of two models whose weights differ but
+   whose decisions and score ordering do not. The mechanism is genuinely
+   different (σ = 9.43/9.17/3.27 adaptive vs 5.50 uniform), so this is collapse,
+   not a wiring fault: at a composed participant ε of 8.0 over 60 epochs with
+   C = 0.1, DP-SGD on 141 sessions learns essentially nothing either way.
+   Phase 3's re-run agrees and is the stronger evidence, because it includes the
+   control this table lacks: adaptive − uniform = +0.016 (95% CI [−0.058,
+   +0.092], p = 0.746) and **anti_adaptive − uniform = 0.000 (p = 1.0)**. An
+   anti-adaptive arm — deliberately giving the *riskiest* modalities the *most*
+   budget — scoring identically to uniform is what
+   `run_allocation_comparison.py` documents as the signal that the allocation
+   axis is inert. **H1's utility claim is not demonstrated on this corpus**; its
+   privacy claim stands on Phase 6 independently.
+
+3. **Every federated arm falls to or below chance on the official test split**
+   (0.422–0.467) while the centralized arm holds 0.709. The seed-to-seed spread
+   is tiny (±0.01), so this is systematic rather than noise. The plausible cause
+   is the known distribution shift between the AVEC2017 dev and test splits
+   interacting with 10 clients of ~8 sessions each, but it is **not established**
+   here and is flagged as open rather than explained.
+
+Inference latency is 0.64 ms/batch, flat from batch 1 to 16, i.e. 0.64 → 0.041
+ms/sample: the model is small enough that per-sample cost is dominated by fixed
+overhead, which is the useful form of the compute-budget result.
+
 ## Consequences
 
 - Chapter 4's tables are generated from the real corpus under one protocol shared
