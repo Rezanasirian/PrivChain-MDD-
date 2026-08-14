@@ -641,7 +641,11 @@ class EvaluationSettings(_Strict):
     # short without invalidating the budget, so this is separate from `epochs`
     # and must be large enough for DP-SGD to converge (ADR-0012).
     dp_epochs: int = Field(default=3, gt=0)
-    rounds: int = Field(default=5, gt=0)  # federated rounds
+    # Federated rounds. ``None`` defers to ``federated.yaml``'s ``num_rounds``,
+    # which is the right default: duplicating the round count here is how the
+    # Chapter-4 federated arms ended up trained for 5 rounds against a
+    # centralized arm allowed 200 epochs (ADR-0023).
+    rounds: int | None = Field(default=None, gt=0)
     latency_batch_sizes: list[int]
     latency_repeats: int = Field(default=20, gt=0)
 

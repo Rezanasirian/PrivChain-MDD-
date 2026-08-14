@@ -306,21 +306,39 @@ def _eval_federated(
     base: Any,
     fed: Any,
     input_dims: dict[str, int],
+    labels_all: list[int],
     device: torch.device,
     rounds: int,
     seed: int,
     strategy: str,
     aggregation: AggregationConfig,
 ) -> dict[str, float]:
-    """Train a federated variant on a fold and score the held-out test split."""
+    """Train a federated variant on a fold and score the held-out test split.
+
+    Mirrors ``scripts/run_federated_comparison.py``: clients partition the fold's
+    *training* data only, per-round model selection happens on a selection split
+    carved out of it, and the fold's scored split is touched once at the end.
+    Passing the scored split in as the round validation loader would select on
+    the number being reported (ADR-0015).
+    """
     seed_everything(seed)
-    train_subset = Subset(full, train_idx)
-    federation = fed.federation.model_copy(
-        update={"num_rounds": rounds, "clients_per_round": fed.federation.num_clients}
+    fold_train, selection = _carve_fold(
+        full, train_idx, labels_all, selection_fraction=base.train.selection_fraction, seed=seed
     )
-    partitions = build_client_partitions(len(train_subset), federation, seed)
+    # A fold cannot support more clients than it has training sessions. This only
+    # binds on the 32-session mock corpus (9 per fold after the selection split);
+    # on DAIC-WOZ each fold carries ~100, so the configured count stands.
+    num_clients = min(fed.federation.num_clients, len(fold_train))  # type: ignore[arg-type]
+    federation = fed.federation.model_copy(
+        update={
+            "num_rounds": rounds,
+            "num_clients": num_clients,
+            "clients_per_round": num_clients,
+        }
+    )
+    partitions = build_client_partitions(len(fold_train), federation, seed)  # type: ignore[arg-type]
     clients = build_federated_clients(
-        train_subset,
+        fold_train,
         partitions,
         input_dims=input_dims,
         model_config=base.model,
@@ -333,37 +351,40 @@ def _eval_federated(
         seed=seed,
     )
     global_model = MultimodalDepressionModel(input_dims, base.model)
-    test_loader = _loader(full, test_idx, base.train.batch_size)
-
+    batch_size = base.train.batch_size
+    selection_loader: DataLoader[Sample] = DataLoader(
+        selection, batch_size=batch_size, collate_fn=collate_fn
+    )
+    common = {
+        "num_rounds": rounds,
+        "clients_per_round": num_clients,
+        "phq8_max": base.data.phq8_max,
+        "phq_loss_weight": base.model.phq_loss_weight,
+        "seed": seed,
+        "device": str(device),
+        "early_stopping_patience": federation.early_stopping_patience,
+    }
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)
         if strategy == "fedavg":
-            run_simulation(
-                global_model,
-                clients,
-                test_loader,
-                num_rounds=rounds,
-                clients_per_round=federation.num_clients,
-                phq8_max=base.data.phq8_max,
-                phq_loss_weight=base.model.phq_loss_weight,
-                run_dir=run_dir,
-                seed=seed,
-            )
+            run_simulation(global_model, clients, selection_loader, run_dir=run_dir, **common)
         else:
             run_capability_aware_simulation(
                 global_model,
                 clients,
-                test_loader,
+                selection_loader,
                 aggregation=aggregation,
-                num_rounds=rounds,
-                clients_per_round=federation.num_clients,
-                phq8_max=base.data.phq8_max,
-                phq_loss_weight=base.model.phq_loss_weight,
                 run_dir=run_dir,
-                seed=seed,
+                **common,
             )
     objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
-    return evaluate_model(global_model.to(device), test_loader, objective, device)
+    return evaluate_with_selected_threshold(
+        global_model.to(device),
+        selection_loader,
+        _loader(full, test_idx, batch_size),
+        objective,
+        device,
+    )
 
 
 def _cross_validate(
@@ -418,7 +439,8 @@ def main() -> None:
     seed_everything(base.seed)
 
     k_folds = args.k_folds if args.k_folds is not None else ev.k_folds
-    rounds = args.rounds if args.rounds is not None else ev.rounds
+    # federated.yaml owns the round count unless explicitly overridden here.
+    rounds = args.rounds or ev.rounds or fed.federation.num_rounds
     # Same override semantics as scripts/run_federated_comparison.py, so the
     # Phase 4 and Phase 7 federated arms can be compared run for run.
     federation = fed.federation
@@ -471,6 +493,7 @@ def main() -> None:
             base=base,
             fed=fed,
             input_dims=input_dims,
+            labels_all=labels_all,
             device=device,
             rounds=rounds,
             seed=s,

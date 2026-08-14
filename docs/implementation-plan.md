@@ -85,11 +85,11 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 0 — Environment & Data Setup (2–4 days)
 **Goal:** A reproducible foundation before any model code is written.
-- [ ] Apply for DAIC-WOZ access (requires a Data Use Agreement — **this is the longest lead-time item in the whole project; start it today**, approval can take weeks). _(External/manual — not yet done.)_
+- [x] Apply for DAIC-WOZ access (requires a Data Use Agreement — **this is the longest lead-time item in the whole project; start it today**, approval can take weeks). _(Granted; the corpus was first downloaded and parsed on 2026-08-13 — ADR-0010. `docs/runbook/server-scripts/` rebuilds it on a fresh box in ~15 minutes, manifest included.)_
 - [x] Until approval arrives, build a **mock/synthetic** version of the DAIC-WOZ structure (short random audio, a few image frames, fake transcripts, random PHQ-8 labels) so the full pipeline can be tested without real data. _(`src/privchain/data/mock_daic_woz.py`; see ADR-0001.)_
 - [x] Git repo + folder structure (`data/`, `src/encoders/`, `src/federated/`, `src/privacy/`, `chaincode/`, `experiments/`, `notebooks/`)
 - [x] Python virtual environment + dependency manifest (`pyproject.toml` + `uv`, per CLAUDE.md §3, replacing `requirements.txt`; torch/opacus/flwr/librosa/transformers/scikit-learn declared across core + optional groups).
-- [ ] Install Go + Hyperledger Fabric (a local test network via `fabric-samples`). _(External/manual — Go not installed in current env; needed for Phase 5.)_
+- [x] Install Go + Hyperledger Fabric (a local test network via `fabric-samples`). _(Go 1.26.5 + the Fabric 2.5 binaries, installed natively rather than via `fabric-samples`, which assumes Docker — see ADR-0022 and `docs/runbook/server-scripts/00_toolchain.sh`.)_
 - **Definition of Done:** A smoke-test `pytest` run on the mock data pipeline passes and produces correctly shaped tensors. ✅ **Met** — 13 tests pass (`tests/unit/test_mock_daic_woz.py`, `tests/integration/test_pipeline_smoke.py`).
 
 ### Phase 1 — Centralized Multimodal Baseline Model (no federation, no privacy) (1–2 weeks)
@@ -138,7 +138,7 @@ These are stated directly in the text — deviating from them means diverging fr
 
 ### Phase 5 — Blockchain Layer with Hyperledger Fabric (H3 — integration) (2 weeks)
 **Goal:** Auditability and smart-contract enforcement for H1 and H2.
-- [ ] Stand up a local Fabric test network (2–4 peers + orderer). _(External/manual — needs Go + Docker + `fabric-samples`, not installed in the offline env.)_
+- [x] Stand up a local Fabric test network (2–4 peers + orderer). _(Done 2026-08-13 as a single-peer + single-orderer etcdraft network run **without Docker**, which the deployment container makes impossible; chaincode runs as a process via Chaincode-as-a-Service. Scale was traded for realness deliberately — see ADR-0022.)_
 - [x] Write chaincode in Go with 4 functions + read helpers, input validation, explicit errors, and `shimtest` (MockStub) unit tests. `chaincode/privchain-cc/` (ADR-0006):
   - `RegisterClient(clientID, capabilityVector)`
   - `LogPrivacyBudget(clientID, modality, round, epsilonSpent)` — **append-only** (consumed ε never overwritten, CLAUDE.md §7)

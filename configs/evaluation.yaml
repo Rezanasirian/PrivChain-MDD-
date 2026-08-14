@@ -19,7 +19,13 @@ evaluation:
   # on real data (ADR-0012); the old fixed `epochs: 3` trained every Chapter-4
   # row to a small fraction of that and is why the table needed regenerating.
   epochs: 200
-  rounds: 5               # federated rounds per fold
+
+  # Federated rounds per fold. Left unset so federated.yaml's `num_rounds` (120,
+  # with patience 40) is the single source of truth. The old `rounds: 5` here was
+  # a mock-era value that silently trained every federated arm for 5 rounds while
+  # the centralized arm got up to 200 epochs -- which put the thesis's own
+  # proposed method at chance in the Chapter-4 table (ADR-0023).
+  rounds: null
 
   # DP-SGD cannot use early stopping: epochs are a privacy parameter, so cutting
   # training short does not refund the budget the accountant already charged.
