@@ -31,6 +31,21 @@ Verify with `ruff check src scripts tests`, `mypy --strict src`, `pytest -q`.
 
 ## 2. Data
 
+`bootstrap_data.sh` chains this whole section — apt deps, download, extract, the
+split-CSV layout the config expects, and the text-embedding restore below — and
+is what was actually used to rebuild on 2026-08-14. It took **~15 minutes** on a
+fresh box at ~100 MB/s. Run it detached:
+
+```bash
+setsid nohup bash docs/runbook/server-scripts/bootstrap_data.sh \
+    > /workspace/bootstrap.log 2>&1 < /dev/null &
+```
+
+`bootstrap_py.sh` does the Python environment in parallel — it is deliberately
+separate so the long download is never blocked behind a pip resolve.
+
+The individual steps, if you need them one at a time:
+
 ```bash
 bash docs/runbook/server-scripts/download_daic.sh   # ~119 GB, 6 parallel streams
 bash docs/runbook/server-scripts/extract_daic.sh
