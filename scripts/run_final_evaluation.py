@@ -349,8 +349,9 @@ def _eval_federated(
         phq8_max=base.data.phq8_max,
         phq_loss_weight=base.model.phq_loss_weight,
         seed=seed,
+        device=str(device),
     )
-    global_model = MultimodalDepressionModel(input_dims, base.model)
+    global_model = MultimodalDepressionModel(input_dims, base.model).to(device)
     batch_size = base.train.batch_size
     selection_loader: DataLoader[Sample] = DataLoader(
         selection, batch_size=batch_size, collate_fn=collate_fn
