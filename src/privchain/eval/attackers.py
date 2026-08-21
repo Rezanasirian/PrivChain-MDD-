@@ -80,10 +80,10 @@ def release_embeddings_dp(
 ) -> NDArray[np.float64]:
     """Release embeddings under the ``(ε, δ)`` Gaussian mechanism.
 
-    Each row is clipped to ``clip_norm`` — bounding the change one subject can
-    cause — and perturbed with Gaussian noise of standard deviation
-    ``σ(ε, δ) · clip_norm``, where ``σ`` comes from the same RDP accountant used
-    for DP-SGD, evaluated as a single unsubsampled application.
+    Each row is clipped to ``clip_norm``. Under record-replacement adjacency two
+    clipped records can differ by ``2 * clip_norm``, so Gaussian noise has
+    standard deviation ``σ(ε, δ) * 2 * clip_norm``. ``σ`` comes from the same RDP
+    accountant used for DP-SGD, evaluated as one unsubsampled application.
 
     This is the mechanism that actually bounds *re-identification*. DP-SGD does
     not: it constrains how much a trained model depends on any one training
@@ -93,7 +93,8 @@ def release_embeddings_dp(
         embeddings: Array of shape ``(N, D)`` to release.
         target_epsilon: Privacy budget ``ε`` for the release.
         delta: Target ``δ``.
-        clip_norm: L2 bound applied before noising (the sensitivity).
+        clip_norm: L2 radius applied before noising (half the replacement
+            sensitivity).
         rng: Source of randomness.
 
     Returns:
@@ -103,7 +104,7 @@ def release_embeddings_dp(
 
     clipped = clip_rows(embeddings, clip_norm)
     sigma = get_noise_multiplier(target_epsilon, sample_rate=1.0, steps=1, delta=delta)
-    return add_gaussian_noise(clipped, sigma * clip_norm, rng)
+    return add_gaussian_noise(clipped, sigma * 2.0 * clip_norm, rng)
 
 
 def _l2_normalize(matrix: NDArray[np.float64]) -> NDArray[np.float64]:

@@ -127,9 +127,12 @@ def run_flower_simulation(
             self, parameters: list[NDArray[Any]], config: dict[str, Any]
         ) -> tuple[list[NDArray[Any]], int, dict[str, Any]]:
             state = ndarrays_to_state(self._fc.model, parameters)
-            updated, num_samples = self._fc.fit(state)
+            updated, num_samples, spend = self._fc.fit(state)
             self._fc.set_parameters(updated)
-            return state_to_ndarrays(self._fc.model), num_samples, {}
+            metrics: dict[str, Any] = {}
+            if spend is not None:
+                metrics["epsilon_composed"] = spend.cumulative["composed"]
+            return state_to_ndarrays(self._fc.model), num_samples, metrics
 
         def evaluate(
             self, parameters: list[NDArray[Any]], config: dict[str, Any]

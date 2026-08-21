@@ -90,6 +90,9 @@ def test_modality_masking_zeros_absent_modalities() -> None:
 
     assert sample["video"].shape == (1, data_cfg.video.n_features)
     assert torch.all(sample["video"] == 0)
+    assert sample["presence"]["video"].item() == 0
+    assert sample["presence"]["audio"].item() == 1
+    assert sample["presence"]["text"].item() == 1
     # Present modalities are untouched.
     assert torch.equal(sample["audio"], original["audio"])
     assert torch.equal(sample["text"], original["text"])

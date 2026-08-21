@@ -20,7 +20,7 @@ comparison measures how much budget each arm was handed, not how well it spent i
 `scripts/run_final_evaluation.py` matched its adaptive and uniform arms like this:
 
 ```python
-uniform_eps = sum(adaptive.values()) / len(MODALITIES)   # "same total budget"
+uniform_eps = sum(adaptive.values()) / len(MODALITIES)  # "same total budget"
 ```
 
 That is the arithmetic mean of the per-modality ε, and it is **not** the same

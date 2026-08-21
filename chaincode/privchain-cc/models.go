@@ -35,10 +35,12 @@ const roundKeyWidth = 10
 // by a client in a given round. Consumed epsilon is never overwritten
 // (CLAUDE.md §7), so (clientId, modality, round) is unique.
 type BudgetRecord struct {
-	ClientID     string  `json:"clientId"`
-	Modality     string  `json:"modality"`
-	Round        int     `json:"round"`
-	EpsilonSpent float64 `json:"epsilonSpent"`
+	ClientID           string  `json:"clientId"`
+	Modality           string  `json:"modality"`
+	Round              int     `json:"round"`
+	EpsilonIncremental float64 `json:"epsilonIncremental"`
+	EpsilonCumulative  float64 `json:"epsilonCumulative"`
+	EpsilonSpent       float64 `json:"epsilonSpent"`
 }
 
 // ReputationRecord is a client's latest per-modality reputation. Reputation is
@@ -71,4 +73,8 @@ func isKnownModality(name string) bool {
 		}
 	}
 	return false
+}
+
+func isKnownPrivacyGroup(name string) bool {
+	return isKnownModality(name) || name == "shared" || name == "composed"
 }

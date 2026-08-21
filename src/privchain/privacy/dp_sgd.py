@@ -34,6 +34,7 @@ import torch
 from opacus import GradSampleModule
 from torch import nn
 
+from privchain.config import CAPABILITY_MODALITIES
 from privchain.data.mock_daic_woz import Sample, collate_fn
 from privchain.training.objective import DepressionObjective, move_batch_to_device
 
@@ -51,7 +52,9 @@ def _strip_wrapper_prefix(name: str) -> str:
     return name
 
 
-def map_parameter_groups(model: nn.Module) -> dict[str, list[nn.Parameter]]:
+def map_parameter_groups(
+    model: nn.Module, capability: tuple[int, int, int] | None = None
+) -> dict[str, list[nn.Parameter]]:
     """Group a model's parameters into per-modality groups + a shared group.
 
     Works on both a bare model and one wrapped in
@@ -60,21 +63,31 @@ def map_parameter_groups(model: nn.Module) -> dict[str, list[nn.Parameter]]:
 
     Args:
         model: A :class:`MultimodalDepressionModel` (or compatible) instance.
+        capability: Optional ``[audio, video, text]`` availability flags. When
+            supplied, absent encoder groups are omitted entirely.
 
     Returns:
         Mapping ``{group_name: [parameters]}`` with keys ``audio``, ``video``,
         ``text``, and ``shared``.
     """
-    groups: dict[str, list[nn.Parameter]] = {"audio": [], "video": [], "text": [], SHARED_GROUP: []}
+    enabled = set(CAPABILITY_MODALITIES)
+    if capability is not None:
+        enabled = {
+            modality
+            for modality, flag in zip(CAPABILITY_MODALITIES, capability, strict=True)
+            if flag == 1
+        }
+    groups: dict[str, list[nn.Parameter]] = {name: [] for name in enabled}
+    groups[SHARED_GROUP] = []
     for raw_name, param in model.named_parameters():
         name = _strip_wrapper_prefix(raw_name)
-        if name.startswith("encoders.audio"):
+        if name.startswith("encoders.audio") and "audio" in groups:
             groups["audio"].append(param)
-        elif name.startswith("encoders.video"):
+        elif name.startswith("encoders.video") and "video" in groups:
             groups["video"].append(param)
-        elif name.startswith("encoders.text"):
+        elif name.startswith("encoders.text") and "text" in groups:
             groups["text"].append(param)
-        else:
+        elif not name.startswith("encoders."):
             groups[SHARED_GROUP].append(param)
     return groups
 

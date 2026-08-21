@@ -12,8 +12,8 @@ written, and nobody had asked what it did. It z-scored each feature column
 **within a session**:
 
 ```python
-mean = matrix.mean(axis=0, keepdims=True)   # over time, within one participant
-std  = matrix.std(axis=0, keepdims=True)
+mean = matrix.mean(axis=0, keepdims=True)  # over time, within one participant
+std = matrix.std(axis=0, keepdims=True)
 matrix = (matrix - mean) / (std + 1e-6)
 ```
 

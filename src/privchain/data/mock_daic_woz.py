@@ -39,6 +39,7 @@ class Sample(TypedDict):
     audio: torch.Tensor  # (T_audio, n_mels)
     video: torch.Tensor  # (T_video, n_features)
     text: torch.Tensor  # (T_text, embed_dim)
+    presence: dict[str, torch.Tensor]  # scalar 0/1 flag per modality
     phq8_score: torch.Tensor  # scalar long
     label: torch.Tensor  # scalar long in {0, 1}
 
@@ -52,6 +53,7 @@ class Batch(TypedDict):
     audio_lengths: torch.Tensor  # (B,) true (unpadded) lengths
     video_lengths: torch.Tensor  # (B,)
     text_lengths: torch.Tensor  # (B,)
+    presence: dict[str, torch.Tensor]  # modality -> (B,) 0/1 flags
     phq8_score: torch.Tensor  # (B,)
     label: torch.Tensor  # (B,)
 
@@ -134,6 +136,7 @@ class MockDaicWozDataset(Dataset[Sample]):
             audio=torch.from_numpy(audio),
             video=torch.from_numpy(video),
             text=torch.from_numpy(text),
+            presence={m: torch.tensor(1, dtype=torch.long) for m in MODALITIES},
             phq8_score=torch.tensor(spec.phq8_score, dtype=torch.long),
             label=torch.tensor(label, dtype=torch.long),
         )
@@ -185,6 +188,10 @@ def collate_fn(samples: list[Sample]) -> Batch:
         audio_lengths=audio_lengths,
         video_lengths=video_lengths,
         text_lengths=text_lengths,
+        presence={
+            modality: torch.stack([sample["presence"][modality] for sample in samples])
+            for modality in MODALITIES
+        },
         phq8_score=torch.stack([s["phq8_score"] for s in samples]),
         label=torch.stack([s["label"] for s in samples]),
     )

@@ -37,6 +37,7 @@ class MultimodalDepressionModel(nn.Module):
     def __init__(self, input_dims: dict[str, int], config: ModelConfig) -> None:
         super().__init__()
         self.config = config
+        self.input_dims = dict(input_dims)
         # Each modality may override the shared encoder config (ADR-0014).
         encoder_configs = {modality: config.encoder_for(modality) for modality in MODALITIES}
         self.encoders = nn.ModuleDict(
@@ -77,7 +78,7 @@ class MultimodalDepressionModel(nn.Module):
             "video": self.encoders["video"](batch["video"], batch["video_lengths"]),
             "text": self.encoders["text"](batch["text"], batch["text_lengths"]),
         }
-        fused = self.fusion(embeddings, presence)
+        fused = self.fusion(embeddings, batch["presence"] if presence is None else presence)
 
         outputs: dict[str, torch.Tensor] = {"logit": self.classifier(fused).squeeze(-1)}
         if self.regressor is not None:

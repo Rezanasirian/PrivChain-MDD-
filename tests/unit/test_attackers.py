@@ -148,6 +148,26 @@ def test_dp_release_bounds_the_released_norm() -> None:
     assert np.all(np.linalg.norm(released, axis=1) < 2.0)
 
 
+def test_dp_release_uses_record_replacement_sensitivity() -> None:
+    from privchain.privacy.accountant import get_noise_multiplier
+
+    embeddings = np.array([[3.0, 4.0]], dtype=np.float64)
+    epsilon, delta, clip_norm = 3.0, 1e-5, 2.0
+    released = release_embeddings_dp(
+        embeddings,
+        target_epsilon=epsilon,
+        delta=delta,
+        clip_norm=clip_norm,
+        rng=np.random.default_rng(17),
+    )
+    clipped = clip_rows(embeddings, clip_norm)
+    sigma = get_noise_multiplier(epsilon, sample_rate=1.0, steps=1, delta=delta)
+    expected_noise = np.random.default_rng(17).normal(
+        0.0, sigma * 2.0 * clip_norm, size=embeddings.shape
+    )
+    assert np.allclose(released, clipped + expected_noise)
+
+
 def test_reidentification_errors() -> None:
     attacker = ReidentificationAttacker()
     with pytest.raises(RuntimeError):

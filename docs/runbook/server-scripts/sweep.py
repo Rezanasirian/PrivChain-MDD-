@@ -94,7 +94,9 @@ def main() -> None:
         mean_f1 = sum(f1s) / len(f1s)
         spread_f1 = max(f1s) - min(f1s)
         mean_auc = sum(aucs) / len(aucs)
-        results.append((mean_f1, mean_auc, spread_f1, {"lr": lr, "hidden": hidden, "drop": dropout}))
+        results.append(
+            (mean_f1, mean_auc, spread_f1, {"lr": lr, "hidden": hidden, "drop": dropout})
+        )
         print(
             f"{lr:>7.0e} {hidden:>7} {dropout:>5.1f} "
             f"{mean_f1:>9.3f}+-{spread_f1:<5.3f} {mean_auc:>16.3f}",

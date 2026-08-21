@@ -13,7 +13,7 @@ capability-aware aggregation (H2). It uses the low-level `shim.Chaincode`
 | Function | Args | Semantics |
 |---|---|---|
 | `RegisterClient` | `clientID, audio, video, text` | Register a client + capability vector; rejects duplicates and all-zero capability. |
-| `LogPrivacyBudget` | `clientID, modality, round, epsilonSpent` | **Append-only** consumed-ε entry; rejects overwriting `(clientID, modality, round)` (CLAUDE.md §7). |
+| `LogPrivacyBudget` | `clientID, group, round, epsilonIncremental, epsilonCumulative` | **Append-only** executed-accountant entry; rejects overwriting `(clientID, group, round)` (CLAUDE.md §7). |
 | `UpdateReputation` | `clientID, modality, score, round` | Set latest per-modality reputation (score ∈ [0,1]); updatable by design. |
 | `PublishSubgraph` | `round, clientID…` | **Immutable** per-round aggregation subgraph; rejects re-publish. |
 | `GetClient` / `GetReputation` / `GetSubgraph` / `GetBudgetHistory` | (reads) | Query helpers used by the Python bridge. |

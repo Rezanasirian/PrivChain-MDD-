@@ -153,13 +153,15 @@ def compose_epsilon(
         raise ValueError("delta must be in (0, 1)")
     total = [0.0] * len(orders)
     any_mechanism = False
+    any_application = False
     for mechanism in mechanisms:
         any_mechanism = True
+        any_application = any_application or (mechanism.steps > 0 and mechanism.sample_rate > 0.0)
         curve = _rdp_curve(
             mechanism.noise_multiplier, mechanism.sample_rate, mechanism.steps, orders
         )
         total = [a + b for a, b in zip(total, curve, strict=True)]
-    if not any_mechanism:
+    if not any_mechanism or not any_application:
         return 0.0
     epsilon, _ = rdp_analysis.get_privacy_spent(orders=list(orders), rdp=total, delta=delta)
     return float(epsilon)

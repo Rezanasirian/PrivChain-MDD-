@@ -181,3 +181,11 @@ aggregation is necessary.
 - The client population mix is worth revisiting as an experimental variable — a
   mix where most clients *lack* text would be a far sharper test of H2 than the
   current one, and is the obvious follow-up.
+# Revision — 2026-08-21
+
+The numerical conclusions below are historical and superseded pending the
+corrected campaign. The run discarded the best federated checkpoint and scored
+the last round, did not propagate presence masks, and used masked-private-batch
+proximal matching under the name “distillation.” The artifact remains for audit
+provenance, but it is not evidence about the corrected data-free-anchor
+mechanism in ADR-0024.

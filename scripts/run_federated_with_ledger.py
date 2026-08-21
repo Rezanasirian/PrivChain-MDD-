@@ -31,10 +31,11 @@ from privchain.config import (
     modality_input_dims,
 )
 from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
+from privchain.federated.client import ClientDPConfig
 from privchain.federated.partition import build_client_partitions
 from privchain.federated.simulation import build_federated_clients, run_capability_aware_simulation
 from privchain.fusion.baseline_model import MultimodalDepressionModel
-from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
+from privchain.privacy.budget_allocator import allocate_target_epsilons
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
@@ -88,18 +89,18 @@ def main() -> None:
         phq8_max=base.data.phq8_max,
         phq_loss_weight=base.model.phq_loss_weight,
         seed=base.seed,
+        client_dp=ClientDPConfig(
+            target_epsilons=allocate_target_epsilons(
+                privacy.privacy.allocation, privacy.privacy.per_modality
+            ),
+            delta=privacy.privacy.delta,
+            max_grad_norm=privacy.privacy.max_grad_norm,
+            batch_size=base.train.batch_size,
+            num_rounds=federation.num_rounds,
+            seed=base.seed,
+        ),
     )
     global_model = MultimodalDepressionModel(input_dims, base.model)
-
-    # DP budget allocator supplies the per-modality consumed epsilon we log.
-    sample_rate = min(1.0, base.train.batch_size / max(len(train_subset), 1))
-    allocator = PerModalityBudgetAllocator.from_config(
-        privacy.privacy.allocation,
-        privacy.privacy.per_modality,
-        delta=privacy.privacy.delta,
-        sample_rate=sample_rate,
-        steps=federation.num_rounds,
-    )
 
     ledger = build_ledger(blockchain.ledger)
     run_dir = create_run_dir(base.train.output_dir, "phase5", "phase5_federated_with_ledger")
@@ -126,7 +127,6 @@ def main() -> None:
         run_dir=run_dir,
         seed=base.seed,
         ledger=ledger,
-        budget_allocator=allocator,
     )
 
     audit = _audit(ledger, federation.num_rounds)
@@ -177,7 +177,12 @@ def _audit(ledger: object, num_rounds: int) -> dict[str, object]:
         for modality in CAPABILITY_MODALITIES:
             history = ledger.budget_history(client_id, modality)
             budget_history[modality] = [
-                {"round": r.round, "epsilon_spent": r.epsilon_spent} for r in history
+                {
+                    "round": r.round,
+                    "epsilon_incremental": r.epsilon_incremental,
+                    "epsilon_cumulative": r.epsilon_cumulative,
+                }
+                for r in history
             ]
             rep = ledger.get_reputation(client_id, modality)
             if rep is not None:

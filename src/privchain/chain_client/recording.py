@@ -20,7 +20,8 @@ def record_round(
     round_num: int,
     participants: list[tuple[str, Capability]],
     reputation: dict[str, dict[str, float]] | None = None,
-    consumed_epsilon: dict[str, float] | None = None,
+    consumed_epsilon: dict[str, dict[str, dict[str, float]]] | None = None,
+    subgraph_client_ids: list[str] | None = None,
     registered: set[str],
 ) -> None:
     """Write one round's registration, subgraph, budget, and reputation.
@@ -32,8 +33,11 @@ def record_round(
             clients, with ``capability`` the ``[audio, video, text]`` flags.
         reputation: Optional ``{client_id: {modality: score}}`` to log per
             modality the client possesses.
-        consumed_epsilon: Optional ``{modality: epsilon}`` consumed this round
-            (from the DP budget allocator), logged append-only per client.
+        consumed_epsilon: Optional ``{client_id: {incremental/cumulative:
+            {group: epsilon}}}`` from executed client accountants.
+        subgraph_client_ids: Optional IDs whose updates were actually aggregated.
+            Defaults to every participant. This can differ from ``participants``
+            when a Byzantine filter rejects an update after its DP mechanism ran.
         registered: Set of already-registered client IDs, updated in place so a
             client is registered exactly once across rounds.
     """
@@ -49,16 +53,20 @@ def record_round(
             ledger.register_client(client_id, capability)
         registered.add(client_id)
 
-    ledger.publish_subgraph(round_num, [client_id for client_id, _ in participants])
+    if subgraph_client_ids is None:
+        subgraph_client_ids = [client_id for client_id, _ in participants]
+    ledger.publish_subgraph(round_num, subgraph_client_ids)
 
     for client_id, capability in participants:
+        client_spend = consumed_epsilon.get(client_id) if consumed_epsilon is not None else None
+        if client_spend is not None:
+            incremental = client_spend["incremental"]
+            cumulative = client_spend["cumulative"]
+            for group, value in incremental.items():
+                ledger.log_privacy_budget(client_id, group, round_num, value, cumulative[group])
         for index, modality in enumerate(CAPABILITY_MODALITIES):
             if capability[index] != 1:
                 continue
-            if consumed_epsilon is not None and modality in consumed_epsilon:
-                ledger.log_privacy_budget(
-                    client_id, modality, round_num, consumed_epsilon[modality]
-                )
             if reputation is not None:
                 score = reputation.get(client_id, {}).get(modality)
                 if score is not None:

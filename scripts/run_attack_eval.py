@@ -49,6 +49,7 @@ from privchain.config import (
     load_baseline_config,
     load_privacy_config,
     modality_input_dims,
+    resolve_device,
 )
 from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
 from privchain.eval.attackers import (
@@ -58,6 +59,7 @@ from privchain.eval.attackers import (
     release_embeddings_dp,
 )
 from privchain.eval.embeddings import extract_subject_embeddings, split_enroll_probe
+from privchain.eval.session_views import build_views, concat_views
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.privacy.budget_allocator import (
     PerModalityBudgetAllocator,
@@ -75,6 +77,7 @@ from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
 from privchain.training.objective import DepressionObjective, move_batch_to_device
+from privchain.training.protocol import build_splits
 
 MODALITIES = ("audio", "video", "text")
 
@@ -196,6 +199,12 @@ def main() -> None:
     parser.add_argument("--privacy-config", type=Path, default=Path("configs/privacy.yaml"))
     parser.add_argument("--attack-config", type=Path, default=Path("configs/attack.yaml"))
     parser.add_argument(
+        "--daic-config",
+        type=Path,
+        default=None,
+        help="Real DAIC-WOZ config; uses disjoint session segments instead of jittered views.",
+    )
+    parser.add_argument(
         "--train-epochs",
         type=int,
         default=25,
@@ -208,17 +217,30 @@ def main() -> None:
     atk = load_attack_config(args.attack_config).attack
     seed_everything(base.seed)
 
-    device = torch.device("cpu")
-    full = MockDaicWozDataset(base.data, seed=base.seed)
-    members, nonmembers = split_dataset(full, base.train.val_fraction, base.seed)
-
-    input_dims = modality_input_dims(base.data)
-    num_subjects = len(full)
+    device = torch.device(resolve_device(base.train.device))
+    full: Dataset[Sample] | None
+    view_datasets: list[Dataset[Sample]] = []
+    if args.daic_config is None:
+        full = MockDaicWozDataset(base.data, seed=base.seed)
+        members, nonmembers = split_dataset(full, base.train.val_fraction, base.seed)
+        input_dims = modality_input_dims(base.data)
+        num_subjects = len(full)
+    else:
+        full = None
+        splits, input_dims = build_splits(base, args.daic_config)
+        members, nonmembers = splits.train, splits.report
+        view_datasets = [splits.train, splits.selection, splits.report]
+        num_subjects = sum(len(dataset) for dataset in view_datasets)  # type: ignore[arg-type]
     chance = ReidentificationAttacker.chance_accuracy(num_subjects)
     run_dir = create_run_dir(base.train.output_dir, "phase6", "phase6_attack_eval")
     save_config(
         run_dir,
-        {"baseline": base.model_dump(), "privacy": priv.model_dump(), "attack": atk.model_dump()},
+        {
+            "baseline": base.model_dump(),
+            "privacy": priv.model_dump(),
+            "attack": atk.model_dump(),
+            "dataset": "daic_woz" if args.daic_config is not None else "mock",
+        },
     )
 
     def train_at(target_epsilon: float | None) -> MultimodalDepressionModel:
@@ -267,15 +289,40 @@ def main() -> None:
         """
         successes: dict[str, float] = {}
         for modality in MODALITIES:
-            embeddings, subjects, views = extract_subject_embeddings(
-                model,
-                full,
-                modality,
-                num_views=atk.num_views,
-                jitter=atk.jitter,
-                seed=base.seed,
-                device=device,
-            )
+            if full is not None:
+                embeddings, subjects, views = extract_subject_embeddings(
+                    model,
+                    full,
+                    modality,
+                    num_views=atk.num_views,
+                    jitter=atk.jitter,
+                    seed=base.seed,
+                    device=device,
+                )
+                enroll_views = atk.enroll_views
+            else:
+                offset = 0
+                parts = []
+                for dataset in view_datasets:
+                    parts.append(
+                        build_views(
+                            dataset,
+                            modality,
+                            num_segments=atk.segments.num_segments,
+                            encoder_type=base.model.encoder_for(modality).type,
+                            encoder=model.encoders[modality],
+                            device=device,
+                            subject_offset=offset,
+                        )
+                    )
+                    offset += len(dataset)  # type: ignore[arg-type]
+                segmented = concat_views(*parts)
+                embeddings, subjects, views = (
+                    segmented.features,
+                    segmented.subject_ids,
+                    segmented.view_ids,
+                )
+                enroll_views = atk.segments.enroll_segments
             if release_epsilon is not None:
                 embeddings = release_embeddings_dp(
                     embeddings,
@@ -285,7 +332,7 @@ def main() -> None:
                     rng=np.random.default_rng(base.seed),
                 )
             successes[modality] = _reid_success(
-                split_enroll_probe(embeddings, subjects, views, atk.enroll_views), base.seed
+                split_enroll_probe(embeddings, subjects, views, enroll_views), base.seed
             )
         return successes
 

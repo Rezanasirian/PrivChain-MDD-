@@ -33,10 +33,11 @@ from privchain.config import (
     modality_input_dims,
 )
 from privchain.data.mock_daic_woz import MockDaicWozDataset, collate_fn
+from privchain.federated.client import ClientDPConfig
 from privchain.federated.partition import build_client_partitions
 from privchain.federated.simulation import build_federated_clients, run_capability_aware_simulation
 from privchain.fusion.baseline_model import MultimodalDepressionModel
-from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
+from privchain.privacy.budget_allocator import allocate_target_epsilons
 from privchain.seeding import seed_everything
 from privchain.training.loaders import split_dataset
 
@@ -89,14 +90,19 @@ def _aggregation() -> AggregationConfig:
     )
 
 
-def _allocator() -> PerModalityBudgetAllocator:
+def _dp_config() -> ClientDPConfig:
     per_modality = {
         "audio": ModalityPrivacy(epsilon=2.0, reidentification_risk=0.9),
         "video": ModalityPrivacy(epsilon=4.0, reidentification_risk=0.6),
         "text": ModalityPrivacy(epsilon=8.0, reidentification_risk=0.3),
     }
-    return PerModalityBudgetAllocator.from_config(
-        AllocationConfig(mode="explicit"), per_modality, delta=1e-5, sample_rate=0.2, steps=2
+    return ClientDPConfig(
+        target_epsilons=allocate_target_epsilons(AllocationConfig(mode="explicit"), per_modality),
+        delta=1e-5,
+        max_grad_norm=1.0,
+        batch_size=4,
+        num_rounds=2,
+        seed=42,
     )
 
 
@@ -125,6 +131,7 @@ def test_federated_round_is_recorded_to_ledger(tmp_path: Path) -> None:
         phq8_max=data_cfg.phq8_max,
         phq_loss_weight=model_cfg.phq_loss_weight,
         seed=42,
+        client_dp=_dp_config(),
     )
     global_model = MultimodalDepressionModel(input_dims, model_cfg)
     ledger = MockLedger()
@@ -143,7 +150,6 @@ def test_federated_round_is_recorded_to_ledger(tmp_path: Path) -> None:
         run_dir=run_dir,
         seed=42,
         ledger=ledger,
-        budget_allocator=_allocator(),
     )
     assert len(history) == fed_cfg.num_rounds
     assert "num_byzantine_flagged" in history[-1]
@@ -168,4 +174,13 @@ def test_federated_round_is_recorded_to_ledger(tmp_path: Path) -> None:
         # Append-only: one entry per round the client participated in.
         assert [e.round for e in history_entries] == [1, 2]
         assert all(e.epsilon_spent > 0.0 for e in history_entries)
+        assert all(e.epsilon_incremental > 0.0 for e in history_entries)
+        assert [e.epsilon_cumulative for e in history_entries] == sorted(
+            e.epsilon_cumulative for e in history_entries
+        )
         assert ledger.get_reputation(client_id, modality) is not None
+
+    shared = ledger.budget_history(client_id, "shared")
+    composed = ledger.budget_history(client_id, "composed")
+    assert len(shared) == fed_cfg.num_rounds
+    assert len(composed) == fed_cfg.num_rounds

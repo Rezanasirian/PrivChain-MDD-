@@ -1,4 +1,4 @@
-"""Diagnostic: which lever recovers DP-SGD utility on 107 sessions? (ADR-0013)
+"""Diagnose which lever recovers DP-SGD utility on 107 sessions (ADR-0013).
 
 Three levers are swept together at a fixed target epsilon:
 
@@ -143,23 +143,37 @@ def main() -> None:
     pos_weight = positive_class_weight(weight_loader)
 
     print(f"target_eps={TARGET_EPS}  steps={STEPS}  device={device}  n_train={len(train_set)}")
-    print(f"\n{'q':>5} {'C':>5} {'hidden':>7} {'sigma':>8} "
-          f"{'F1@8':>7} {'AUC@8':>7} | {'F1@inf':>7} {'AUC@inf':>8}", flush=True)
+    print(
+        f"\n{'q':>5} {'C':>5} {'hidden':>7} {'sigma':>8} "
+        f"{'F1@8':>7} {'AUC@8':>7} | {'F1@inf':>7} {'AUC@inf':>8}",
+        flush=True,
+    )
 
     common = dict(
-        train_set=train_set, dev_loader=dev_loader, dims=dims, base=base,
-        delta=delta, device=device, pos_weight=pos_weight,
+        train_set=train_set,
+        dev_loader=dev_loader,
+        dims=dims,
+        base=base,
+        delta=delta,
+        device=device,
+        pos_weight=pos_weight,
     )
     for q, clip, hidden in itertools.product((32 / 107, 1.0), (0.1, 1.0), (32, 128)):
         sigma = PerModalityBudgetAllocator(
-            dict.fromkeys(MODALITIES, TARGET_EPS), dict.fromkeys(MODALITIES, 0.5),
-            delta=delta, sample_rate=q, steps=STEPS,
+            dict.fromkeys(MODALITIES, TARGET_EPS),
+            dict.fromkeys(MODALITIES, 0.5),
+            delta=delta,
+            sample_rate=q,
+            steps=STEPS,
         ).noise_multipliers()["audio"]
 
         f1_dp, auc_dp = run(**common, q=q, clip=clip, hidden=hidden, private=True)  # type: ignore[arg-type]
         f1_inf, auc_inf = run(**common, q=q, clip=clip, hidden=hidden, private=False)  # type: ignore[arg-type]
-        print(f"{q:>5.2f} {clip:>5.1f} {hidden:>7} {sigma:>8.3f} "
-              f"{f1_dp:>7.3f} {auc_dp:>7.3f} | {f1_inf:>7.3f} {auc_inf:>8.3f}", flush=True)
+        print(
+            f"{q:>5.2f} {clip:>5.1f} {hidden:>7} {sigma:>8.3f} "
+            f"{f1_dp:>7.3f} {auc_dp:>7.3f} | {f1_inf:>7.3f} {auc_inf:>8.3f}",
+            flush=True,
+        )
         sys.stdout.flush()
 
 

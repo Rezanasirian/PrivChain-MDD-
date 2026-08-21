@@ -68,7 +68,13 @@ class BudgetRecord:
     client_id: str
     modality: str
     round: int
-    epsilon_spent: float
+    epsilon_incremental: float
+    epsilon_cumulative: float
+
+    @property
+    def epsilon_spent(self) -> float:
+        """Backward-compatible alias for the cumulative expenditure."""
+        return self.epsilon_cumulative
 
 
 @dataclass(frozen=True)
@@ -98,9 +104,14 @@ class LedgerClient(Protocol):
         ...
 
     def log_privacy_budget(
-        self, client_id: str, modality: str, round_num: int, epsilon_spent: float
+        self,
+        client_id: str,
+        modality: str,
+        round_num: int,
+        epsilon_incremental: float,
+        epsilon_cumulative: float | None = None,
     ) -> None:
-        """Append a consumed-ε entry (append-only; never overwritten)."""
+        """Append incremental and cumulative consumed ε (never overwritten)."""
         ...
 
     def update_reputation(
@@ -144,6 +155,12 @@ def _validate_modality(modality: str) -> None:
     """Raise :class:`LedgerError` for an unknown modality name."""
     if modality not in CAPABILITY_MODALITIES:
         raise LedgerError(f"unknown modality: {modality!r}")
+
+
+def _validate_privacy_group(group: str) -> None:
+    """Raise for an unknown DP parameter group."""
+    if group not in (*CAPABILITY_MODALITIES, "shared", "composed"):
+        raise LedgerError(f"unknown privacy group: {group!r}")
 
 
 class MockLedger:
@@ -220,14 +237,23 @@ class MockLedger:
         self._clients[client_id] = ClientRecord(client_id, capability, self.caller)
 
     def log_privacy_budget(
-        self, client_id: str, modality: str, round_num: int, epsilon_spent: float
+        self,
+        client_id: str,
+        modality: str,
+        round_num: int,
+        epsilon_incremental: float,
+        epsilon_cumulative: float | None = None,
     ) -> None:
         """Append a consumed-ε entry; raise on overwrite (append-only)."""
-        _validate_modality(modality)
+        _validate_privacy_group(modality)
+        explicit_cumulative = epsilon_cumulative is not None
+        cumulative = epsilon_incremental if epsilon_cumulative is None else epsilon_cumulative
         if round_num < 0:
             raise LedgerError("round must be non-negative")
-        if not (epsilon_spent >= 0.0) or epsilon_spent == float("inf"):
-            raise LedgerError("epsilon_spent must be finite and non-negative")
+        if not (epsilon_incremental >= 0.0) or epsilon_incremental == float("inf"):
+            raise LedgerError("epsilon_incremental must be finite and non-negative")
+        if not (cumulative >= epsilon_incremental) or cumulative == float("inf"):
+            raise LedgerError("epsilon_cumulative must be finite and at least incremental")
         if client_id not in self._clients:
             raise LedgerError(f"client {client_id!r} is not registered")
         self._require_owner_or_coordinator(client_id)
@@ -237,7 +263,12 @@ class MockLedger:
                 f"privacy budget already logged for {client_id!r}/{modality}/round {round_num}; "
                 "consumed epsilon is append-only and must not be overwritten"
             )
-        self._budgets[key] = BudgetRecord(client_id, modality, round_num, epsilon_spent)
+        previous = self.budget_history(client_id, modality)
+        if explicit_cumulative and previous and cumulative < previous[-1].epsilon_cumulative:
+            raise LedgerError("epsilon_cumulative must be monotonic")
+        self._budgets[key] = BudgetRecord(
+            client_id, modality, round_num, epsilon_incremental, cumulative
+        )
 
     def update_reputation(
         self, client_id: str, modality: str, score: float, round_num: int

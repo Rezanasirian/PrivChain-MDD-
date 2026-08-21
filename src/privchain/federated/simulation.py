@@ -28,12 +28,12 @@ from privchain.config import AggregationConfig, ModelConfig
 from privchain.data.mock_daic_woz import Sample, collate_fn
 from privchain.federated.aggregation import ClientUpdate, capability_aware_aggregate, fedavg
 from privchain.federated.capability import is_missing_any
-from privchain.federated.client import FederatedClient
+from privchain.federated.client import ClientDPConfig, FederatedClient, PrivacySpend
+from privchain.federated.distillation import synthesize_anchors
 from privchain.federated.partition import ClientPartition, ModalityMaskedDataset
 from privchain.federated.reputation import ReputationTracker
 from privchain.federated.robust import flag_byzantine_updates
 from privchain.fusion.baseline_model import MultimodalDepressionModel
-from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
 from privchain.training.experiment import JsonlMetricLogger
 from privchain.training.objective import DepressionObjective, evaluate_model
 
@@ -93,6 +93,7 @@ def build_federated_clients(
     phq_loss_weight: float,
     seed: int,
     device: str = "cpu",
+    client_dp: ClientDPConfig | None = None,
 ) -> list[FederatedClient]:
     """Construct one :class:`FederatedClient` per partition.
 
@@ -109,6 +110,8 @@ def build_federated_clients(
         phq_loss_weight: PHQ-8 regression weight.
         seed: Base seed for per-client loader shuffling.
         device: Torch device string.
+        client_dp: Optional client-side DP-SGD configuration. Each constructed
+            client receives an independently seeded accountant/mechanism.
 
     Returns:
         A list of constructed clients (skipping any empty partition).
@@ -138,6 +141,19 @@ def build_federated_clients(
                 phq8_max=phq8_max,
                 phq_loss_weight=phq_loss_weight,
                 device=device,
+                dp=(
+                    client_dp
+                    if client_dp is None
+                    else ClientDPConfig(
+                        target_epsilons=client_dp.target_epsilons,
+                        delta=client_dp.delta,
+                        max_grad_norm=client_dp.max_grad_norm,
+                        batch_size=batch_size,
+                        num_rounds=client_dp.num_rounds,
+                        seed=client_dp.seed + partition.client_id,
+                        backend=client_dp.backend,
+                    )
+                ),
             )
         )
     return clients
@@ -202,7 +218,7 @@ def run_simulation(
         states: list[OrderedDict[str, torch.Tensor]] = []
         weights: list[float] = []
         for client in selected:
-            updated, num_samples = client.fit(global_state)
+            updated, num_samples, _spend = client.fit(global_state)
             states.append(updated)
             weights.append(float(num_samples))
 
@@ -258,8 +274,9 @@ def _record_round_to_ledger(
     round_num: int,
     updates: list[ClientUpdate],
     tracker: ReputationTracker,
-    budget_allocator: PerModalityBudgetAllocator | None,
+    privacy_spend: dict[str, PrivacySpend],
     registered: set[str],
+    aggregated_client_ids: list[str] | None = None,
 ) -> None:
     """Write a round's subgraph, consumed budget, and reputation to the ledger.
 
@@ -268,18 +285,28 @@ def _record_round_to_ledger(
         round_num: The current round.
         updates: The client updates that were aggregated this round.
         tracker: The reputation tracker (its snapshot is logged).
-        budget_allocator: Optional DP allocator for per-modality consumed ε.
+        privacy_spend: Per-client spend returned by mechanisms executed this round.
         registered: Set of already-registered client IDs (updated in place).
+        aggregated_client_ids: IDs retained by the Byzantine filter. Privacy
+            spend is still recorded for every participant because their local
+            mechanism already executed.
     """
     participants = [(str(u.client_id), u.capability) for u in updates]
     reputation = {str(cid): groups for cid, groups in tracker.snapshot().items()}
-    consumed = budget_allocator.consumed_epsilon(round_num) if budget_allocator else None
+    consumed = {
+        client_id: {
+            "incremental": spend.incremental,
+            "cumulative": spend.cumulative,
+        }
+        for client_id, spend in privacy_spend.items()
+    }
     record_round(
         ledger,
         round_num=round_num,
         participants=participants,
         reputation=reputation,
-        consumed_epsilon=consumed,
+        consumed_epsilon=consumed or None,
+        subgraph_client_ids=aggregated_client_ids,
         registered=registered,
     )
 
@@ -298,7 +325,6 @@ def run_capability_aware_simulation(
     seed: int,
     capability_val_loaders: dict[str, DataLoader[Sample]] | None = None,
     ledger: LedgerClient | None = None,
-    budget_allocator: PerModalityBudgetAllocator | None = None,
     device: str = "cpu",
     early_stopping_patience: int | None = None,
 ) -> list[dict[str, Any]]:
@@ -329,8 +355,6 @@ def run_capability_aware_simulation(
         seed: Base seed for per-round client sampling.
         capability_val_loaders: Optional masked validation loaders per pattern.
         ledger: Optional audit ledger; when set, each round is recorded to it.
-        budget_allocator: Optional DP allocator; when set (with a ledger), the
-            per-modality consumed ε is logged each round.
         device: Torch device string.
         early_stopping_patience: Rounds without a selection-split improvement
             before stopping; ``None`` runs the full budget.
@@ -376,19 +400,36 @@ def run_capability_aware_simulation(
         if teacher is not None:
             teacher.load_state_dict(global_state)
             teacher.eval()
+        anchor = None
+        if teacher is not None and distill.mode in {"anchor", "random"}:
+            anchor = synthesize_anchors(
+                teacher,
+                distill,
+                device=torch_device,
+                generator=torch.Generator(device=torch_device).manual_seed(seed + round_num),
+            )
 
         updates: list[ClientUpdate] = []
+        round_spend: dict[str, PrivacySpend] = {}
         for client in selected:
             use_distill = teacher is not None and (
                 distill.apply_to == "all" or is_missing_any(client.capability)
             )
-            updated, num_samples = client.fit(
+            updated, num_samples, spend = client.fit(
                 global_state,
                 teacher=teacher if use_distill else None,
                 distill_weight=distill.weight if use_distill else 0.0,
                 distill_temperature=distill.temperature,
+                anchor=anchor if use_distill else None,
+                distill_steps=distill.student_steps,
             )
+            if spend is not None:
+                round_spend[str(client.client_id)] = spend
             updates.append(ClientUpdate(client.client_id, client.capability, num_samples, updated))
+
+        # Preserve all participants for privacy accounting: a rejected update has
+        # still executed its local DP mechanism and consumed budget.
+        audited_updates = list(updates)
 
         # Byzantine robustness: drop shared-group outlier updates before aggregation.
         num_flagged = 0
@@ -407,8 +448,16 @@ def run_capability_aware_simulation(
         global_model.load_state_dict(global_state)
 
         if ledger is not None:
+            if not round_spend:
+                raise ValueError("a ledger audit cannot record epsilon without client DP")
             _record_round_to_ledger(
-                ledger, round_num, updates, tracker, budget_allocator, registered
+                ledger,
+                round_num,
+                audited_updates,
+                tracker,
+                round_spend,
+                registered,
+                aggregated_client_ids=[str(update.client_id) for update in updates],
             )
 
         metrics = evaluate_model(global_model, val_loader, objective, torch_device)

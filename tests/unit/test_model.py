@@ -17,6 +17,7 @@ from privchain.config import (
     modality_input_dims,
 )
 from privchain.data.mock_daic_woz import MockDaicWozDataset, collate_fn
+from privchain.federated.partition import ModalityMaskedDataset
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.fusion.multimodal_fusion import ConcatFusion
 
@@ -94,6 +95,48 @@ def test_model_is_differentiable() -> None:
     loss.backward()
     grads = [p.grad for p in model.parameters() if p.requires_grad]
     assert any(g is not None and torch.any(g != 0) for g in grads)
+
+
+def test_absent_modality_is_zero_before_projection_and_has_no_gradient() -> None:
+    data_cfg = _data_config()
+    base = MockDaicWozDataset(data_cfg, seed=11)
+    masked = ModalityMaskedDataset(base, [0, 1, 2], (1, 0, 1))
+    batch = collate_fn([masked[i] for i in range(3)])
+    model = MultimodalDepressionModel(modality_input_dims(data_cfg), _model_config())
+
+    fusion_input: list[torch.Tensor] = []
+
+    def capture(_module: torch.nn.Module, args: tuple[torch.Tensor, ...]) -> None:
+        fusion_input.append(args[0].detach().clone())
+
+    handle = model.fusion.net.register_forward_pre_hook(capture)
+    output = model(batch)
+    handle.remove()
+    output["logit"].sum().backward()
+
+    assert fusion_input
+    width = model.config.encoder_for("video").out_dim
+    start = model.config.encoder_for("audio").out_dim
+    assert torch.count_nonzero(fusion_input[0][:, start : start + width]) == 0
+    assert all(
+        parameter.grad is None or torch.count_nonzero(parameter.grad) == 0
+        for parameter in model.encoders["video"].parameters()
+    )
+
+
+def test_absent_modality_values_cannot_change_prediction() -> None:
+    data_cfg = _data_config()
+    base = MockDaicWozDataset(data_cfg, seed=12)
+    masked = ModalityMaskedDataset(base, [0, 1], (1, 0, 1))
+    batch = collate_fn([masked[0], masked[1]])
+    model = MultimodalDepressionModel(modality_input_dims(data_cfg), _model_config()).eval()
+
+    with torch.no_grad():
+        original = model(batch)["logit"]
+        changed = dict(batch)
+        changed["video"] = torch.randn_like(batch["video"]) * 1000
+        perturbed = model(changed)["logit"]  # type: ignore[arg-type]
+    assert torch.equal(original, perturbed)
 
 
 def _override_config(**kwargs: object) -> ModelConfig:

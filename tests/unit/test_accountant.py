@@ -75,6 +75,11 @@ def test_empty_composition_spends_nothing() -> None:
     assert compose_epsilon([], 1e-5) == 0.0
 
 
+def test_zero_step_composition_spends_nothing() -> None:
+    mechanism = Mechanism(noise_multiplier=1.0, sample_rate=0.1, steps=0, name="audio")
+    assert compose_epsilon([mechanism], 1e-5) == 0.0
+
+
 def test_single_mechanism_composition_matches_get_epsilon() -> None:
     assert compose_epsilon([_AUDIO], 1e-5) == pytest.approx(
         get_epsilon(_AUDIO.noise_multiplier, _AUDIO.sample_rate, _AUDIO.steps, 1e-5)

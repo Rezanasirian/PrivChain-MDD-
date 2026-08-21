@@ -358,6 +358,14 @@ class DistillationConfig(_Strict):
     weight: float = Field(default=0.5, ge=0.0)
     temperature: float = Field(default=2.0, gt=0.0)
     apply_to: Literal["missing_modality", "all"] = "missing_modality"
+    mode: Literal["anchor", "random", "proximal"] = "anchor"
+    anchor_batch_size: int = Field(default=16, gt=1)
+    anchor_sequence_length: int = Field(default=8, gt=0)
+    anchor_optimization_steps: int = Field(default=20, ge=0)
+    anchor_learning_rate: float = Field(default=0.05, gt=0.0)
+    anchor_l2_weight: float = Field(default=1e-4, ge=0.0)
+    anchor_diversity_weight: float = Field(default=1.0, ge=0.0)
+    student_steps: int = Field(default=1, gt=0)
 
 
 class AggregationConfig(_Strict):

@@ -16,6 +16,17 @@ def test_raw_media_blocked_anywhere() -> None:
     assert is_blocked("whatever/RECORDING.MOV")
 
 
+def test_data_arrays_and_checkpoints_blocked_anywhere() -> None:
+    for path in (
+        "docs/cache/embedding.npy",
+        "experiments/phase7/run/best_global_model.pt",
+        "src/privchain/fixture.npz",
+        "notebooks/model.pkl",
+        "artifacts/weights.safetensors",
+    ):
+        assert is_blocked(path)
+
+
 def test_anything_under_data_is_blocked() -> None:
     assert is_blocked("data/mock/session_001/audio.npy")
     assert is_blocked("data/train_split_Depression_AVEC2017.csv")
@@ -31,6 +42,19 @@ def test_result_csv_outside_data_is_allowed() -> None:
     """Chapter-4 tables must remain committable — the old rule blocked them."""
     assert not is_blocked("experiments/phase7/run/cv_results.csv")
     assert not is_blocked("docs/architecture/table.csv")
+
+
+def test_normal_code_config_and_aggregate_artifacts_are_allowed() -> None:
+    for path in (
+        "src/privchain/config.py",
+        "chaincode/privchain-cc/main.go",
+        "configs/privacy.yaml",
+        "docs/architecture/ADR-0025.md",
+        "scripts/run_all.sh",
+        "experiments/phase7/run/results.json",
+        "experiments/phase7/run/plot.png",
+    ):
+        assert not is_blocked(path)
 
 
 def test_main_exit_codes() -> None:

@@ -1,12 +1,8 @@
-"""Pre-commit guard: block raw data / media files from being committed.
+"""Pre-commit guard: block data-like and model artifacts from being committed.
 
-Enforces CLAUDE.md §7. Fails if any staged file is raw media (``.wav``,
-``.mp4``, ``.avi``, ``.mov``) anywhere, is a ``.csv`` **under** ``data/``, or
-lives under ``data/`` at all (other than the allowlisted ``.gitkeep`` /
-``README.md`` placeholders).
-
-``.csv`` is deliberately only blocked under ``data/``: a repo-wide rule would
-also block the Chapter-4 result tables that belong in ``experiments/``.
+Enforces CLAUDE.md §7 and ADR-0025. Data-derived arrays, serialized models,
+checkpoints, and raw media are blocked everywhere. Aggregate, human-reviewable
+results such as JSON, CSV, YAML, and PNG remain allowed outside ``data/``.
 
 Invoked by ``.pre-commit-config.yaml`` with the staged filenames as arguments.
 """
@@ -16,10 +12,26 @@ from __future__ import annotations
 import sys
 from pathlib import PurePosixPath
 
-# Raw media — never committable, wherever it lives. `.csv` is intentionally
-# absent: it is blocked under data/ by the path rule below, and a repo-wide ban
-# would also block the Chapter-4 result tables.
-BLOCKED_SUFFIXES = {".wav", ".mp4", ".avi", ".mov"}
+# Data-derived tensors and serialized models can leak training records just as
+# raw media can. CSV is intentionally absent: aggregate Chapter-4 tables are
+# legitimate artifacts outside data/.
+BLOCKED_SUFFIXES = {
+    ".avi",
+    ".h5",
+    ".hdf5",
+    ".joblib",
+    ".mov",
+    ".mp3",
+    ".mp4",
+    ".npy",
+    ".npz",
+    ".pickle",
+    ".pkl",
+    ".pt",
+    ".pth",
+    ".safetensors",
+    ".wav",
+}
 ALLOWLIST = {"data/.gitkeep", "data/README.md"}
 
 

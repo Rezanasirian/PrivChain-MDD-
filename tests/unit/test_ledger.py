@@ -185,3 +185,27 @@ def test_registration_is_idempotent_against_a_persistent_ledger() -> None:
 
     assert ledger.get_client("0") is not None
     assert ledger.get_client("1") is not None
+
+
+def test_record_round_accounts_rejected_participants_outside_subgraph() -> None:
+    ledger = MockLedger()
+    participants: list[tuple[str, Capability]] = [("0", (1, 0, 1)), ("1", (1, 1, 1))]
+    spend = {
+        client_id: {
+            "incremental": {"shared": 0.1},
+            "cumulative": {"shared": 0.1},
+        }
+        for client_id, _ in participants
+    }
+
+    record_round(
+        ledger,
+        round_num=1,
+        participants=participants,
+        consumed_epsilon=spend,
+        subgraph_client_ids=["0"],
+        registered=set(),
+    )
+
+    assert ledger.get_subgraph(1).client_ids == ("0",)
+    assert ledger.budget_history("1", "shared")[0].epsilon_incremental == pytest.approx(0.1)

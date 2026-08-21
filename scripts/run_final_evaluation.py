@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -88,7 +89,6 @@ from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
     DepressionObjective,
-    evaluate_model,
     evaluate_with_selected_threshold,
     positive_class_weight,
 )
@@ -97,6 +97,21 @@ from privchain.training.trainer import CentralizedTrainer
 
 MODALITIES = ("audio", "video", "text")
 FoldRunner = Callable[[list[int], list[int], int], dict[str, float]]
+PRE_REGISTRATION = "docs/evaluation/PRE-REGISTRATION-2026-08-21.md"
+
+
+def _assert_official_campaign_locked() -> None:
+    """Refuse official-test access unless protocol and code are immutable."""
+    tracked = subprocess.run(
+        ["git", "cat-file", "-e", f"HEAD:{PRE_REGISTRATION}"], capture_output=True
+    )
+    status = subprocess.run(
+        ["git", "status", "--porcelain"], capture_output=True, check=True, text=True
+    )
+    if tracked.returncode != 0:
+        raise RuntimeError("pre-registration must be committed before official campaign")
+    if status.stdout.strip():
+        raise RuntimeError("official campaign requires a clean worktree (no config/code changes)")
 
 
 def _loader(
@@ -240,6 +255,7 @@ def _eval_centralized_dp(
     base: Any,
     priv: Any,
     input_dims: dict[str, int],
+    labels_all: list[int],
     device: torch.device,
     epochs: int,
     seed: int,
@@ -247,11 +263,14 @@ def _eval_centralized_dp(
 ) -> dict[str, float]:
     """Train centralized per-modality DP-SGD (adaptive or uniform ε) on a fold."""
     seed_everything(seed)
+    fold_train, selection = _carve_fold(
+        full, train_idx, labels_all, selection_fraction=base.train.selection_fraction, seed=seed
+    )
     objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
 
     risks = {m: priv.per_modality[m].reidentification_risk for m in MODALITIES}
     batch_size = base.train.batch_size
-    n_train = len(train_idx)
+    n_train = len(fold_train)  # type: ignore[arg-type]
     sample_rate = min(1.0, batch_size / n_train)
     expected_batch_size = sample_rate * n_train
     steps = steps_for_epochs(n_train, batch_size, epochs)
@@ -281,7 +300,7 @@ def _eval_centralized_dp(
     groups = map_parameter_groups(dp_model)
     optimizer = torch.optim.SGD(dp_model.parameters(), lr=base.train.learning_rate)
     generator = torch.Generator(device=device).manual_seed(seed)
-    train_subset = Subset(full, train_idx)
+    train_subset = fold_train
     dp_train_steps(
         dp_model,
         train_subset,
@@ -295,7 +314,16 @@ def _eval_centralized_dp(
         device=device,
         generator=generator,
     )
-    return evaluate_model(model, _loader(full, test_idx, batch_size), objective, device)
+    selection_loader: DataLoader[Sample] = DataLoader(
+        selection, batch_size=batch_size, collate_fn=collate_fn
+    )
+    return evaluate_with_selected_threshold(
+        model,
+        selection_loader,
+        _loader(full, test_idx, batch_size),
+        objective,
+        device,
+    )
 
 
 def _eval_federated(
@@ -312,6 +340,7 @@ def _eval_federated(
     seed: int,
     strategy: str,
     aggregation: AggregationConfig,
+    checkpoint_dir: Path,
 ) -> dict[str, float]:
     """Train a federated variant on a fold and score the held-out test split.
 
@@ -365,19 +394,20 @@ def _eval_federated(
         "device": str(device),
         "early_stopping_patience": federation.early_stopping_patience,
     }
-    with tempfile.TemporaryDirectory() as tmp:
-        run_dir = Path(tmp)
-        if strategy == "fedavg":
-            run_simulation(global_model, clients, selection_loader, run_dir=run_dir, **common)
-        else:
-            run_capability_aware_simulation(
-                global_model,
-                clients,
-                selection_loader,
-                aggregation=aggregation,
-                run_dir=run_dir,
-                **common,
-            )
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    if strategy == "fedavg":
+        run_simulation(global_model, clients, selection_loader, run_dir=checkpoint_dir, **common)
+    else:
+        run_capability_aware_simulation(
+            global_model,
+            clients,
+            selection_loader,
+            aggregation=aggregation,
+            run_dir=checkpoint_dir,
+            **common,
+        )
+    checkpoint = checkpoint_dir / "best_global_model.pt"
+    global_model.load_state_dict(torch.load(checkpoint, map_location=device))
     objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
     return evaluate_with_selected_threshold(
         global_model.to(device),
@@ -431,6 +461,16 @@ def main() -> None:
     )
     parser.add_argument("--partition", choices=("iid", "dirichlet"), default=None)
     parser.add_argument("--num-clients", type=int, default=None)
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="One-epoch/one-round validation that never reads the official test split.",
+    )
+    parser.add_argument(
+        "--official-campaign",
+        action="store_true",
+        help="Run the locked official-test campaign (requires committed pre-registration).",
+    )
     args = parser.parse_args()
 
     base = load_baseline_config(args.config)
@@ -439,9 +479,13 @@ def main() -> None:
     ev = load_evaluation_config(args.evaluation_config).evaluation
     seed_everything(base.seed)
 
-    k_folds = args.k_folds if args.k_folds is not None else ev.k_folds
+    if args.official_campaign:
+        _assert_official_campaign_locked()
+    k_folds = 2 if args.smoke else (args.k_folds if args.k_folds is not None else ev.k_folds)
     # federated.yaml owns the round count unless explicitly overridden here.
-    rounds = args.rounds or ev.rounds or fed.federation.num_rounds
+    rounds = 1 if args.smoke else (args.rounds or ev.rounds or fed.federation.num_rounds)
+    centralized_epochs = 1 if args.smoke else ev.epochs
+    dp_epochs = 1 if args.smoke else ev.dp_epochs
     # Same override semantics as scripts/run_federated_comparison.py, so the
     # Phase 4 and Phase 7 federated arms can be compared run for run.
     federation = fed.federation
@@ -485,22 +529,46 @@ def main() -> None:
         )
 
     # Method runners (each a fold closure: train_idx, test_idx, seed -> metrics).
-    def federated(strategy: str, aggregation: AggregationConfig) -> FoldRunner:
+    run_dir = create_run_dir(base.train.output_dir, "phase7", "phase7_final_evaluation")
+    save_config(
+        run_dir,
+        {
+            "baseline": base.model_dump(),
+            "federated": fed.model_dump(),
+            "privacy": priv.model_dump(),
+            "evaluation": ev.model_dump(),
+            "daic_woz": load_yaml(args.daic_config) if args.daic_config is not None else None,
+        },
+        manifest_extra={
+            "dataset": dataset_name,
+            "dataset_size": n,
+            "official_test_previously_observed_in_invalid_run": bool(official_idx),
+            "protocol": "pre-registered-no-feedback-campaign",
+        },
+    )
+
+    def federated(name: str, strategy: str, aggregation: AggregationConfig) -> FoldRunner:
         """Bind one federated variant into a fold runner."""
-        return lambda tr, te, s: _eval_federated(
-            full,
-            tr,
-            te,
-            base=base,
-            fed=fed,
-            input_dims=input_dims,
-            labels_all=labels_all,
-            device=device,
-            rounds=rounds,
-            seed=s,
-            strategy=strategy,
-            aggregation=aggregation,
-        )
+
+        def run(tr: list[int], te: list[int], seed: int) -> dict[str, float]:
+            fold_id = f"{min(te, default=-1)}-{len(te)}-{sum(te)}"
+            return _eval_federated(
+                full,
+                tr,
+                te,
+                base=base,
+                fed=fed,
+                input_dims=input_dims,
+                labels_all=labels_all,
+                device=device,
+                rounds=rounds,
+                seed=seed,
+                strategy=strategy,
+                aggregation=aggregation,
+                checkpoint_dir=run_dir / name / fold_id / str(seed),
+            )
+
+        return run
 
     methods: dict[str, FoldRunner] = {
         "centralized": lambda tr, te, s: _eval_centralized(
@@ -511,16 +579,22 @@ def main() -> None:
             input_dims=input_dims,
             labels_all=labels_all,
             device=device,
-            epochs=ev.epochs,
+            epochs=centralized_epochs,
             seed=s,
         ),
-        "fedavg": federated("fedavg", fed.aggregation),
+        "fedavg": federated("fedavg", "fedavg", fed.aggregation),
         "personalized": federated(
-            "capability_aware", cap_config(reputation=True, distillation=False)
+            "personalized",
+            "capability_aware",
+            cap_config(reputation=True, distillation=False),
         ),
-        "proposed": federated("capability_aware", cap_config(reputation=True, distillation=True)),
+        "proposed": federated(
+            "proposed", "capability_aware", cap_config(reputation=True, distillation=True)
+        ),
         "proposed_no_reputation": federated(
-            "capability_aware", cap_config(reputation=False, distillation=True)
+            "proposed_no_reputation",
+            "capability_aware",
+            cap_config(reputation=False, distillation=True),
         ),
     }
 
@@ -534,7 +608,7 @@ def main() -> None:
     # published DAIC-WOZ work; across seeds because a single fit on ~47 sessions
     # is not a result (ADR-0015).
     official: dict[str, dict[str, Any]] = {}
-    if official_idx:
+    if official_idx and args.official_campaign:
         pool_idx = list(range(len(labels_all)))
         for name, runner in methods.items():
             print(f"  official test: {name} ...")
@@ -554,8 +628,9 @@ def main() -> None:
                 base=base,
                 priv=priv,
                 input_dims=input_dims,
+                labels_all=labels_all,
                 device=device,
-                epochs=ev.dp_epochs,
+                epochs=dp_epochs,
                 seed=s,
                 mode=mode,
             ),
@@ -576,16 +651,6 @@ def main() -> None:
         device=device,
     )
 
-    run_dir = create_run_dir(base.train.output_dir, "phase7", "phase7_final_evaluation")
-    save_config(
-        run_dir,
-        {
-            "baseline": base.model_dump(),
-            "federated": fed.model_dump(),
-            "privacy": priv.model_dump(),
-            "evaluation": ev.model_dump(),
-        },
-    )
     (run_dir / "cv_results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
     if official:
         (run_dir / "official_test.json").write_text(
@@ -595,7 +660,14 @@ def main() -> None:
     (run_dir / "ablation.json").write_text(json.dumps(ablation, indent=2), encoding="utf-8")
     (run_dir / "dp_comparison.json").write_text(json.dumps(dp_results, indent=2), encoding="utf-8")
     (run_dir / "latency.json").write_text(json.dumps(latency, indent=2), encoding="utf-8")
-    _write_summary(run_dir / "chapter4_summary.md", results, ablation, dp_results, latency)
+    _write_summary(
+        run_dir / "chapter4_summary.md",
+        results,
+        ablation,
+        dp_results,
+        latency,
+        dataset_name=dataset_name,
+    )
     _plot_latency(latency, run_dir / "inference_latency.png")
 
     header = f"\n{'method':<24}{'CV F1':>16}{'CV ROC-AUC':>16}{'held-out F1':>14}"
@@ -620,15 +692,20 @@ def _write_summary(
     ablation: dict[str, dict[str, Any]],
     dp_results: dict[str, dict[str, Any]],
     latency: list[dict[str, Any]],
+    *,
+    dataset_name: str = "mock",
 ) -> None:
     """Write the combined Chapter-4 markdown tables."""
-    lines = ["# Chapter 4 — final evaluation (mock data)\n"]
-    lines.append(
-        "> On mock data the depression label is random; these are "
-        "placeholder numbers demonstrating the tables. DAIC-WOZ fills them in.\n"
-    )
+    label = "real DAIC-WOZ" if dataset_name == "daic_woz" else "mock data"
+    lines = [f"# Chapter 4 — final evaluation ({label})\n"]
+    if dataset_name == "mock":
+        lines.append(
+            "> On mock data the depression label is random; these are "
+            "placeholder numbers demonstrating the tables. DAIC-WOZ fills them in.\n"
+        )
 
-    lines.append("\n## Main comparison (10-fold CV, mean±std)\n")
+    num_folds = int(results["centralized"]["cv"].get("num_folds", 0))
+    lines.append(f"\n## Main comparison ({num_folds}-fold CV, mean±std)\n")
     lines.append("| method | F1 | ROC-AUC | accuracy | held-out F1 |")
     lines.append("|---|---|---|---|---|")
     labels = {

@@ -93,7 +93,10 @@ def masked_statistics(features: torch.Tensor, lengths: torch.Tensor) -> torch.Te
 
     mean = (features * mask).sum(dim=1) / count
     variance = (((features - mean.unsqueeze(1)) ** 2) * mask).sum(dim=1) / count
-    std = torch.sqrt(variance + 1e-8)
+    # The algebraic variance is non-negative; clamp only protects against tiny
+    # floating-point underflow without fabricating non-zero spread for a
+    # one-frame session.
+    std = torch.sqrt(variance.clamp_min(0.0))
 
     # Padding must not win an extremum, so push it to the opposite infinity.
     minimum = features.masked_fill(~valid.unsqueeze(-1), float("inf")).min(dim=1).values

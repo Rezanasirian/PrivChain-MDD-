@@ -225,8 +225,10 @@ class ModalityMaskedDataset(Dataset[Sample]):
         """
         sample = self._base[self._indices[index]]
         masked: Sample = dict(sample)  # type: ignore[assignment]
+        masked["presence"] = dict(sample["presence"])
         for modality in CAPABILITY_MODALITIES:
             if self._capability[modality] == 0:
                 feat_dim = sample[modality].shape[1]  # type: ignore[literal-required]
                 masked[modality] = torch.zeros((1, feat_dim), dtype=sample[modality].dtype)  # type: ignore[literal-required]
+                masked["presence"][modality] = torch.tensor(0, dtype=torch.long)
         return masked

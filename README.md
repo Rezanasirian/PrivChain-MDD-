@@ -13,13 +13,13 @@ privacy and a Hyperledger Fabric auditability layer.
 | Phase | Description | State |
 |------:|-------------|-------|
 | 0 | Environment & data setup (scaffold + mock data pipeline) | ✅ done |
-| 1 | Centralized multimodal baseline (encoders + fusion + trainer) | ✅ done (mock; real loader pending download) |
-| 2 | Heterogeneous federated clients (FedAvg; sim + Flower backends) | ✅ done (sim verified; Flower backend pending `flwr`) |
-| 3 | Per-modality adaptive DP (H1): allocator + RDP accountant + DP-SGD | ✅ done (sim verified; Opacus bridge pending `opacus`) |
-| 4 | Capability-aware aggregation + reputation + distillation (H2) | ⬜ |
-| 5 | Hyperledger Fabric blockchain layer (H3) | ⬜ |
-| 6 | Attacker models for privacy evaluation (H5) | ⬜ |
-| 7 | Comparative baselines & final evaluation (H5) | ⬜ |
+| 1 | Centralized multimodal baseline (encoders + fusion + trainer) | ✅ real-data run |
+| 2 | Heterogeneous federated clients (FedAvg; sim + Flower backends) | ✅ done |
+| 3 | Per-modality adaptive DP (H1): allocator + RDP accountant + DP-SGD | ✅ Opacus verified |
+| 4 | Capability-aware aggregation + reputation + data-free distillation (H2) | ✅ mechanism complete |
+| 5 | Hyperledger Fabric blockchain layer (H3) | ✅ live Fabric verified |
+| 6 | Attacker models for privacy evaluation (H5) | ✅ real-data run |
+| 7 | Comparative baselines & final evaluation (H5) | ⚠️ rerun pending corrected protocol |
 
 ## Quick start (Phase 0)
 

@@ -52,3 +52,11 @@ aggregation:
     weight: 0.5               # weight of the soft-target (teacher) loss term
     temperature: 2.0          # softening temperature for teacher/student logits
     apply_to: missing_modality  # {missing_modality, all}
+    mode: anchor              # {anchor, random, proximal}; ADR-0024
+    anchor_batch_size: 16
+    anchor_sequence_length: 8
+    anchor_optimization_steps: 20
+    anchor_learning_rate: 0.05
+    anchor_l2_weight: 0.0001
+    anchor_diversity_weight: 1.0
+    student_steps: 1

@@ -171,3 +171,18 @@ overhead, which is the useful form of the compute-budget result.
   `tests/unit/test_phase7_real_data_wiring.py` pins the pooling and the
   selection-split disjointness against a tiny on-disk fixture.
 - Any Chapter-4 figure produced before 2026-08-14 is superseded.
+
+## Revision — 2026-08-21
+
+The 2026-08-14 run is itself superseded. A later mechanism audit found that the
+federated best checkpoint was written inside a temporary directory and deleted
+before scoring, the ledger path did not execute DP-SGD, DP alone used a fixed
+0.5 threshold, presence masks never reached the model, and the distillation
+teacher saw the same masked private batch as its student. The reported numbers
+therefore do not represent the mechanisms named in the table.
+
+The phrase “exactly one read per method” is replaced by the operational rule in
+`docs/evaluation/PRE-REGISTRATION-2026-08-21.md`: one locked campaign without
+feedback, configuration changes, or selective reruns. Multiple declared seeds
+necessarily process the test split multiple times. The prior test exposure is
+disclosed rather than hidden.

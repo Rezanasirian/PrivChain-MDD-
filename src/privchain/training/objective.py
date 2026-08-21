@@ -29,7 +29,13 @@ def move_batch_to_device(batch: Batch, device: torch.device) -> Batch:
     Returns:
         A batch with all tensors on ``device``.
     """
-    moved = {key: cast("torch.Tensor", value).to(device) for key, value in batch.items()}
+    moved: dict[str, object] = {}
+    for key, value in batch.items():
+        if key == "presence":
+            masks = cast("dict[str, torch.Tensor]", value)
+            moved[key] = {name: tensor.to(device) for name, tensor in masks.items()}
+        else:
+            moved[key] = cast("torch.Tensor", value).to(device)
     return cast("Batch", moved)
 
 

@@ -15,7 +15,7 @@ import sys
 
 import torch
 
-from privchain.config import load_baseline_config, load_privacy_config, load_yaml, resolve_device
+from privchain.config import load_baseline_config, load_privacy_config, resolve_device
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.privacy.budget_allocator import PerModalityBudgetAllocator
 from privchain.privacy.dp_sgd import (
@@ -32,7 +32,7 @@ from privchain.training.objective import (
     evaluate_model,
     positive_class_weight,
 )
-from privchain.training.protocol import build_splits, format_aggregate, make_loader
+from privchain.training.protocol import build_splits, make_loader
 
 MODALITIES = ("audio", "video", "text")
 CLIP_NORMS = (0.01, 0.05, 0.1, 0.5, 1.0)
@@ -123,8 +123,7 @@ def main() -> None:
             mean_f1 = sum(m["f1"] for m in per_seed) / len(per_seed)
             label = "   inf" if not private else f"{target_eps:6.1f}"
             print(
-                f"{label} {clip:>7.2f} {sigma_shown:>8.3f}  "
-                f"auc={mean_auc:.3f}  f1={mean_f1:.3f}",
+                f"{label} {clip:>7.2f} {sigma_shown:>8.3f}  auc={mean_auc:.3f}  f1={mean_f1:.3f}",
                 flush=True,
             )
             sys.stdout.flush()

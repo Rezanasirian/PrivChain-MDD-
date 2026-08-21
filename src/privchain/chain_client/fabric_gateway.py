@@ -57,10 +57,25 @@ class FabricRestLedger:
         self._invoke("RegisterClient", [client_id, *(str(flag) for flag in capability)])
 
     def log_privacy_budget(
-        self, client_id: str, modality: str, round_num: int, epsilon_spent: float
+        self,
+        client_id: str,
+        modality: str,
+        round_num: int,
+        epsilon_incremental: float,
+        epsilon_cumulative: float | None = None,
     ) -> None:
         """Invoke ``LogPrivacyBudget``."""
-        self._invoke("LogPrivacyBudget", [client_id, modality, str(round_num), repr(epsilon_spent)])
+        cumulative = epsilon_incremental if epsilon_cumulative is None else epsilon_cumulative
+        self._invoke(
+            "LogPrivacyBudget",
+            [
+                client_id,
+                modality,
+                str(round_num),
+                repr(epsilon_incremental),
+                repr(cumulative),
+            ],
+        )
 
     def update_reputation(
         self, client_id: str, modality: str, score: float, round_num: int
@@ -108,7 +123,13 @@ class FabricRestLedger:
         payload = self._query("GetBudgetHistory", [client_id, modality])
         records = json.loads(payload) if payload else []
         return [
-            BudgetRecord(r["clientId"], r["modality"], r["round"], r["epsilonSpent"])
+            BudgetRecord(
+                r["clientId"],
+                r["modality"],
+                r["round"],
+                r.get("epsilonIncremental", r["epsilonSpent"]),
+                r.get("epsilonCumulative", r["epsilonSpent"]),
+            )
             for r in records
         ]
 

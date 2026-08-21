@@ -33,7 +33,7 @@ import torch
 from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
-from privchain.data.mock_daic_woz import Sample
+from privchain.data.mock_daic_woz import MODALITIES, Sample
 from privchain.data.text_vectorizers import TextVectorizer, build_text_vectorizer
 from privchain.segmentation import contiguous_spans
 
@@ -635,6 +635,7 @@ class DaicWozDataset(Dataset[Sample]):
             audio=torch.from_numpy(audio),
             video=torch.from_numpy(video),
             text=torch.from_numpy(text).unsqueeze(0),  # (1, D_text)
+            presence={m: torch.tensor(1, dtype=torch.long) for m in MODALITIES},
             phq8_score=torch.tensor(record["score"], dtype=torch.long),
             label=torch.tensor(record["label"], dtype=torch.long),
         )
