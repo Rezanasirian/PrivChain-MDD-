@@ -12,7 +12,7 @@ only thing that is genuinely expensive to replace.
 | item | size | replaceable? |
 |---|---|---|
 | `data/daic_woz/` (raw corpus) | 119 GB | Yes, but needs the DUA and a long download |
-| `data/daic_woz/_feature_cache/` | 416 MB | Yes — regenerated on first run, costs GPU time for the text embeddings |
+| `data/daic_woz/_feature_cache/` | 416 MB | Yes — regenerated on first run, costs GPU time for the text embeddings (no committed copy exists; see §2) |
 | `/workspace/fabric`, `gopath`, `gocache`, `flwr-libs` | ~1.4 GB | Yes — `docs/runbook/server-scripts/00_toolchain.sh` and `pip install` |
 | `.fabric/` (Fabric network state) | ~33 MB | Yes — `scripts/fabric/setup_network.sh` regenerates crypto and ledger |
 
@@ -22,19 +22,28 @@ Everything else — code, configs, ADRs, experiment results — is committed.
 
 ```bash
 git clone <repo> /workspace/PrivChain-MDD- && cd /workspace/PrivChain-MDD-
-# The env used so far: numpy>=2.1 (torch 2.12 requires it), opacus, transformers.
+# The env needs numpy>=2.1 (torch 2.11+ requires it), opacus, transformers.
 # `flwr` must NOT go in the main environment: it pins numpy<2 and breaks torch,
 # scipy and mypy. Install it to a separate directory (see step 5).
 ```
+
+**Which interpreter.** On a vast.ai *PyTorch* image the preinstalled torch is in
+the `/venv/main` virtualenv, not in the system interpreter — `pip install
+--break-system-packages` there gets you a second, CPU-only torch and a box that
+silently trains on CPU. `bootstrap_py.sh` now picks `/venv/main/bin/python` when
+it exists and falls back to system `python3` otherwise, so every command below is
+`/venv/main/bin/python …` on such an image. Take the PyTorch template: it saves a
+multi-GB wheel download on an hourly-billed box and its CUDA build already matches
+the host driver.
 
 Verify with `ruff check src scripts tests`, `mypy --strict src`, `pytest -q`.
 
 ## 2. Data
 
-`bootstrap_data.sh` chains this whole section — apt deps, download, extract, the
-split-CSV layout the config expects, and the text-embedding restore below — and
-is what was actually used to rebuild on 2026-08-14. It took **~15 minutes** on a
-fresh box at ~100 MB/s. Run it detached:
+`bootstrap_data.sh` chains this whole section — apt deps, download, extract and
+the split-CSV layout the config expects. It took **~15 minutes** on the 2026-08-14
+box at ~100 MB/s, and **~35 minutes** on the 2026-08-22 box at ~55 MB/s; the USC
+host, not the instance, sets the rate. Run it detached:
 
 ```bash
 setsid nohup bash docs/runbook/server-scripts/bootstrap_data.sh \
@@ -59,13 +68,15 @@ No credentials are needed; the USC host serves the archive directly.
 Participant 440's archive is truncated at source and is excluded in
 `configs/daic_woz.yaml` (ADR-0010).
 
-**Restore the text embeddings before the first run** — they are the only cached
-artifact that costs GPU time and the only one that survives a re-download:
-
-```bash
-mkdir -p data/daic_woz/_feature_cache
-cp docs/runbook/text-embedding-cache/*.npy data/daic_woz/_feature_cache/
-```
+**There is no committed text-embedding cache any more.** It used to live at
+`docs/runbook/text-embedding-cache/` — 282 `.npy` mpnet embeddings of real
+DAIC-WOZ transcripts, one per participant, with the participant number in the
+filename. Sentence-embedding inversion reconstructs a meaningful share of the
+source text, so those files were derived participant data in a public repository.
+They were removed from the working tree and from Git history. Do not reintroduce
+them: `scripts/check_no_raw_data.py` now blocks data-shaped files anywhere in the
+tree. The text embeddings rebuild on GPU on the first run, which costs a few
+minutes and nothing else.
 
 The audio/video cache is deliberately not kept: its key includes each source
 file's mtime, so a fresh download invalidates it anyway. It rebuilds on first use

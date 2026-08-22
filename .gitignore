@@ -62,6 +62,9 @@ chaincode/**/*.exe
 # tracked, which is what hid it. See ADR-0022.
 chaincode/privchain-cc/privchain-cc
 
+# ─── Local scratch ──────────────────────────────────────────────────────────
+.tmp/
+
 # ─── Notebooks scratch ──────────────────────────────────────────────────────
 .ipynb_checkpoints/
 

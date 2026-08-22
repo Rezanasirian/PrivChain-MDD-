@@ -17,10 +17,9 @@ bash $S/extract_daic.sh 2>&1 | tail -3
 echo "### split csvs $(date -u +%H:%M:%S)"
 cp -v $R/data/daic_woz/raw/*.csv $R/data/daic_woz/ 2>&1 | wc -l | sed "s/^/csvs=/"
 
-echo "### text cache $(date -u +%H:%M:%S)"
+echo "### text cache: none — the committed .npy cache was purged (see incident note);"
+echo "### text embeddings rebuild on GPU during the first run."
 mkdir -p $R/data/daic_woz/_feature_cache
-cp $R/docs/runbook/text-embedding-cache/*.npy $R/data/daic_woz/_feature_cache/
-ls $R/data/daic_woz/_feature_cache/*.npy | wc -l | sed "s/^/cached_npy=/"
 
 echo "### done $(date -u +%H:%M:%S)"
 df -h / | tail -1
