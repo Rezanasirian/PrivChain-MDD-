@@ -1,0 +1,78 @@
+{
+  "seeds": [
+    42,
+    7,
+    2024
+  ],
+  "aggregate": {
+    "num_folds": 3.0,
+    "accuracy_num_valid_folds": 3.0,
+    "accuracy_mean": 0.7352941176470589,
+    "accuracy_std": 0.0,
+    "f1_num_valid_folds": 3.0,
+    "f1_mean": 0.5413533834586466,
+    "f1_std": 0.021266369358993856,
+    "loss_num_valid_folds": 3.0,
+    "loss_mean": 0.6603733164568742,
+    "loss_std": 0.02115054574942178,
+    "precision_num_valid_folds": 3.0,
+    "precision_mean": 0.6166666666666667,
+    "precision_std": 0.011785113019775804,
+    "recall_num_valid_folds": 3.0,
+    "recall_mean": 0.48484848484848486,
+    "recall_std": 0.042854956435548326,
+    "roc_auc_num_valid_folds": 3.0,
+    "roc_auc_mean": 0.7404479578392622,
+    "roc_auc_std": 0.015919691664814994,
+    "threshold_num_valid_folds": 3.0,
+    "threshold_mean": 0.500356987118721,
+    "threshold_std": 0.005080411334197291,
+    "roc_auc_ci_low": 0.5263001872269607,
+    "roc_auc_ci_high": 0.9157738095238094,
+    "roc_auc_ci_width": 0.3894736222968487
+  },
+  "per_seed": [
+    {
+      "seed": 42,
+      "metrics": {
+        "accuracy": 0.7352941176470589,
+        "precision": 0.6,
+        "recall": 0.5454545454545454,
+        "f1": 0.5714285714285713,
+        "roc_auc": 0.7628458498023716,
+        "threshold": 0.49495653808116913,
+        "loss": 0.6340139005333185
+      },
+      "best_epoch": 36
+    },
+    {
+      "seed": 7,
+      "metrics": {
+        "accuracy": 0.7352941176470589,
+        "precision": 0.625,
+        "recall": 0.45454545454545453,
+        "f1": 0.5263157894736842,
+        "roc_auc": 0.7272727272727273,
+        "threshold": 0.49895328283309937,
+        "loss": 0.6613094843924046
+      },
+      "best_epoch": 36
+    },
+    {
+      "seed": 2024,
+      "metrics": {
+        "accuracy": 0.7352941176470589,
+        "precision": 0.625,
+        "recall": 0.45454545454545453,
+        "f1": 0.5263157894736842,
+        "roc_auc": 0.7312252964426877,
+        "threshold": 0.5071611404418945,
+        "loss": 0.6857965644448996
+      },
+      "best_epoch": 37
+    }
+  ],
+  "n_train": 86,
+  "n_selection": 21,
+  "n_report": 34
+}

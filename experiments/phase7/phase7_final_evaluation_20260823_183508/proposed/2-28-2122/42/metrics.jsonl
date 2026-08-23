@@ -1,0 +1,1 @@
+{"round": 1, "num_clients": 10, "num_aggregated": 10, "num_byzantine_flagged": 0, "val_accuracy": 0.30434782608695654, "val_precision": 0.30434782608695654, "val_recall": 1.0, "val_f1": 0.4666666666666667, "val_roc_auc": 0.45535714285714285, "val_threshold": 0.5, "val_loss": 0.7164511680603027}

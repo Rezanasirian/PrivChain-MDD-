@@ -1,0 +1,127 @@
+{
+  "config": {
+    "baseline": {
+      "data": {
+        "audio": {
+          "max_frames": 200,
+          "min_frames": 80,
+          "n_mels": 40
+        },
+        "depression_cutoff": 10,
+        "num_sessions": 32,
+        "phq8_max": 24,
+        "root": "data/mock",
+        "text": {
+          "embed_dim": 64,
+          "max_tokens": 60,
+          "min_tokens": 20
+        },
+        "video": {
+          "max_frames": 100,
+          "min_frames": 40,
+          "n_features": 49
+        }
+      },
+      "model": {
+        "encoder": {
+          "bidirectional": true,
+          "dropout": 0.3,
+          "hidden_dim": 128,
+          "out_dim": 128,
+          "type": "stats"
+        },
+        "encoder_overrides": {
+          "text": {
+            "type": "mean"
+          }
+        },
+        "fusion": {
+          "dropout": 0.1,
+          "hidden_dim": 128,
+          "type": "concat"
+        },
+        "head": {
+          "dropout": 0.1,
+          "hidden_dim": 64
+        },
+        "phq_loss_weight": 0.1,
+        "use_phq_regression": true
+      },
+      "seed": 42,
+      "train": {
+        "batch_size": 32,
+        "class_weighting": true,
+        "device": "auto",
+        "early_stopping_patience": 40,
+        "epochs": 200,
+        "learning_rate": 0.0003,
+        "num_workers": 0,
+        "output_dir": "experiments",
+        "run_name": "phase1_centralized_baseline",
+        "seeds": [
+          42,
+          7,
+          2024
+        ],
+        "selection_fraction": 0.2,
+        "selection_metric": "f1",
+        "val_fraction": 0.25,
+        "weight_decay": 0.0001
+      }
+    },
+    "privacy": {
+      "accountant": "rdp",
+      "allocation": {
+        "mode": "inverse_risk",
+        "risk_sharpness": 1.0,
+        "total_epsilon": 14.0,
+        "total_participant_epsilon": 8.0
+      },
+      "delta": 1e-05,
+      "max_grad_norm": 0.1,
+      "per_modality": {
+        "audio": {
+          "epsilon": 2.0,
+          "reidentification_risk": 1.0
+        },
+        "text": {
+          "epsilon": 8.0,
+          "reidentification_risk": 0.29
+        },
+        "video": {
+          "epsilon": 4.0,
+          "reidentification_risk": 0.97
+        }
+      },
+      "sweep": {
+        "epochs": 60,
+        "target_epsilons": [
+          0.5,
+          1.0,
+          2.0,
+          4.0,
+          8.0,
+          16.0
+        ]
+      }
+    }
+  },
+  "created_at_utc": "2026-08-23T19:00:36.923260+00:00",
+  "dependencies": {
+    "numpy": "2.5.2",
+    "opacus": "1.6.0",
+    "pydantic": "2.13.4",
+    "scikit-learn": "1.9.0",
+    "torch": "2.11.0+cu128"
+  },
+  "git": {
+    "commit": "f78dd9624dfa70455a23ccd59a1ee4e0e596e42c",
+    "dirty": true
+  },
+  "platform": {
+    "cuda": "12.8",
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "python": "3.12.13",
+    "system": "Linux-5.15.0-164-generic-x86_64-with-glibc2.39"
+  }
+}
