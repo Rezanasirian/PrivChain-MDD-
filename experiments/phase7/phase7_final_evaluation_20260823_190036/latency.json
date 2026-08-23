@@ -1,0 +1,27 @@
+[
+  {
+    "batch_size": 1,
+    "ms_per_batch": 0.9854421485215425,
+    "ms_per_sample": 0.9854421485215425
+  },
+  {
+    "batch_size": 2,
+    "ms_per_batch": 0.9827776346355677,
+    "ms_per_sample": 0.49138881731778383
+  },
+  {
+    "batch_size": 4,
+    "ms_per_batch": 1.0109411552548409,
+    "ms_per_sample": 0.2527352888137102
+  },
+  {
+    "batch_size": 8,
+    "ms_per_batch": 1.0157551150768995,
+    "ms_per_sample": 0.12696938938461244
+  },
+  {
+    "batch_size": 16,
+    "ms_per_batch": 1.0228479281067848,
+    "ms_per_sample": 0.06392799550667405
+  }
+]
