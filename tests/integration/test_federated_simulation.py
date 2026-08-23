@@ -125,3 +125,43 @@ def test_federated_simulation_runs_and_logs(tmp_path: Path) -> None:
     lines = (run_dir / "metrics.jsonl").read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == fed_cfg.num_rounds
     assert "round" in json.loads(lines[0])
+
+
+def test_class_weighting_reaches_clients_from_their_own_shard() -> None:
+    """Clients weight their BCE like the centralized arm, from local labels only.
+
+    The centralized baseline weighted its loss whenever ``train.class_weighting``
+    was set while every federated client trained unweighted, so the Chapter-4
+    comparison charged federation for a difference in objective rather than in
+    method (ADR-0026). Pins both halves: the flag has to reach the clients, and
+    the weight has to be measured per shard rather than shared.
+    """
+    seed_everything(42)
+    data_cfg, model_cfg, fed_cfg = _data_config(), _model_config(), _federation()
+    full = MockDaicWozDataset(data_cfg, seed=42)
+    train_subset, _ = split_dataset(full, 0.25, 42)
+    partitions = build_client_partitions(len(train_subset), fed_cfg, seed=42)
+
+    common = {
+        "input_dims": modality_input_dims(data_cfg),
+        "model_config": model_cfg,
+        "batch_size": 4,
+        "local_epochs": fed_cfg.local_epochs,
+        "learning_rate": 0.01,
+        "weight_decay": 0.0,
+        "phq8_max": data_cfg.phq8_max,
+        "phq_loss_weight": model_cfg.phq_loss_weight,
+        "seed": 42,
+    }
+
+    off = build_federated_clients(train_subset, partitions, **common)  # type: ignore[arg-type]
+    assert all(c.pos_weight is None for c in off)
+    assert all(c.objective.pos_weight is None for c in off)
+
+    on = build_federated_clients(train_subset, partitions, class_weighting=True, **common)  # type: ignore[arg-type]
+    weights = [c.pos_weight for c in on]
+    assert any(w is not None for w in weights), "class_weighting never reached the clients"
+    assert all(w is None or w > 0.0 for w in weights)
+    # A shard holding one class only is undefined, and stays unweighted.
+    for client, weight in zip(on, weights, strict=True):
+        assert client.objective.pos_weight == weight

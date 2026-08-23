@@ -72,6 +72,11 @@ class FederatedClient:
         phq8_max: Max PHQ-8 score (for the objective).
         phq_loss_weight: Weight on the PHQ-8 regression term.
         device: Torch device string.
+        pos_weight: Positive-class weight for the BCE term, measured from this
+            client's own shard. Left unweighted when ``None``. The centralized
+            baseline weights its loss whenever ``train.class_weighting`` is set;
+            clients that did not do the same were trained under a different loss
+            than the arm they are compared against (ADR-0026).
     """
 
     def __init__(
@@ -88,6 +93,7 @@ class FederatedClient:
         phq_loss_weight: float,
         device: str = "cpu",
         dp: ClientDPConfig | None = None,
+        pos_weight: float | None = None,
     ) -> None:
         self.client_id = client_id
         self.capability = capability
@@ -97,7 +103,8 @@ class FederatedClient:
         self.local_epochs = local_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.objective = DepressionObjective(phq8_max, phq_loss_weight)
+        self.objective = DepressionObjective(phq8_max, phq_loss_weight, pos_weight).to(self.device)
+        self.pos_weight = pos_weight
         self.dp = dp
         self._dp_steps = 0
         self._steps_per_round = 0

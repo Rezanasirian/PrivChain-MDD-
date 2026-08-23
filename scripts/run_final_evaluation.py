@@ -97,7 +97,7 @@ from privchain.training.trainer import CentralizedTrainer
 
 MODALITIES = ("audio", "video", "text")
 FoldRunner = Callable[[list[int], list[int], int], dict[str, float]]
-PRE_REGISTRATION = "docs/evaluation/PRE-REGISTRATION-2026-08-21.md"
+PRE_REGISTRATION = "docs/evaluation/PRE-REGISTRATION-2026-08-23.md"
 
 
 def _assert_official_campaign_locked() -> None:
@@ -266,10 +266,19 @@ def _eval_centralized_dp(
     fold_train, selection = _carve_fold(
         full, train_idx, labels_all, selection_fraction=base.train.selection_fraction, seed=seed
     )
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
+    batch_size = base.train.batch_size
+    # Same loss as every other arm: weighting the DP arm's BCE but not the
+    # others would charge DP-SGD for a difference in objective (ADR-0026).
+    dp_pos_weight = (
+        positive_class_weight(DataLoader(fold_train, batch_size=batch_size, collate_fn=collate_fn))
+        if base.train.class_weighting
+        else None
+    )
+    objective = DepressionObjective(
+        base.data.phq8_max, base.model.phq_loss_weight, dp_pos_weight
+    ).to(device)
 
     risks = {m: priv.per_modality[m].reidentification_risk for m in MODALITIES}
-    batch_size = base.train.batch_size
     n_train = len(fold_train)  # type: ignore[arg-type]
     sample_rate = min(1.0, batch_size / n_train)
     expected_batch_size = sample_rate * n_train
@@ -379,6 +388,7 @@ def _eval_federated(
         phq_loss_weight=base.model.phq_loss_weight,
         seed=seed,
         device=str(device),
+        class_weighting=base.train.class_weighting,
     )
     global_model = MultimodalDepressionModel(input_dims, base.model).to(device)
     batch_size = base.train.batch_size

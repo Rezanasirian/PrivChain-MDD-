@@ -35,7 +35,11 @@ from privchain.federated.reputation import ReputationTracker
 from privchain.federated.robust import flag_byzantine_updates
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.training.experiment import JsonlMetricLogger
-from privchain.training.objective import DepressionObjective, evaluate_model
+from privchain.training.objective import (
+    DepressionObjective,
+    evaluate_model,
+    positive_class_weight,
+)
 
 
 @dataclass
@@ -94,6 +98,7 @@ def build_federated_clients(
     seed: int,
     device: str = "cpu",
     client_dp: ClientDPConfig | None = None,
+    class_weighting: bool = False,
 ) -> list[FederatedClient]:
     """Construct one :class:`FederatedClient` per partition.
 
@@ -112,6 +117,12 @@ def build_federated_clients(
         device: Torch device string.
         client_dp: Optional client-side DP-SGD configuration. Each constructed
             client receives an independently seeded accountant/mechanism.
+        class_weighting: Weight each client's BCE term by ``n_neg / n_pos``
+            measured on that client's own shard, which is all a real client can
+            observe. Mirrors ``train.class_weighting`` in the centralized arm;
+            without it the arms are trained under different losses and the
+            comparison charges federation for the difference (ADR-0026). A shard
+            holding a single class is left unweighted.
 
     Returns:
         A list of constructed clients (skipping any empty partition).
@@ -129,12 +140,22 @@ def build_federated_clients(
             generator=torch.Generator().manual_seed(seed + partition.client_id),
         )
         model = MultimodalDepressionModel(input_dims, model_config)
+        # Counted on an unshuffled pass over the same shard, so the weight a
+        # client trains under is derived only from data it actually holds.
+        pos_weight = (
+            positive_class_weight(
+                DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
+            )
+            if class_weighting
+            else None
+        )
         clients.append(
             FederatedClient(
                 partition.client_id,
                 partition.capability,
                 model,
                 loader,
+                pos_weight=pos_weight,
                 local_epochs=local_epochs,
                 learning_rate=learning_rate,
                 weight_decay=weight_decay,

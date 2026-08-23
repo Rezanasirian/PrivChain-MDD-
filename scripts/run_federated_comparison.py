@@ -246,6 +246,7 @@ def main() -> None:
             phq_loss_weight=base.model.phq_loss_weight,
             seed=seed,
             device=device,
+            class_weighting=train_cfg.class_weighting,
         )
 
         common: dict[str, Any] = {
