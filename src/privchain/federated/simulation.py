@@ -14,14 +14,16 @@ backends reuse the same :class:`~privchain.federated.client.FederatedClient` and
 from __future__ import annotations
 
 import copy
+import time
 from collections import OrderedDict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 from privchain.chain_client import LedgerClient, record_round
 from privchain.config import AggregationConfig, ModelConfig
@@ -40,6 +42,10 @@ from privchain.training.objective import (
     evaluate_model,
     positive_class_weight,
 )
+
+#: How a client weights its BCE term. ``pooled_oracle`` is a control that
+#: deliberately crosses the federated boundary; see ADR-0026.
+ClassWeightMode = Literal["off", "per_shard", "pooled_oracle"]
 
 
 @dataclass
@@ -83,6 +89,28 @@ class _BestRoundTracker:
         return self.patience is not None and self.stale >= self.patience
 
 
+def _round_work(selected: Sequence[FederatedClient]) -> dict[str, int]:
+    """Sum the local work the selected clients performed this round.
+
+    A shard smaller than ``batch_size`` collapses to one batch, so a round can
+    carry far fewer optimizer steps than its budget suggests. Logging the counts
+    turns that from something inferred off shard sizes into something recorded,
+    and lets a sweep hold total steps fixed while varying how they are grouped.
+
+    Args:
+        selected: The clients whose ``fit`` was just called.
+
+    Returns:
+        Per-round ``optimizer_steps``, ``num_local_batches`` and
+        ``examples_seen`` totals.
+    """
+    return {
+        "optimizer_steps": sum(c.last_work.optimizer_steps for c in selected),
+        "num_local_batches": sum(c.last_work.num_batches for c in selected),
+        "examples_seen": sum(c.last_work.examples_seen for c in selected),
+    }
+
+
 def build_federated_clients(
     base_dataset: Any,
     partitions: list[ClientPartition],
@@ -98,7 +126,7 @@ def build_federated_clients(
     seed: int,
     device: str = "cpu",
     client_dp: ClientDPConfig | None = None,
-    class_weighting: bool = False,
+    class_weight_mode: ClassWeightMode = "off",
 ) -> list[FederatedClient]:
     """Construct one :class:`FederatedClient` per partition.
 
@@ -117,17 +145,35 @@ def build_federated_clients(
         device: Torch device string.
         client_dp: Optional client-side DP-SGD configuration. Each constructed
             client receives an independently seeded accountant/mechanism.
-        class_weighting: Weight each client's BCE term by ``n_neg / n_pos``
-            measured on that client's own shard, which is all a real client can
-            observe. Mirrors ``train.class_weighting`` in the centralized arm;
-            without it the arms are trained under different losses and the
-            comparison charges federation for the difference (ADR-0026). A shard
-            holding a single class is left unweighted.
+        class_weight_mode: How each client weights its BCE term.
+            ``"off"`` leaves the loss unweighted. ``"per_shard"`` uses
+            ``n_neg / n_pos`` measured on that client's own partition, which is
+            all a real client can observe, and mirrors ``train.class_weighting``
+            in the centralized arm — without it the arms train under different
+            losses and the comparison charges federation for the difference
+            (ADR-0026). ``"pooled_oracle"`` gives every client one weight
+            measured across all shards; that crosses the federated boundary and
+            ADR-0026 rejected it as an architecture, so it exists only as an
+            experimental control for how much per-shard weight noise costs. A
+            shard holding a single class is left unweighted either way.
 
     Returns:
         A list of constructed clients (skipping any empty partition).
     """
     clients: list[FederatedClient] = []
+    # The oracle weight is measured once over every shard's labels, which is the
+    # federated-boundary violation that makes it a control rather than a design.
+    pooled_weight = (
+        positive_class_weight(
+            DataLoader(
+                Subset(base_dataset, [i for p in partitions for i in p.indices]),
+                batch_size=batch_size,
+                collate_fn=collate_fn,
+            )
+        )
+        if class_weight_mode == "pooled_oracle"
+        else None
+    )
     for partition in partitions:
         if not partition.indices:
             continue
@@ -142,13 +188,12 @@ def build_federated_clients(
         model = MultimodalDepressionModel(input_dims, model_config)
         # Counted on an unshuffled pass over the same shard, so the weight a
         # client trains under is derived only from data it actually holds.
-        pos_weight = (
-            positive_class_weight(
+        if class_weight_mode == "per_shard":
+            pos_weight = positive_class_weight(
                 DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
             )
-            if class_weighting
-            else None
-        )
+        else:
+            pos_weight = pooled_weight
         clients.append(
             FederatedClient(
                 partition.client_id,
@@ -230,6 +275,9 @@ def run_simulation(
         (k, v.detach().cpu().clone()) for k, v in global_model.state_dict().items()
     )
     k_per_round = min(clients_per_round, len(clients))
+    started = time.perf_counter()
+    cumulative_steps = 0
+    cumulative_examples = 0
 
     for round_num in range(1, num_rounds + 1):
         rng = np.random.default_rng(seed + round_num)
@@ -246,8 +294,16 @@ def run_simulation(
         global_state = fedavg(states, weights)
         global_model.load_state_dict(global_state)
 
+        work = _round_work(selected)
+        cumulative_steps += work["optimizer_steps"]
+        cumulative_examples += work["examples_seen"]
+
         metrics = evaluate_model(global_model, val_loader, objective, torch_device)
         record: dict[str, Any] = {"round": round_num, "num_clients": len(selected)}
+        record.update(work)
+        record["cumulative_optimizer_steps"] = cumulative_steps
+        record["cumulative_examples_seen"] = cumulative_examples
+        record["elapsed_seconds"] = round(time.perf_counter() - started, 3)
         record.update({f"val_{k}": v for k, v in metrics.items()})
         logger.log(record)
         history.append(record)
@@ -412,6 +468,9 @@ def run_capability_aware_simulation(
     )
     k_per_round = min(clients_per_round, len(clients))
     registered: set[str] = set()
+    started = time.perf_counter()
+    cumulative_steps = 0
+    cumulative_examples = 0
 
     for round_num in range(1, num_rounds + 1):
         rng = np.random.default_rng(seed + round_num)
@@ -482,11 +541,18 @@ def run_capability_aware_simulation(
             )
 
         metrics = evaluate_model(global_model, val_loader, objective, torch_device)
+        work = _round_work(selected)
+        cumulative_steps += work["optimizer_steps"]
+        cumulative_examples += work["examples_seen"]
         record: dict[str, Any] = {
             "round": round_num,
             "num_clients": len(selected),
             "num_aggregated": len(updates),
             "num_byzantine_flagged": num_flagged,
+            **work,
+            "cumulative_optimizer_steps": cumulative_steps,
+            "cumulative_examples_seen": cumulative_examples,
+            "elapsed_seconds": round(time.perf_counter() - started, 3),
         }
         record.update({f"val_{k}": v for k, v in metrics.items()})
         record.update(

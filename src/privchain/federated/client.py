@@ -58,6 +58,26 @@ class PrivacySpend:
     cumulative: dict[str, float]
 
 
+@dataclass(frozen=True)
+class LocalWork:
+    """Compute one client performed during one ``fit``.
+
+    A shard smaller than ``batch_size`` yields a single batch, so
+    ``local_epochs=1`` is one optimizer step per round however large the round
+    budget looks. Recording the work makes that visible instead of inferable, and
+    lets a sweep hold total steps constant while varying how they are grouped.
+
+    Attributes:
+        optimizer_steps: ``optimizer.step()`` calls, including anchor KD steps.
+        num_batches: Local batches drawn (KD anchor steps excluded).
+        examples_seen: Training examples consumed, counting repeats across epochs.
+    """
+
+    optimizer_steps: int
+    num_batches: int
+    examples_seen: int
+
+
 class FederatedClient:
     """A single simulated federated client.
 
@@ -105,6 +125,7 @@ class FederatedClient:
         self.weight_decay = weight_decay
         self.objective = DepressionObjective(phq8_max, phq_loss_weight, pos_weight).to(self.device)
         self.pos_weight = pos_weight
+        self.last_work = LocalWork(0, 0, 0)
         self.dp = dp
         self._dp_steps = 0
         self._steps_per_round = 0
@@ -248,16 +269,25 @@ class FederatedClient:
             self._dp_steps += self._steps_per_round
             cumulative = self._privacy_at(self._dp_steps)
             incremental = {name: cumulative[name] - before[name] for name in cumulative}
-            self._distill_anchor(
+            anchor_steps = self._distill_anchor(
                 teacher, anchor, optimizer, distill_weight, distill_temperature, distill_steps
+            )
+            self.last_work = LocalWork(
+                optimizer_steps=len(batches) + anchor_steps,
+                num_batches=len(batches),
+                examples_seen=sum(len(b) for b in batches),
             )
             return self.get_parameters(), self.num_samples, PrivacySpend(incremental, cumulative)
 
         distilling = teacher is not None and distill_weight > 0.0 and anchor is None
         self.model.train()
+        local_batches = 0
+        examples = 0
         for _ in range(self.local_epochs):
             for raw_batch in self.train_loader:
                 batch = move_batch_to_device(raw_batch, self.device)
+                local_batches += 1
+                examples += int(batch["label"].numel())
                 optimizer.zero_grad()
                 outputs = self.model(batch)
                 loss = self.objective(outputs, batch)
@@ -270,8 +300,13 @@ class FederatedClient:
                     )
                 loss.backward()  # type: ignore[no-untyped-call]
                 optimizer.step()
-        self._distill_anchor(
+        anchor_steps = self._distill_anchor(
             teacher, anchor, optimizer, distill_weight, distill_temperature, distill_steps
+        )
+        self.last_work = LocalWork(
+            optimizer_steps=local_batches + anchor_steps,
+            num_batches=local_batches,
+            examples_seen=examples,
         )
         return self.get_parameters(), self.num_samples, None
 
@@ -283,10 +318,15 @@ class FederatedClient:
         weight: float,
         temperature: float,
         steps: int,
-    ) -> None:
-        """Run post-training KD; this method never advances a DP accountant."""
+    ) -> int:
+        """Run post-training KD; this method never advances a DP accountant.
+
+        Returns:
+            The number of optimizer steps taken, so the caller can account for
+            them in :class:`LocalWork` (zero when KD is not configured).
+        """
         if teacher is None or anchor is None or weight <= 0.0:
-            return
+            return 0
         student_anchor = capability_masked_anchor(anchor, self.capability)
         teacher.eval()
         with torch.no_grad():
@@ -298,6 +338,7 @@ class FederatedClient:
             loss = weight * distillation_loss(student_logit, teacher_logit, temperature)
             loss.backward()  # type: ignore[no-untyped-call]
             optimizer.step()
+        return steps
 
     def evaluate(
         self, global_state: OrderedDict[str, torch.Tensor], loader: DataLoader[Sample]

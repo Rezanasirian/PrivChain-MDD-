@@ -9,6 +9,7 @@ simulator (the Flower backend mirrors this but needs the optional ``flwr`` dep).
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -158,10 +159,86 @@ def test_class_weighting_reaches_clients_from_their_own_shard() -> None:
     assert all(c.pos_weight is None for c in off)
     assert all(c.objective.pos_weight is None for c in off)
 
-    on = build_federated_clients(train_subset, partitions, class_weighting=True, **common)  # type: ignore[arg-type]
-    weights = [c.pos_weight for c in on]
-    assert any(w is not None for w in weights), "class_weighting never reached the clients"
+    per_shard = build_federated_clients(  # type: ignore[arg-type]
+        train_subset, partitions, class_weight_mode="per_shard", **common
+    )
+    weights = [c.pos_weight for c in per_shard]
+    assert any(w is not None for w in weights), "the mode never reached the clients"
     assert all(w is None or w > 0.0 for w in weights)
     # A shard holding one class only is undefined, and stays unweighted.
-    for client, weight in zip(on, weights, strict=True):
+    for client, weight in zip(per_shard, weights, strict=True):
         assert client.objective.pos_weight == weight
+
+    pooled = build_federated_clients(  # type: ignore[arg-type]
+        train_subset, partitions, class_weight_mode="pooled_oracle", **common
+    )
+    pooled_weights = {c.pos_weight for c in pooled}
+    assert len(pooled_weights) == 1, "the oracle weight must be identical across clients"
+    # The control only means anything if it differs from what shards see locally.
+    assert len(set(weights)) > 1, "fixture no longer produces uneven shards"
+
+
+def test_round_log_records_local_work() -> None:
+    """Each round logs the optimizer steps and examples it actually spent.
+
+    A shard smaller than ``batch_size`` collapses to one batch, so a 120-round
+    budget can carry 120 optimizer steps per client rather than the many implied
+    by the round count. The counts have to be logged for a sweep to hold total
+    steps fixed while varying how they are grouped, and for the claim to be
+    checkable at all.
+    """
+    seed_everything(42)
+    data_cfg, model_cfg, fed_cfg = _data_config(), _model_config(), _federation()
+    full = MockDaicWozDataset(data_cfg, seed=42)
+    train_subset, val_subset = split_dataset(full, 0.25, 42)
+    val_loader: DataLoader = DataLoader(
+        val_subset, batch_size=4, shuffle=False, collate_fn=collate_fn
+    )
+    partitions = build_client_partitions(len(train_subset), fed_cfg, seed=42)
+    clients = build_federated_clients(
+        train_subset,
+        partitions,
+        input_dims=modality_input_dims(data_cfg),
+        model_config=model_cfg,
+        batch_size=4,
+        local_epochs=fed_cfg.local_epochs,
+        learning_rate=0.01,
+        weight_decay=0.0,
+        phq8_max=data_cfg.phq8_max,
+        phq_loss_weight=model_cfg.phq_loss_weight,
+        seed=42,
+    )
+    global_model = MultimodalDepressionModel(modality_input_dims(data_cfg), model_cfg)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp) / "run"
+        run_dir.mkdir()
+        history = run_simulation(
+            global_model,
+            clients,
+            val_loader,
+            num_rounds=fed_cfg.num_rounds,
+            clients_per_round=fed_cfg.clients_per_round,
+            phq8_max=data_cfg.phq8_max,
+            phq_loss_weight=model_cfg.phq_loss_weight,
+            run_dir=run_dir,
+            seed=42,
+        )
+
+    first = history[0]
+    for key in (
+        "optimizer_steps",
+        "num_local_batches",
+        "examples_seen",
+        "cumulative_optimizer_steps",
+        "cumulative_examples_seen",
+        "elapsed_seconds",
+    ):
+        assert key in first, f"{key} missing from the round record"
+
+    # One step per batch, and no client can spend more examples than it holds.
+    assert first["optimizer_steps"] == first["num_local_batches"]
+    held = sum(len(p.indices) for p in partitions)
+    assert 0 < first["examples_seen"] <= held * fed_cfg.local_epochs
+    # Cumulative counters only ever grow.
+    assert history[-1]["cumulative_optimizer_steps"] >= first["cumulative_optimizer_steps"]

@@ -101,6 +101,14 @@ def main() -> None:
     parser.add_argument("--num-clients", type=int, default=None)
     parser.add_argument("--rounds", type=int, default=None)
     parser.add_argument("--seeds", type=int, nargs="+", default=None)
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Override train.batch_size. A shard smaller than this collapses to "
+        "one batch, so it also sets how many optimizer steps a round can carry.",
+    )
+    parser.add_argument("--local-epochs", type=int, default=None, help="Override local_epochs.")
     args = parser.parse_args()
 
     base = load_baseline_config(args.config)
@@ -122,6 +130,12 @@ def main() -> None:
         )
     if args.rounds is not None:
         federation = federation.model_copy(update={"num_rounds": args.rounds})
+    if args.local_epochs is not None:
+        federation = federation.model_copy(update={"local_epochs": args.local_epochs})
+    if args.batch_size is not None:
+        base = base.model_copy(
+            update={"train": base.train.model_copy(update={"batch_size": args.batch_size})}
+        )
 
     splits, input_dims = build_splits(base, args.daic_config)
     device = resolve_device(base.train.device)
@@ -246,7 +260,7 @@ def main() -> None:
             phq_loss_weight=base.model.phq_loss_weight,
             seed=seed,
             device=device,
-            class_weighting=train_cfg.class_weighting,
+            class_weight_mode="per_shard" if train_cfg.class_weighting else "off",
         )
 
         common: dict[str, Any] = {

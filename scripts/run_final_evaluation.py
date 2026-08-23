@@ -388,7 +388,7 @@ def _eval_federated(
         phq_loss_weight=base.model.phq_loss_weight,
         seed=seed,
         device=str(device),
-        class_weighting=base.train.class_weighting,
+        class_weight_mode="per_shard" if base.train.class_weighting else "off",
     )
     global_model = MultimodalDepressionModel(input_dims, base.model).to(device)
     batch_size = base.train.batch_size
