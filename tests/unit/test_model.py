@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import torch
+from torch import nn
 
 from privchain.config import (
     AudioConfig,
@@ -19,7 +20,7 @@ from privchain.config import (
 from privchain.data.mock_daic_woz import MockDaicWozDataset, collate_fn
 from privchain.federated.partition import ModalityMaskedDataset
 from privchain.fusion.baseline_model import MultimodalDepressionModel
-from privchain.fusion.multimodal_fusion import ConcatFusion
+from privchain.fusion.multimodal_fusion import ConcatFusion, GatedFusion, build_fusion
 
 
 def _data_config() -> DataConfig:
@@ -179,3 +180,44 @@ def test_model_builds_a_different_encoder_per_modality() -> None:
     # `stats` projects from 5 functionals per channel, `mean` straight from the dim.
     assert model.encoders["audio"].proj.in_features == 5 * 5
     assert model.encoders["text"].proj.in_features == 9
+
+
+def test_gated_fusion_zeroes_absent_modalities() -> None:
+    """A missing branch must not leak through a nonzero gate."""
+    fusion = GatedFusion({"audio": 3, "text": 3}, hidden_dim=4)
+    embeddings = {"audio": torch.randn(2, 3), "text": torch.randn(2, 3)}
+    presence = {"audio": torch.tensor([0, 1]), "text": torch.tensor([1, 1])}
+    fusion(embeddings, presence)
+    assert fusion.last_gates["audio"][0].item() == pytest.approx(0.0)
+    assert fusion.last_gates["audio"][1].item() > 0.0
+
+
+def test_gated_fusion_matches_concat_when_gates_are_forced_open() -> None:
+    """Gating is the only difference; with gates at 1 the two must agree."""
+    dims = {"audio": 3, "text": 3}
+    gated = GatedFusion(dims, hidden_dim=4)
+    concat = ConcatFusion(dims, hidden_dim=4)
+    concat.net.load_state_dict(gated.net.state_dict())
+    for gate in gated.gates.values():
+        nn.init.zeros_(gate.weight)
+        nn.init.constant_(gate.bias, 20.0)  # sigmoid(20) is 1.0 to float precision
+    embeddings = {"audio": torch.randn(2, 3), "text": torch.randn(2, 3)}
+    gated.eval()
+    concat.eval()
+    with torch.no_grad():
+        assert gated(embeddings) == pytest.approx(concat(embeddings), abs=1e-5)
+
+
+def test_gated_fusion_gates_vary_per_sample() -> None:
+    """A usable audio session and a noisy one must not share a weight."""
+    torch.manual_seed(0)
+    fusion = GatedFusion({"audio": 4}, hidden_dim=4)
+    fusion({"audio": torch.randn(8, 4) * 5.0})
+    assert fusion.last_gates["audio"].std().item() > 1e-3
+
+
+def test_build_fusion_rejects_an_unknown_type() -> None:
+    config = FusionConfig(type="concat", hidden_dim=4, dropout=0.0)
+    broken = config.model_copy(update={"type": "attention"})
+    with pytest.raises(ValueError, match="unknown fusion type"):
+        build_fusion({"audio": 3}, broken)

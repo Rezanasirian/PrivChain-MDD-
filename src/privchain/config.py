@@ -104,7 +104,11 @@ class EncoderConfig(_Strict):
 class FusionConfig(_Strict):
     """Multimodal fusion hyperparameters (Phase 1)."""
 
-    type: Literal["concat"] = "concat"
+    # gated: scale each modality by a learned per-sample scalar before
+    #        concatenating, so a branch that carries mostly noise on this corpus
+    #        (audio alone is near chance) can be attenuated rather than forcing
+    #        the classifier to suppress it.
+    type: Literal["concat", "gated"] = "concat"
     hidden_dim: int = Field(gt=0)
     dropout: float = Field(default=0.0, ge=0.0, le=1.0)
 

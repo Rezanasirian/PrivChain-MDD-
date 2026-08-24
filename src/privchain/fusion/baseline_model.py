@@ -22,7 +22,7 @@ from privchain.data.mock_daic_woz import MODALITIES, Batch
 from privchain.encoders.audio import AudioEncoder
 from privchain.encoders.text import TextEncoder
 from privchain.encoders.video import VideoEncoder
-from privchain.fusion.multimodal_fusion import ConcatFusion
+from privchain.fusion.multimodal_fusion import build_fusion
 
 
 class MultimodalDepressionModel(nn.Module):
@@ -48,7 +48,7 @@ class MultimodalDepressionModel(nn.Module):
             }
         )
         modality_dims = {modality: encoder_configs[modality].out_dim for modality in MODALITIES}
-        self.fusion = ConcatFusion(modality_dims, config.fusion.hidden_dim, config.fusion.dropout)
+        self.fusion = build_fusion(modality_dims, config.fusion)
 
         self.classifier = nn.Sequential(
             nn.Linear(self.fusion.out_dim, config.head.hidden_dim),
