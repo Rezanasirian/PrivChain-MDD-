@@ -86,11 +86,19 @@ class EncoderConfig(_Strict):
     #        delta) then an MLP — the tractable choice at 107 training sessions.
     # mean:  learned projection then masked mean-pool.
     # gru:   bidirectional DPGRU over the sequence (needs far more data).
-    type: Literal["mean", "gru", "stats"] = "gru"
+    # attn: learned additive attention over timesteps instead of a flat mean.
+    #       Only meaningful when the sequence has more than one step, so for text
+    #       it needs daic_woz.text.representation set to segments or turns.
+    type: Literal["mean", "gru", "stats", "attn"] = "gru"
     hidden_dim: int = Field(gt=0)
     out_dim: int = Field(gt=0)
     bidirectional: bool = True
     dropout: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Scoring width for `attn`, and whether to add fixed sinusoidal position
+    # codes before pooling so the encoder can use where in the session a segment
+    # sat, not only what was said.
+    attention_dim: int = Field(default=64, gt=0)
+    positional: bool = False
 
 
 class FusionConfig(_Strict):

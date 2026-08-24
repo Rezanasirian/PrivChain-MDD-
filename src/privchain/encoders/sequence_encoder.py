@@ -132,6 +132,68 @@ def reverse_padded(sequence: torch.Tensor, lengths: torch.Tensor) -> torch.Tenso
     return torch.gather(sequence, 1, gather_idx.unsqueeze(-1).expand_as(sequence))
 
 
+class AdditiveAttentionPool(nn.Module):
+    """Score each timestep with a small MLP, then take a masked softmax average.
+
+    Additive (Bahdanau-style) attention rather than multi-head self-attention:
+    it adds ``hidden_dim * attn_dim + attn_dim`` parameters instead of four
+    projection matrices, which matters at ~110 training sessions and again under
+    DP-SGD, where every parameter carries clipped per-sample gradient noise.
+
+    Args:
+        hidden_dim: Width of the incoming per-timestep vectors.
+        attn_dim: Width of the scoring layer.
+    """
+
+    def __init__(self, hidden_dim: int, attn_dim: int) -> None:
+        super().__init__()
+        self.score = nn.Sequential(
+            nn.Linear(hidden_dim, attn_dim),
+            nn.Tanh(),
+            nn.Linear(attn_dim, 1),
+        )
+
+    def forward(self, hidden: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+        """Pool ``(B, T, H)`` to ``(B, H)`` over valid timesteps only.
+
+        Args:
+            hidden: Padded per-timestep vectors.
+            lengths: True per-sample lengths.
+
+        Returns:
+            Attention-weighted mean of shape ``(B, H)``.
+        """
+        scores = self.score(hidden).squeeze(-1)  # (B, T)
+        time_index = torch.arange(hidden.shape[1], device=hidden.device).unsqueeze(0)
+        valid = time_index < lengths.unsqueeze(1)
+        # Padding must not win any weight; -inf keeps softmax exactly zero there.
+        scores = scores.masked_fill(~valid, float("-inf"))
+        weights = torch.softmax(scores, dim=1).unsqueeze(-1)  # (B, T, 1)
+        pooled: torch.Tensor = (hidden * weights).sum(dim=1)
+        return pooled
+
+
+def sinusoidal_positions(length: int, dim: int, device: torch.device) -> torch.Tensor:
+    """Standard fixed sinusoidal position codes, shape ``(1, length, dim)``.
+
+    Fixed rather than learned: with ~110 training sessions a learned table for
+    every segment index would spend parameters on positions some folds never see.
+
+    Args:
+        length: Number of timesteps.
+        dim: Embedding width.
+        device: Device for the result.
+
+    Returns:
+        Position encoding broadcastable over a ``(B, length, dim)`` batch.
+    """
+    position = torch.arange(length, device=device, dtype=torch.float32).unsqueeze(1)
+    index = torch.arange(dim, device=device, dtype=torch.float32)
+    angle = position / torch.pow(10000.0, (2 * torch.div(index, 2, rounding_mode="floor")) / dim)
+    encoding = torch.where(index % 2 == 0, torch.sin(angle), torch.cos(angle))
+    return encoding.unsqueeze(0)
+
+
 class SequenceEncoder(nn.Module):
     """Project → (optional GRU) → masked mean-pool → output projection.
 
@@ -177,6 +239,11 @@ class SequenceEncoder(nn.Module):
             pooled_dim = config.hidden_dim
 
         self.dropout = nn.Dropout(config.dropout)
+        self.attention: AdditiveAttentionPool | None = (
+            AdditiveAttentionPool(pooled_dim, config.attention_dim)
+            if config.type == "attn"
+            else None
+        )
         self.out = nn.Linear(pooled_dim, config.out_dim)
 
     def forward(self, sequence: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
@@ -214,6 +281,13 @@ class SequenceEncoder(nn.Module):
             else:
                 hidden = forward_out
 
-        pooled = masked_mean(hidden, lengths)
+        if self.attention is not None:
+            if self.config.positional:
+                hidden = hidden + sinusoidal_positions(
+                    hidden.shape[1], hidden.shape[2], hidden.device
+                )
+            pooled = self.attention(hidden, lengths)
+        else:
+            pooled = masked_mean(hidden, lengths)
         encoded: torch.Tensor = self.out(self.dropout(pooled))
         return encoded

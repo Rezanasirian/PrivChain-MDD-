@@ -172,3 +172,54 @@ def test_modality_encoders_are_sequence_encoders() -> None:
         assert isinstance(enc, SequenceEncoder)
         out = enc(torch.randn(2, 5, 6), torch.tensor([5, 2]))
         assert out.shape == (2, 4)
+
+
+def _attn_config(**overrides: object) -> EncoderConfig:
+    base = {"type": "attn", "hidden_dim": 8, "out_dim": 4, "dropout": 0.0, "attention_dim": 8}
+    base.update(overrides)
+    return EncoderConfig(**base)  # type: ignore[arg-type]
+
+
+def test_attention_pooling_ignores_padded_timesteps() -> None:
+    """Padding must win zero weight, or short sessions are scored on garbage."""
+    encoder = SequenceEncoder(3, _attn_config()).eval()
+    real = torch.randn(1, 2, 3)
+    padded = torch.cat([real, torch.randn(1, 5, 3) * 100.0], dim=1)
+    lengths = torch.tensor([2])
+    with torch.no_grad():
+        assert encoder(real, lengths) == pytest.approx(encoder(padded, lengths), abs=1e-5)
+
+
+def test_attention_pooling_can_differ_from_a_flat_mean() -> None:
+    """If attention could only reproduce the mean it would buy nothing."""
+    torch.manual_seed(0)
+    sequence, lengths = torch.randn(4, 6, 3), torch.tensor([6, 6, 6, 6])
+    attn = SequenceEncoder(3, _attn_config()).eval()
+    mean = SequenceEncoder(3, _attn_config(type="mean")).eval()
+    mean.load_state_dict(
+        {k: v for k, v in attn.state_dict().items() if not k.startswith("attention.")},
+        strict=False,
+    )
+    with torch.no_grad():
+        assert not torch.allclose(attn(sequence, lengths), mean(sequence, lengths), atol=1e-4)
+
+
+def test_positional_encoding_makes_order_matter() -> None:
+    """Without positions, attention pooling is permutation-invariant."""
+    torch.manual_seed(0)
+    sequence, lengths = torch.randn(1, 5, 3), torch.tensor([5])
+    shuffled = sequence[:, torch.tensor([4, 0, 3, 1, 2]), :]
+
+    blind = SequenceEncoder(3, _attn_config(positional=False)).eval()
+    aware = SequenceEncoder(3, _attn_config(positional=True)).eval()
+    with torch.no_grad():
+        assert blind(sequence, lengths) == pytest.approx(blind(shuffled, lengths), abs=1e-5)
+        assert not torch.allclose(aware(sequence, lengths), aware(shuffled, lengths), atol=1e-4)
+
+
+def test_attention_handles_a_single_timestep() -> None:
+    """A silent participant collapses to one row; softmax over one step is 1.0."""
+    encoder = SequenceEncoder(3, _attn_config()).eval()
+    with torch.no_grad():
+        out = encoder(torch.randn(2, 1, 3), torch.tensor([1, 1]))
+    assert out.shape == torch.Size([2, 4]) and torch.isfinite(out).all()
