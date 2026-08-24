@@ -61,3 +61,18 @@ def test_factory_rejects_an_unknown_vectorizer() -> None:
     """
     with pytest.raises(ValueError, match="tfidf"):
         build_text_vectorizer({"vectorizer": "tfidf", "dim": 8})
+
+
+def test_transform_many_matches_transform_one_at_a_time() -> None:
+    """The batched path must not drift from the single-text one it replaces."""
+    vectorizer = HashingTextVectorizer(16, seed=3)
+    texts = ["i feel tired today", "", "sleep has been difficult lately"]
+    batched = vectorizer.transform_many(texts)
+    assert batched.shape == (3, 16)
+    for row, text in zip(batched, texts, strict=True):
+        assert row == pytest.approx(vectorizer.transform(text), abs=1e-6)
+
+
+def test_transform_many_on_no_texts_returns_an_empty_matrix() -> None:
+    vectorizer = HashingTextVectorizer(16)
+    assert vectorizer.transform_many([]).shape == (0, 16)

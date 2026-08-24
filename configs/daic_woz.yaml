@@ -99,6 +99,15 @@ daic_woz:
     # transformer: contextual embeddings. Text is the strongest DAIC-WOZ
     #   modality and hashing throws away word order and context, so real runs
     #   use this — see ADR-0014.
+    # How the transcript becomes a sequence for the text encoder.
+    #   document: one row for the whole interview (the original behaviour). The
+    #             encoder then pools over a length-1 sequence, so it cannot
+    #             attend to anything and word order across the session is gone.
+    #   segments: `num_segments` contiguous stretches of turns, one row each.
+    #   turns:    one row per participant turn.
+    representation: document
+    num_segments: 8
+
     vectorizer: transformer
     dim: 512                             # hashing only; transformer uses its hidden size
     transformer:

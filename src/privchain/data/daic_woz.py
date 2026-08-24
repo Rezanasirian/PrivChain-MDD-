@@ -6,7 +6,10 @@ the mock dataset, so the Phase 1 model/trainer run unchanged on real data:
 
 * **audio** — COVAREP features (one row per ~10 ms frame), shape ``(T, D_audio)``
 * **video** — OpenFace facial features/AUs (metadata columns dropped), ``(T, D_video)``
-* **text**  — participant transcript turns vectorized into a single ``(1, D_text)`` row
+* **text**  — participant transcript turns vectorized into ``(T_text, D_text)``;
+  ``text.representation`` picks whether that is one row for the whole interview
+  (``document``), one per contiguous stretch (``segments``) or one per turn
+  (``turns``)
 * **label** — ``PHQ8_Binary``; **phq8_score** — ``PHQ8_Score`` from the split file
 
 To keep memory and IO bounded over ~15-minute interviews, feature rows are
@@ -344,6 +347,18 @@ class DaicWozDataset(Dataset[Sample]):
         self._audio_cfg = config["audio"]
         self._video_cfg = config["video"]
         self._text_cfg = config["text"]
+        # How the transcript becomes a sequence. `document` is the original
+        # behaviour and gives the text encoder a length-1 sequence, so any
+        # pooling it does is a no-op; the other two keep the interview's shape.
+        self._text_representation = str(self._text_cfg.get("representation", "document")).lower()
+        if self._text_representation not in {"document", "segments", "turns"}:
+            raise ValueError(
+                f"unknown text.representation {self._text_representation!r}; "
+                "expected document, segments or turns"
+            )
+        self._text_num_segments = int(self._text_cfg.get("num_segments", 8))
+        if self._text_num_segments < 1:
+            raise ValueError("text.num_segments must be positive")
         self._dir_template = config.get("participant_dir_template", "{pid}_P")
         # Parsed-feature memoization; set `feature_cache_dir: null` to disable.
         cache_name: str | None = config.get("feature_cache_dir", "_feature_cache")
@@ -510,6 +525,12 @@ class DaicWozDataset(Dataset[Sample]):
             "dim": self._vectorizer.dim,
             "options": cfg.get("transformer", {}),
             "speaker": cfg.get("participant_speaker", "Participant"),
+            # Bumped when the text pipeline changes shape. Without it a cache
+            # written by the old (1, D) document path would be loaded as though
+            # it were a segment matrix.
+            "text_schema": 2,
+            "representation": self._text_representation,
+            "num_segments": self._text_num_segments,
         }
         key = json.dumps(identity, sort_keys=True, default=str)
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
@@ -536,19 +557,55 @@ class DaicWozDataset(Dataset[Sample]):
         )
 
     def _load_text(self, pid: int) -> NDArray[np.float32]:
+        """Embed one participant's transcript under the configured representation.
+
+        ``document`` collapses the whole interview to one row, which is what the
+        text branch has always received — so its encoder pools over a length-1
+        sequence and cannot attend to anything. ``segments`` and ``turns`` keep
+        the interview's shape, giving the encoder something to select over.
+
+        Args:
+            pid: Participant id.
+
+        Returns:
+            Array of shape ``(T, dim)``: ``T == 1`` for ``document``, at most
+            ``num_segments`` for ``segments``, one row per turn for ``turns``.
+        """
         cfg = self._text_cfg
         path = self._file(pid, cfg["file_template"])
+        representation = self._text_representation
+        kind = (
+            f"text-{representation}{self._text_num_segments}"
+            if representation == "segments"
+            else f"text-{representation}"
+        )
 
         # Transformer embeddings cost a GPU forward pass per session, so the
         # result is memoized like the audio/video matrices.
-        cache_path = self._text_cache_path(path, "text")
+        cache_path = self._text_cache_path(path, kind)
         if cache_path is not None and cache_path.is_file():
             cached: NDArray[np.float32] = np.load(cache_path)
             return cached
 
-        vector = self._vectorizer.transform(" ".join(self._participant_turns(pid)))
-        self._write_text_cache(cache_path, vector)
-        return vector
+        turns = self._participant_turns(pid)
+        if representation == "document":
+            matrix = self._vectorizer.transform(" ".join(turns))[None, :]
+        elif representation == "turns":
+            matrix = self._vectorizer.transform_many(turns)
+        else:
+            # A participant with fewer turns than segments simply yields fewer
+            # rows; collate pads them. Demanding num_segments would drop the
+            # quietest participants, who are not a random subset here.
+            parts = min(self._text_num_segments, len(turns))
+            spans = contiguous_spans(len(turns), parts) if parts > 0 else []
+            matrix = self._vectorizer.transform_many(
+                [" ".join(turns[start:stop]) for start, stop in spans]
+            )
+        if matrix.shape[0] == 0:  # silent participant: keep the contract at T >= 1
+            matrix = np.zeros((1, self._vectorizer.dim), dtype=np.float32)
+        matrix = np.ascontiguousarray(matrix, dtype=np.float32)
+        self._write_text_cache(cache_path, matrix)
+        return matrix
 
     def text_segment_vectors(self, index: int, num_segments: int) -> NDArray[np.float32]:
         """Embed ``num_segments`` contiguous stretches of one participant's speech.
@@ -619,8 +676,8 @@ class DaicWozDataset(Dataset[Sample]):
             index: Session index in ``[0, len(self))``.
 
         Returns:
-            A :class:`Sample` with audio/video sequences, a length-1 text
-            sequence, and integer labels.
+            A :class:`Sample` with audio/video sequences, a text sequence
+            whose length depends on ``text.representation``, and integer labels.
         """
         if self._cache is not None and index in self._cache:
             return self._cache[index]
@@ -629,12 +686,12 @@ class DaicWozDataset(Dataset[Sample]):
         pid = record["pid"]
         audio = self._load_audio(pid)
         video = self._load_video(pid)
-        text = self._load_text(pid)  # (D_text,)
+        text = self._load_text(pid)  # (T_text, D_text)
 
         sample = Sample(
             audio=torch.from_numpy(audio),
             video=torch.from_numpy(video),
-            text=torch.from_numpy(text).unsqueeze(0),  # (1, D_text)
+            text=torch.from_numpy(text),  # (T_text, D_text)
             presence={m: torch.tensor(1, dtype=torch.long) for m in MODALITIES},
             phq8_score=torch.tensor(record["score"], dtype=torch.long),
             label=torch.tensor(record["label"], dtype=torch.long),

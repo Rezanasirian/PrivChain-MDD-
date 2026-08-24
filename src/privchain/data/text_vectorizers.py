@@ -17,6 +17,7 @@ Two implementations, selected by ``daic_woz.text.vectorizer``:
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import Any, Protocol
 
 import numpy as np
@@ -47,6 +48,10 @@ class TextVectorizer(Protocol):
 
     def transform(self, text: str) -> NDArray[np.float32]:
         """Vectorize one transcript into a ``(dim,)`` float32 vector."""
+        ...
+
+    def transform_many(self, texts: Sequence[str]) -> NDArray[np.float32]:
+        """Vectorize several transcripts into a ``(len(texts), dim)`` array."""
         ...
 
 
@@ -93,6 +98,19 @@ class HashingTextVectorizer:
         if norm > 0.0:
             vec /= norm
         return vec
+
+    def transform_many(self, texts: Sequence[str]) -> NDArray[np.float32]:
+        """Vectorize several transcripts.
+
+        Args:
+            texts: Transcript strings.
+
+        Returns:
+            Array of shape ``(len(texts), dim)``. Empty input yields ``(0, dim)``.
+        """
+        if not texts:
+            return np.zeros((0, self._dim), dtype=np.float32)
+        return np.stack([self.transform(text) for text in texts]).astype(np.float32)
 
 
 _MODEL_CACHE: dict[tuple[str, str], tuple[Any, Any]] = {}
@@ -204,6 +222,75 @@ class TransformerTextVectorizer:
         if norm > 0.0:
             document = document / norm
         return np.asarray(document.numpy(), dtype=np.float32)
+
+    def transform_many(self, texts: Sequence[str]) -> NDArray[np.float32]:
+        """Embed several transcripts, batching chunks across them.
+
+        Segment- and turn-level representations ask for many short texts per
+        session instead of one long one. Embedding them one call at a time would
+        run a forward pass per segment; this pools every text's chunks into
+        shared batches, so the cost stays close to the single-document case.
+
+        Averaging and L2 normalization match :meth:`transform` exactly, so the
+        two paths cannot drift apart.
+
+        Args:
+            texts: Transcript strings, one per segment or turn.
+
+        Returns:
+            Array of shape ``(len(texts), dim)``. Empty strings map to zero rows.
+        """
+        torch = self._torch
+        if not texts:
+            return np.zeros((0, self._dim), dtype=np.float32)
+
+        chunk_ids: list[Any] = []
+        chunk_masks: list[Any] = []
+        owner: list[int] = []  # which text each chunk came from
+        for position, text in enumerate(texts):
+            if not text.strip():
+                continue
+            encoded = self._tokenizer(
+                text,
+                max_length=self._max_length,
+                truncation=True,
+                return_overflowing_tokens=True,
+                padding="max_length",
+                return_tensors="pt",
+            )
+            ids = encoded["input_ids"]
+            chunk_ids.append(ids)
+            chunk_masks.append(encoded["attention_mask"])
+            owner.extend([position] * int(ids.shape[0]))
+
+        out = np.zeros((len(texts), self._dim), dtype=np.float32)
+        if not chunk_ids:
+            return out
+
+        all_ids = torch.cat(chunk_ids, dim=0)
+        all_masks = torch.cat(chunk_masks, dim=0)
+        pooled_chunks: list[Any] = []
+        with torch.no_grad():
+            for start in range(0, all_ids.shape[0], self._batch_size):
+                stop = start + self._batch_size
+                ids = all_ids[start:stop].to(self._device)
+                mask_2d = all_masks[start:stop].to(self._device)
+                hidden = self._model(input_ids=ids, attention_mask=mask_2d).last_hidden_state
+                mask = mask_2d.unsqueeze(-1).to(hidden.dtype)
+                pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1.0)
+                pooled_chunks.append(pooled.float().cpu())
+
+        chunk_vectors = torch.cat(pooled_chunks, dim=0)
+        for position in range(len(texts)):
+            rows = [i for i, source in enumerate(owner) if source == position]
+            if not rows:
+                continue  # empty text keeps its zero row
+            document = chunk_vectors[rows].mean(dim=0)
+            norm = float(document.norm())
+            if norm > 0.0:
+                document = document / norm
+            out[position] = document.numpy()
+        return out
 
 
 def build_text_vectorizer(text_config: dict[str, Any], *, seed: int = 0) -> TextVectorizer:
