@@ -67,7 +67,7 @@ from privchain.eval.benchmark import stratified_k_fold_indices
 from privchain.eval.metrics import paired_bootstrap_auc_difference
 from privchain.eval.modality_masking import MaskedModalityModel
 from privchain.fusion.factory import build_depression_model
-from privchain.seeding import seed_everything
+from privchain.seeding import derive_seed, seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.modality_dropout import ModalityDropout
 from privchain.training.objective import (
@@ -418,7 +418,7 @@ def main() -> None:
                         input_dims=input_dims,
                         quality_dims=splits.quality_dims,
                         device=device,
-                        seed=seed + fold_i,
+                        seed=derive_seed(seed, fold_i),
                     )
                     fold_scores[val_idx] = scores
                     row = {"arm": arm, "seed": seed, "fold": fold_i, **metrics}

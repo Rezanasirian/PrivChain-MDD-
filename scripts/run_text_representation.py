@@ -44,7 +44,7 @@ from privchain.data.mock_daic_woz import Sample, collate_fn
 from privchain.eval.benchmark import stratified_k_fold_indices
 from privchain.fusion.baseline_model import MultimodalDepressionModel
 from privchain.fusion.factory import require_baseline_architecture
-from privchain.seeding import seed_everything
+from privchain.seeding import derive_seed, seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
     build_objective,
@@ -263,7 +263,7 @@ def main() -> None:
                         base=base,
                         input_dims=input_dims,
                         device=device,
-                        seed=seed + fold_i,
+                        seed=derive_seed(seed, fold_i),
                         text_only=text_only,
                         encoder_overrides=encoder_overrides,
                     )
