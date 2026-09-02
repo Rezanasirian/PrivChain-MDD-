@@ -60,6 +60,7 @@ class ModalityBranch(nn.Module):
         gate_hidden_dim: Width of the gate scorer's hidden layer.
         dropout: Dropout applied inside the projection and before the heads.
         gate_bias: Initial bias on this modality's gate score.
+        regression: Whether to add this modality's PHQ-8 head.
     """
 
     def __init__(
@@ -72,6 +73,7 @@ class ModalityBranch(nn.Module):
         gate_hidden_dim: int,
         dropout: float,
         gate_bias: float,
+        regression: bool = False,
     ) -> None:
         super().__init__()
         self.project = nn.Sequential(
@@ -97,6 +99,15 @@ class ModalityBranch(nn.Module):
         final = self.gate[-1]
         assert isinstance(final, nn.Linear)
         nn.init.constant_(final.bias, gate_bias)
+        # The PHQ-8 head lives inside the branch, not beside the model, because
+        # it reads *this* modality's session vector and nothing else. A
+        # top-level `regressors.<modality>` would not match the
+        # `encoders.<modality>.` prefix, so per-modality DP budgets and
+        # capability-aware aggregation would file it under `shared` — averaging
+        # it across clients that never held the modality and charging its noise
+        # to the wrong epsilon. That is the exact bug ADR-0027 found in
+        # `fusion.gates.<modality>`.
+        self.regressor: nn.Linear | None = nn.Linear(out_dim, 1) if regression else None
 
     def forward(
         self, segments: torch.Tensor, quality: torch.Tensor, valid: torch.Tensor
@@ -169,22 +180,10 @@ class CapabilityLogitMoE(DepressionModelBase):
                     config.moe.gate_hidden_dim,
                     encoder_configs[modality].dropout,
                     config.moe.gate_bias.get(modality, 0.0),
+                    config.use_phq_regression,
                 )
                 for modality in MODALITIES
             }
-        )
-        # PHQ-8 regression, when enabled, is mixed by the same weights: giving it
-        # its own fusion would let the two heads disagree about which modality
-        # they trust, for a term this ADR's runs set to zero anyway.
-        self.regressors: nn.ModuleDict | None = (
-            nn.ModuleDict(
-                {
-                    modality: nn.Linear(encoder_configs[modality].out_dim, 1)
-                    for modality in MODALITIES
-                }
-            )
-            if config.use_phq_regression
-            else None
         )
         #: Gate weights from the last forward pass, ``{modality: (B,)}``. Read by
         #: the comparison script: an MoE that silently learned to ignore audio
@@ -266,7 +265,7 @@ class CapabilityLogitMoE(DepressionModelBase):
 
         fused = torch.stack([logits[m] * weights[m] for m in MODALITIES], dim=0).sum(dim=0)
         outputs: dict[str, torch.Tensor] = {"logit": fused}
-        if self.regressors is not None:
+        if self.config.use_phq_regression:
             outputs["phq_pred"] = self._mixed_phq(sessions, weights)
         return outputs
 
@@ -310,9 +309,12 @@ class CapabilityLogitMoE(DepressionModelBase):
         Returns:
             ``(B,)`` PHQ-8 predictions in normalized units.
         """
-        assert self.regressors is not None
-        parts = [
-            self.regressors[modality](sessions[modality]).squeeze(-1) * weights[modality]
-            for modality in MODALITIES
-        ]
+        parts: list[torch.Tensor] = []
+        for modality in MODALITIES:
+            # ModuleDict indexing is typed as returning a bare Module, so the
+            # branch's own attributes need the narrowing to be explicit.
+            branch = self.encoders[modality]
+            assert isinstance(branch, ModalityBranch)
+            assert branch.regressor is not None
+            parts.append(branch.regressor(sessions[modality]).squeeze(-1) * weights[modality])
         return torch.stack(parts, dim=0).sum(dim=0)

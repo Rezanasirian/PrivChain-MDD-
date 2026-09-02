@@ -46,8 +46,17 @@ parameters — which matters at this sample size and again under DP noise.
 
 ### D2 — Every parameter lands in a modality group, and none in `shared`
 
-Branch, expert head and gate scorer all live under `encoders.<modality>.`, so
-`map_parameter_groups` and `param_group` classify them correctly with no new rule.
+Branch, expert head, gate scorer **and the optional PHQ-8 head** all live under
+`encoders.<modality>.`, so `map_parameter_groups` and `param_group` classify them correctly
+with no new rule.
+
+The PHQ head is the one that nearly went wrong: written as a top-level
+`regressors.<modality>` it reads only one modality's session vector but does not match the
+prefix, so it was filed under `shared` — averaged across clients that never held the
+modality and charged to the wrong epsilon. That is precisely the bug ADR-0027 found in
+`fusion.gates.<modality>`, reappearing in a new model within one commit of being written
+down, which is why the grouping test is parametrized over `use_phq_regression` rather than
+run once with it off.
 
 A consequence worth stating rather than discovering later: a pure late-fusion MoE has **no
 shared parameters at all**. Under capability-aware aggregation each modality's weights are

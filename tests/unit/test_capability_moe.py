@@ -175,14 +175,23 @@ def test_gate_bias_rejects_an_unknown_modality() -> None:
 # ── Contracts the rest of the system relies on ───────────────────────────────
 
 
-def test_every_parameter_is_owned_by_a_modality() -> None:
-    """Late fusion has no cross-modal weights, so nothing should land in `shared`."""
-    model = _model()
+@pytest.mark.parametrize("regression", [False, True])
+def test_every_parameter_is_owned_by_a_modality(regression: bool) -> None:
+    """Late fusion has no cross-modal weights, so nothing should land in `shared`.
+
+    Parametrized over the PHQ head because the committed config enables it, and
+    a head placed beside the model rather than inside its branch would be filed
+    under `shared` — averaged across clients that never held the modality and
+    charged to the wrong epsilon. ADR-0027 found exactly that bug in
+    `fusion.gates.<modality>`; the test exists so it cannot come back.
+    """
+    model = _model(use_phq_regression=regression)
 
     groups = {param_group(name) for name, _ in model.named_parameters()}
+    stray = [n for n, _ in model.named_parameters() if param_group(n) == SHARED_GROUP]
 
+    assert stray == []
     assert groups == set(MODALITIES)
-    assert SHARED_GROUP not in groups
 
 
 def test_masked_branch_receives_no_gradient() -> None:
