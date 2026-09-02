@@ -77,6 +77,22 @@ model:
     positional: true         # let the pooler use *where* in the interview a segment sat
     dropout: 0.1
 
+  # ── Capability-conditioned logit MoE (ADR-0028) ─────────────────────────────
+  # Only read when model.architecture is capability_moe.
+  moe:
+    # Where the mixture starts, NOT a hyperparameter to sweep. The ADR-0027
+    # ladder measured segment text alone at 0.774 ROC-AUC against 0.638 with
+    # session audio/video beside it, so the gate begins at roughly
+    # 0.79 text / 0.11 audio / 0.11 video instead of a uniform prior the
+    # optimizer would have to unlearn on 107 participants. Derived from the
+    # train split only; recorded in every run manifest as `gate_bias_swept:
+    # false`. Sweeping it would turn a recorded prior into a selected one.
+    gate_bias:
+      audio: 0.0
+      video: 0.0
+      text: 2.0
+    gate_hidden_dim: 32
+
   use_phq_regression: true   # auxiliary PHQ-8 score regression alongside the binary head
   phq_loss_weight: 0.1       # weight of the (normalized) PHQ-8 regression term
   # mse | huber. Huber resists the single participant scoring 24 dominating the

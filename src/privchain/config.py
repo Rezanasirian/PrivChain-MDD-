@@ -166,6 +166,30 @@ class TemporalConfig(_Strict):
     dropout: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
+class MoEConfig(_Strict):
+    """Capability-conditioned logit mixture-of-experts settings (ADR-0028)."""
+
+    # Initial bias on each modality's gate score. Not a swept hyperparameter: it
+    # encodes what the inner-CV ladder already measured (segment text alone
+    # 0.774 ROC-AUC against 0.638 with session audio/video alongside it), so
+    # optimization starts from that prior instead of rediscovering it. Recorded
+    # in the run manifest; never tuned.
+    gate_bias: dict[str, float] = Field(
+        default_factory=lambda: {"audio": 0.0, "video": 0.0, "text": 2.0}
+    )
+    # Width of the gate scorer's hidden layer.
+    gate_hidden_dim: int = Field(default=32, gt=0)
+
+    @field_validator("gate_bias")
+    @classmethod
+    def _known_modalities_only(cls, value: dict[str, float]) -> dict[str, float]:
+        """Reject a bias for an unknown modality, which would be silently dropped."""
+        unknown = sorted(set(value) - set(CAPABILITY_MODALITIES))
+        if unknown:
+            raise ValueError(f"moe.gate_bias has unknown modalities {unknown}")
+        return value
+
+
 class ModelConfig(_Strict):
     """Multimodal baseline-model schema (Phase 1)."""
 
@@ -174,7 +198,13 @@ class ModelConfig(_Strict):
     # segment_gated: the interview is cut into aligned segments, the modalities
     #        are fused *per segment*, and the segment sequence is pooled by
     #        attention (ADR-0027). Requires `daic_woz.segments.enabled`.
-    architecture: Literal["encode_then_fuse", "segment_gated"] = "encode_then_fuse"
+    # capability_moe: each modality produces its OWN logit, and a masked softmax
+    #        over the present modalities mixes those logits (ADR-0028). An absent
+    #        modality contributes exactly zero rather than a zeroed embedding
+    #        that still shifts a shared projection.
+    architecture: Literal["encode_then_fuse", "segment_gated", "capability_moe"] = (
+        "encode_then_fuse"
+    )
     encoder: EncoderConfig
     # Partial per-modality overrides layered onto `encoder`, e.g. giving text a
     # different encoder type. Text arrives as a document-level embedding (a
@@ -184,6 +214,7 @@ class ModelConfig(_Strict):
     fusion: FusionConfig
     head: HeadConfig
     temporal: TemporalConfig = Field(default_factory=TemporalConfig)
+    moe: MoEConfig = Field(default_factory=MoEConfig)
     use_phq_regression: bool = True
     phq_loss_weight: float = Field(default=0.1, ge=0.0)
     # PHQ-8 regression loss. Huber is the more defensible choice on 107 sessions:

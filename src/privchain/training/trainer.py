@@ -9,6 +9,7 @@ loss/eval logic is shared with the federated clients via
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +113,7 @@ class CentralizedTrainer:
         run_dir: Path,
         selection_metric: str = "roc_auc",
         early_stopping_patience: int | None = None,
+        on_epoch_start: Callable[[int], None] | None = None,
     ) -> list[dict[str, Any]]:
         """Train for up to ``epochs`` epochs, logging metrics and the best checkpoint.
 
@@ -127,6 +129,11 @@ class CentralizedTrainer:
                 checkpoint and to drive early stopping (``"roc_auc"``/``"f1"``).
             early_stopping_patience: Stop after this many consecutive epochs
                 without improvement; ``None`` trains the full ``epochs``.
+            on_epoch_start: Called with the zero-based epoch before each training
+                pass. The capability schedule (ADR-0028) uses it to change which
+                modalities each participant is seen under; the epoch cannot be
+                counted inside the dataset because DataLoader workers each hold
+                their own copy.
 
         Returns:
             Per-epoch history records.
@@ -137,6 +144,8 @@ class CentralizedTrainer:
         epochs_without_improvement = 0
 
         for epoch in range(1, epochs + 1):
+            if on_epoch_start is not None:
+                on_epoch_start(epoch - 1)
             train_loss = self.train_epoch(train_loader)
             val_metrics = self.evaluate(val_loader)
 

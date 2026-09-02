@@ -191,6 +191,53 @@ def build_client_partitions(
     ]
 
 
+def apply_capability_mask(sample: Sample, capability: dict[str, int]) -> Sample:
+    """Return a copy of ``sample`` with the modalities it does not hold blanked.
+
+    Shared by the fixed-capability client view (:class:`ModalityMaskedDataset`)
+    and the scheduled training view
+    (:class:`~privchain.training.capability_schedule.ScheduledCapabilityDataset`).
+    Two implementations of "blank a modality" is one too many: they would drift,
+    and the centralized number would stop describing the federated one.
+
+    How an absent modality is blanked depends on what the sample is:
+
+    * **Segment-aligned samples** (they carry ``quality``) keep their length.
+      Segment ``k`` must mean the same stretch of interview in every branch, so
+      collapsing one modality to a single row would break the alignment the
+      architecture rests on. The quality vectors are zeroed too, which sets
+      ``valid = 0`` at every segment.
+    * **Frame-level samples** collapse to a single zero frame. Nothing aligns
+      them, and keeping 3000 zero frames per absent modality would make every
+      capability-restricted client pay to encode padding.
+
+    Args:
+        sample: The unmasked sample.
+        capability: ``{modality: 0/1}`` availability flags.
+
+    Returns:
+        A new sample; the input is never mutated.
+    """
+    masked: Sample = dict(sample)  # type: ignore[assignment]
+    masked["presence"] = dict(sample["presence"])
+    aligned = "quality" in sample
+    if aligned:
+        masked["quality"] = dict(sample["quality"])
+    for modality in CAPABILITY_MODALITIES:
+        if capability[modality] == 0:
+            features = sample[modality]  # type: ignore[literal-required]
+            blank = (
+                torch.zeros_like(features)
+                if aligned
+                else torch.zeros((1, features.shape[1]), dtype=features.dtype)
+            )
+            masked[modality] = blank  # type: ignore[literal-required]
+            masked["presence"][modality] = torch.tensor(0, dtype=torch.long)
+            if aligned:
+                masked["quality"][modality] = torch.zeros_like(sample["quality"][modality])
+    return masked
+
+
 class ModalityMaskedDataset(Dataset[Sample]):
     """View of a base dataset with absent modalities zeroed per a capability.
 
@@ -231,22 +278,4 @@ class ModalityMaskedDataset(Dataset[Sample]):
         Returns:
             The capability-masked :class:`Sample`.
         """
-        sample = self._base[self._indices[index]]
-        masked: Sample = dict(sample)  # type: ignore[assignment]
-        masked["presence"] = dict(sample["presence"])
-        aligned = "quality" in sample
-        if aligned:
-            masked["quality"] = dict(sample["quality"])
-        for modality in CAPABILITY_MODALITIES:
-            if self._capability[modality] == 0:
-                features = sample[modality]  # type: ignore[literal-required]
-                blank = (
-                    torch.zeros_like(features)
-                    if aligned
-                    else torch.zeros((1, features.shape[1]), dtype=features.dtype)
-                )
-                masked[modality] = blank  # type: ignore[literal-required]
-                masked["presence"][modality] = torch.tensor(0, dtype=torch.long)
-                if aligned:
-                    masked["quality"][modality] = torch.zeros_like(sample["quality"][modality])
-        return masked
+        return apply_capability_mask(self._base[self._indices[index]], self._capability)

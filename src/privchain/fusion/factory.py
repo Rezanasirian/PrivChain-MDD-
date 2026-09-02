@@ -12,6 +12,7 @@ from __future__ import annotations
 from privchain.config import ModelConfig
 from privchain.fusion.base import DepressionModelBase
 from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.moe_model import CapabilityLogitMoE
 from privchain.fusion.segment_model import SegmentGatedNetwork
 
 
@@ -39,9 +40,11 @@ def build_depression_model(
         return MultimodalDepressionModel(input_dims, config)
     if config.architecture == "segment_gated":
         return SegmentGatedNetwork(input_dims, config, quality_dims)
+    if config.architecture == "capability_moe":
+        return CapabilityLogitMoE(input_dims, config, quality_dims)
     raise ValueError(
         f"unknown model architecture {config.architecture!r}; "
-        "expected encode_then_fuse or segment_gated"
+        "expected encode_then_fuse, segment_gated or capability_moe"
     )
 
 
