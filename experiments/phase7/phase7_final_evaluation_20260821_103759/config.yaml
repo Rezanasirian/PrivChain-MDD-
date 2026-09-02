@@ -1,0 +1,209 @@
+baseline:
+  seed: 42
+  data:
+    num_sessions: 32
+    root: data/mock
+    phq8_max: 24
+    depression_cutoff: 10
+    audio:
+      min_frames: 80
+      max_frames: 200
+      n_mels: 40
+    video:
+      min_frames: 40
+      max_frames: 100
+      n_features: 49
+    text:
+      embed_dim: 64
+      min_tokens: 20
+      max_tokens: 60
+  model:
+    encoder:
+      type: stats
+      hidden_dim: 128
+      out_dim: 128
+      bidirectional: true
+      dropout: 0.3
+    encoder_overrides:
+      text:
+        type: mean
+    fusion:
+      type: concat
+      hidden_dim: 128
+      dropout: 0.1
+    head:
+      hidden_dim: 64
+      dropout: 0.1
+    use_phq_regression: true
+    phq_loss_weight: 0.1
+  train:
+    batch_size: 32
+    epochs: 200
+    learning_rate: 0.0003
+    weight_decay: 0.0001
+    val_fraction: 0.25
+    num_workers: 0
+    output_dir: experiments
+    run_name: phase1_centralized_baseline
+    class_weighting: true
+    selection_metric: f1
+    early_stopping_patience: 40
+    device: auto
+    selection_fraction: 0.2
+    seeds:
+    - 42
+    - 7
+    - 2024
+federated:
+  seed: 42
+  federation:
+    num_clients: 5
+    num_rounds: 120
+    clients_per_round: 5
+    local_epochs: 1
+    modality_patterns:
+    - name: full
+      capability:
+      - 1
+      - 1
+      - 1
+      fraction: 0.4
+    - name: audio_text
+      capability:
+      - 1
+      - 0
+      - 1
+      fraction: 0.3
+    - name: audio_only
+      capability:
+      - 1
+      - 0
+      - 0
+      fraction: 0.2
+    - name: text_only
+      capability:
+      - 0
+      - 0
+      - 1
+      fraction: 0.1
+    partition:
+      mode: iid
+      dirichlet_alpha: 0.5
+    early_stopping_patience: 40
+  aggregation:
+    strategy: capability_aware
+    reputation_weighting: true
+    federated_distillation: true
+    byzantine_filter: false
+    byzantine_z: 2.5
+    reputation:
+      volume_weight: 0.5
+      ema_decay: 0.8
+      min_reputation: 0.05
+    distillation:
+      weight: 0.5
+      temperature: 2.0
+      apply_to: missing_modality
+      mode: anchor
+      anchor_batch_size: 16
+      anchor_sequence_length: 8
+      anchor_optimization_steps: 20
+      anchor_learning_rate: 0.05
+      anchor_l2_weight: 0.0001
+      anchor_diversity_weight: 1.0
+      student_steps: 1
+privacy:
+  delta: 1.0e-05
+  accountant: rdp
+  max_grad_norm: 0.1
+  allocation:
+    mode: inverse_risk
+    total_epsilon: 14.0
+    risk_sharpness: 1.0
+    total_participant_epsilon: 8.0
+  per_modality:
+    audio:
+      epsilon: 2.0
+      reidentification_risk: 1.0
+    video:
+      epsilon: 4.0
+      reidentification_risk: 0.97
+    text:
+      epsilon: 8.0
+      reidentification_risk: 0.29
+  sweep:
+    target_epsilons:
+    - 0.5
+    - 1.0
+    - 2.0
+    - 4.0
+    - 8.0
+    - 16.0
+    epochs: 60
+evaluation:
+  k_folds: 10
+  held_out_fraction: 0.2
+  epochs: 200
+  dp_epochs: 60
+  rounds: null
+  latency_batch_sizes:
+  - 1
+  - 2
+  - 4
+  - 8
+  - 16
+  latency_repeats: 20
+daic_woz:
+  seed: 42
+  daic_woz:
+    root: data/daic_woz
+    phq8_max: 24
+    participant_dir_template: '{pid}_P'
+    feature_cache_dir: _feature_cache
+    splits:
+      train: train_split_Depression_AVEC2017.csv
+      dev: dev_split_Depression_AVEC2017.csv
+      test: full_test_split.csv
+    label_columns:
+      participant_id: Participant_ID
+      phq_binary: PHQ8_Binary
+      phq_score: PHQ8_Score
+    split_label_columns:
+      test:
+        participant_id: Participant_ID
+        phq_binary: PHQ_Binary
+        phq_score: PHQ_Score
+    exclude_participants:
+    - 440
+    audio:
+      file_template: '{pid}_COVAREP.csv'
+      has_header: false
+      delimiter: ','
+      max_frames: 3000
+      frame_stride: 30
+      normalization: session
+    video:
+      file_template: '{pid}_CLNF_AUs.txt'
+      has_header: true
+      delimiter: ','
+      drop_columns:
+      - frame
+      - timestamp
+      - confidence
+      - success
+      max_frames: 3000
+      frame_stride: 10
+      normalization: session
+    text:
+      file_template: '{pid}_TRANSCRIPT.csv'
+      delimiter: "\t"
+      speaker_column: speaker
+      value_column: value
+      participant_speaker: Participant
+      vectorizer: transformer
+      dim: 512
+      transformer:
+        model_name: sentence-transformers/all-mpnet-base-v2
+        max_length: 384
+        batch_size: 16
+        device: auto

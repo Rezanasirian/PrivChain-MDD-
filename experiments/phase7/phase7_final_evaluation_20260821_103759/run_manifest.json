@@ -1,0 +1,289 @@
+{
+  "config": {
+    "baseline": {
+      "data": {
+        "audio": {
+          "max_frames": 200,
+          "min_frames": 80,
+          "n_mels": 40
+        },
+        "depression_cutoff": 10,
+        "num_sessions": 32,
+        "phq8_max": 24,
+        "root": "data/mock",
+        "text": {
+          "embed_dim": 64,
+          "max_tokens": 60,
+          "min_tokens": 20
+        },
+        "video": {
+          "max_frames": 100,
+          "min_frames": 40,
+          "n_features": 49
+        }
+      },
+      "model": {
+        "encoder": {
+          "bidirectional": true,
+          "dropout": 0.3,
+          "hidden_dim": 128,
+          "out_dim": 128,
+          "type": "stats"
+        },
+        "encoder_overrides": {
+          "text": {
+            "type": "mean"
+          }
+        },
+        "fusion": {
+          "dropout": 0.1,
+          "hidden_dim": 128,
+          "type": "concat"
+        },
+        "head": {
+          "dropout": 0.1,
+          "hidden_dim": 64
+        },
+        "phq_loss_weight": 0.1,
+        "use_phq_regression": true
+      },
+      "seed": 42,
+      "train": {
+        "batch_size": 32,
+        "class_weighting": true,
+        "device": "auto",
+        "early_stopping_patience": 40,
+        "epochs": 200,
+        "learning_rate": 0.0003,
+        "num_workers": 0,
+        "output_dir": "experiments",
+        "run_name": "phase1_centralized_baseline",
+        "seeds": [
+          42,
+          7,
+          2024
+        ],
+        "selection_fraction": 0.2,
+        "selection_metric": "f1",
+        "val_fraction": 0.25,
+        "weight_decay": 0.0001
+      }
+    },
+    "daic_woz": {
+      "daic_woz": {
+        "audio": {
+          "delimiter": ",",
+          "file_template": "{pid}_COVAREP.csv",
+          "frame_stride": 30,
+          "has_header": false,
+          "max_frames": 3000,
+          "normalization": "session"
+        },
+        "exclude_participants": [
+          440
+        ],
+        "feature_cache_dir": "_feature_cache",
+        "label_columns": {
+          "participant_id": "Participant_ID",
+          "phq_binary": "PHQ8_Binary",
+          "phq_score": "PHQ8_Score"
+        },
+        "participant_dir_template": "{pid}_P",
+        "phq8_max": 24,
+        "root": "data/daic_woz",
+        "split_label_columns": {
+          "test": {
+            "participant_id": "Participant_ID",
+            "phq_binary": "PHQ_Binary",
+            "phq_score": "PHQ_Score"
+          }
+        },
+        "splits": {
+          "dev": "dev_split_Depression_AVEC2017.csv",
+          "test": "full_test_split.csv",
+          "train": "train_split_Depression_AVEC2017.csv"
+        },
+        "text": {
+          "delimiter": "\t",
+          "dim": 512,
+          "file_template": "{pid}_TRANSCRIPT.csv",
+          "participant_speaker": "Participant",
+          "speaker_column": "speaker",
+          "transformer": {
+            "batch_size": 16,
+            "device": "auto",
+            "max_length": 384,
+            "model_name": "sentence-transformers/all-mpnet-base-v2"
+          },
+          "value_column": "value",
+          "vectorizer": "transformer"
+        },
+        "video": {
+          "delimiter": ",",
+          "drop_columns": [
+            "frame",
+            "timestamp",
+            "confidence",
+            "success"
+          ],
+          "file_template": "{pid}_CLNF_AUs.txt",
+          "frame_stride": 10,
+          "has_header": true,
+          "max_frames": 3000,
+          "normalization": "session"
+        }
+      },
+      "seed": 42
+    },
+    "evaluation": {
+      "dp_epochs": 60,
+      "epochs": 200,
+      "held_out_fraction": 0.2,
+      "k_folds": 10,
+      "latency_batch_sizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "latency_repeats": 20,
+      "rounds": null
+    },
+    "federated": {
+      "aggregation": {
+        "byzantine_filter": false,
+        "byzantine_z": 2.5,
+        "distillation": {
+          "anchor_batch_size": 16,
+          "anchor_diversity_weight": 1.0,
+          "anchor_l2_weight": 0.0001,
+          "anchor_learning_rate": 0.05,
+          "anchor_optimization_steps": 20,
+          "anchor_sequence_length": 8,
+          "apply_to": "missing_modality",
+          "mode": "anchor",
+          "student_steps": 1,
+          "temperature": 2.0,
+          "weight": 0.5
+        },
+        "federated_distillation": true,
+        "reputation": {
+          "ema_decay": 0.8,
+          "min_reputation": 0.05,
+          "volume_weight": 0.5
+        },
+        "reputation_weighting": true,
+        "strategy": "capability_aware"
+      },
+      "federation": {
+        "clients_per_round": 5,
+        "early_stopping_patience": 40,
+        "local_epochs": 1,
+        "modality_patterns": [
+          {
+            "capability": [
+              1,
+              1,
+              1
+            ],
+            "fraction": 0.4,
+            "name": "full"
+          },
+          {
+            "capability": [
+              1,
+              0,
+              1
+            ],
+            "fraction": 0.3,
+            "name": "audio_text"
+          },
+          {
+            "capability": [
+              1,
+              0,
+              0
+            ],
+            "fraction": 0.2,
+            "name": "audio_only"
+          },
+          {
+            "capability": [
+              0,
+              0,
+              1
+            ],
+            "fraction": 0.1,
+            "name": "text_only"
+          }
+        ],
+        "num_clients": 5,
+        "num_rounds": 120,
+        "partition": {
+          "dirichlet_alpha": 0.5,
+          "mode": "iid"
+        }
+      },
+      "seed": 42
+    },
+    "privacy": {
+      "accountant": "rdp",
+      "allocation": {
+        "mode": "inverse_risk",
+        "risk_sharpness": 1.0,
+        "total_epsilon": 14.0,
+        "total_participant_epsilon": 8.0
+      },
+      "delta": 1e-05,
+      "max_grad_norm": 0.1,
+      "per_modality": {
+        "audio": {
+          "epsilon": 2.0,
+          "reidentification_risk": 1.0
+        },
+        "text": {
+          "epsilon": 8.0,
+          "reidentification_risk": 0.29
+        },
+        "video": {
+          "epsilon": 4.0,
+          "reidentification_risk": 0.97
+        }
+      },
+      "sweep": {
+        "epochs": 60,
+        "target_epsilons": [
+          0.5,
+          1.0,
+          2.0,
+          4.0,
+          8.0,
+          16.0
+        ]
+      }
+    }
+  },
+  "created_at_utc": "2026-08-21T10:37:59.102487+00:00",
+  "dataset": "daic_woz",
+  "dataset_size": 141,
+  "dependencies": {
+    "numpy": "2.5.2",
+    "opacus": "1.6.0",
+    "pydantic": "2.13.4",
+    "scikit-learn": "1.9.0",
+    "torch": "2.11.0+cu128"
+  },
+  "git": {
+    "commit": "a64a9e56d1fee36032f9f123b1e1436b630c5800",
+    "dirty": true
+  },
+  "official_test_previously_observed_in_invalid_run": true,
+  "platform": {
+    "cuda": "12.8",
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "python": "3.12.13",
+    "system": "Linux-5.15.0-164-generic-x86_64-with-glibc2.39"
+  },
+  "protocol": "pre-registered-no-feedback-campaign"
+}
