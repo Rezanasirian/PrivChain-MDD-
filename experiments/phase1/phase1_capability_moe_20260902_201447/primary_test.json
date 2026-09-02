@@ -1,0 +1,69 @@
+{
+  "primary_capability": "audio_only",
+  "contrast": "capability_moe - baseline_gated_fusion",
+  "delta": 0.012121212121212088,
+  "ci_low": -0.029391283236220003,
+  "ci_high": 0.05170726007478186,
+  "significant": 0.0,
+  "secondary_min_capability": {
+    "delta": -0.06017316017316021,
+    "ci_low": -0.19044791666666672,
+    "ci_high": 0.07758840231836542,
+    "argmin_distribution": {
+      "full": 0.042,
+      "audio_text": 0.0265,
+      "audio_only": 0.0495,
+      "text_only": 0.882
+    }
+  },
+  "per_capability": {
+    "baseline_gated_fusion": {
+      "full": {
+        "roc_auc": 0.703030303030303,
+        "pr_auc": 0.5292596484203581
+      },
+      "audio_text": {
+        "roc_auc": 0.683982683982684,
+        "pr_auc": 0.5009146842173406
+      },
+      "audio_only": {
+        "roc_auc": 0.6528138528138528,
+        "pr_auc": 0.4311937601922437
+      },
+      "text_only": {
+        "roc_auc": 0.6220779220779221,
+        "pr_auc": 0.4295644841181314
+      }
+    },
+    "capability_moe": {
+      "full": {
+        "roc_auc": 0.6744588744588744,
+        "pr_auc": 0.47801402304775026
+      },
+      "audio_text": {
+        "roc_auc": 0.6666666666666666,
+        "pr_auc": 0.4937370940922335
+      },
+      "audio_only": {
+        "roc_auc": 0.6649350649350649,
+        "pr_auc": 0.46454682479566023
+      },
+      "text_only": {
+        "roc_auc": 0.5619047619047619,
+        "pr_auc": 0.42011566723457927
+      }
+    }
+  },
+  "gate_weights_full_modality": {
+    "baseline_gated_fusion": {
+      "audio": 0.5745317474377918,
+      "video": 0.2040439049975588,
+      "text": 0.2214243481187674
+    },
+    "capability_moe": {
+      "audio": 0.3950739276268846,
+      "video": 0.20729738786695645,
+      "text": 0.3976286844078258
+    }
+  }
+}

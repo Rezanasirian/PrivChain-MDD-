@@ -1,0 +1,242 @@
+{
+  "arms": {
+    "baseline_gated_fusion": "segment_gated",
+    "capability_moe": "capability_moe"
+  },
+  "capability_pattern_source": "configs/federated.yaml",
+  "capability_patterns": [
+    {
+      "capability": [
+        1,
+        1,
+        1
+      ],
+      "fraction": 0.4,
+      "name": "full"
+    },
+    {
+      "capability": [
+        1,
+        0,
+        1
+      ],
+      "fraction": 0.3,
+      "name": "audio_text"
+    },
+    {
+      "capability": [
+        1,
+        0,
+        0
+      ],
+      "fraction": 0.2,
+      "name": "audio_only"
+    },
+    {
+      "capability": [
+        0,
+        0,
+        1
+      ],
+      "fraction": 0.1,
+      "name": "text_only"
+    }
+  ],
+  "config": {
+    "baseline": {
+      "data": {
+        "audio": {
+          "max_frames": 200,
+          "min_frames": 80,
+          "n_mels": 40
+        },
+        "depression_cutoff": 10,
+        "num_sessions": 32,
+        "phq8_max": 24,
+        "root": "data/mock",
+        "text": {
+          "embed_dim": 64,
+          "max_tokens": 60,
+          "min_tokens": 20
+        },
+        "video": {
+          "max_frames": 100,
+          "min_frames": 40,
+          "n_features": 49
+        }
+      },
+      "model": {
+        "architecture": "encode_then_fuse",
+        "encoder": {
+          "attention_dim": 64,
+          "bidirectional": true,
+          "dropout": 0.3,
+          "hidden_dim": 128,
+          "out_dim": 128,
+          "positional": false,
+          "type": "stats"
+        },
+        "encoder_overrides": {
+          "text": {
+            "type": "mean"
+          }
+        },
+        "fusion": {
+          "dropout": 0.1,
+          "hidden_dim": 128,
+          "type": "concat"
+        },
+        "head": {
+          "dropout": 0.1,
+          "hidden_dim": 64
+        },
+        "huber_delta": 0.1,
+        "moe": {
+          "gate_bias": {
+            "audio": 0.0,
+            "text": 2.0,
+            "video": 0.0
+          },
+          "gate_hidden_dim": 32
+        },
+        "phq_loss": "mse",
+        "phq_loss_weight": 0.1,
+        "temporal": {
+          "attention_dim": 64,
+          "dropout": 0.1,
+          "positional": true
+        },
+        "use_phq_regression": true
+      },
+      "seed": 42,
+      "train": {
+        "batch_size": 32,
+        "class_weighting": true,
+        "device": "auto",
+        "early_stopping_patience": 40,
+        "epochs": 200,
+        "learning_rate": 0.0003,
+        "modality_dropout": {
+          "enabled": false,
+          "patterns": [
+            {
+              "capability": [
+                0,
+                0,
+                1
+              ],
+              "fraction": 0.3,
+              "name": "text_only"
+            },
+            {
+              "capability": [
+                1,
+                0,
+                1
+              ],
+              "fraction": 0.2,
+              "name": "audio_text"
+            },
+            {
+              "capability": [
+                0,
+                1,
+                1
+              ],
+              "fraction": 0.2,
+              "name": "video_text"
+            },
+            {
+              "capability": [
+                1,
+                1,
+                1
+              ],
+              "fraction": 0.2,
+              "name": "full"
+            },
+            {
+              "capability": [
+                1,
+                0,
+                0
+              ],
+              "fraction": 0.1,
+              "name": "audio_only"
+            }
+          ]
+        },
+        "num_workers": 0,
+        "output_dir": "experiments",
+        "run_name": "phase1_centralized_baseline",
+        "seeds": [
+          42,
+          7,
+          2024
+        ],
+        "selection_fraction": 0.2,
+        "selection_metric": "f1",
+        "val_fraction": 0.25,
+        "weight_decay": 0.0001
+      }
+    }
+  },
+  "created_at_utc": "2026-09-02T20:20:52.954390+00:00",
+  "dataset": "daic_woz",
+  "dependencies": {
+    "numpy": "2.5.2",
+    "opacus": "1.6.0",
+    "pydantic": "2.13.5",
+    "scikit-learn": "1.9.0",
+    "torch": "2.11.0+cu128"
+  },
+  "gate_bias_initialization": {
+    "audio": 0.0,
+    "text": 2.0,
+    "video": 0.0
+  },
+  "gate_bias_source": "pre-existing inner-CV result before MoE implementation",
+  "gate_bias_swept": false,
+  "git": {
+    "commit": "d152851891c0ff3a87df9d31b5245a0c347108e8",
+    "dirty": true
+  },
+  "inner_folds": 5,
+  "num_segments": 8,
+  "official_dev_constructed": true,
+  "official_dev_scored": false,
+  "official_dev_selected_on": false,
+  "official_test_read": false,
+  "platform": {
+    "cuda": "12.8",
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "python": "3.12.14",
+    "system": "Linux-6.8.0-134-generic-x86_64-with-glibc2.39"
+  },
+  "pool_size": 107,
+  "primary_capability": "audio_only",
+  "primary_capability_fixed_before_run": true,
+  "protocol": "nested-inner-cv-train-split-only",
+  "seeds": [
+    42,
+    7,
+    2024,
+    101,
+    202,
+    303,
+    404,
+    505,
+    606,
+    707,
+    808,
+    909,
+    1111,
+    1212,
+    1313,
+    1414,
+    1515,
+    1616,
+    1717,
+    1818
+  ]
+}
