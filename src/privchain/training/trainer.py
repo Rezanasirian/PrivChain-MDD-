@@ -126,7 +126,11 @@ class CentralizedTrainer:
             epochs: Maximum number of epochs.
             run_dir: Experiment run directory for logs/checkpoints.
             selection_metric: Validation metric used to select the best
-                checkpoint and to drive early stopping (``"roc_auc"``/``"f1"``).
+                checkpoint and to drive early stopping (``"roc_auc"``, ``"f1"``
+                or ``"loss"``). ``"loss"`` is minimized; on a ~17-sample
+                selection split F1 moves ~0.06 on one flipped prediction, while
+                the loss is continuous and matches what training optimizes
+                (ADR-0028).
             early_stopping_patience: Stop after this many consecutive epochs
                 without improvement; ``None`` trains the full ``epochs``.
             on_epoch_start: Called with the zero-based epoch before each training
@@ -157,6 +161,10 @@ class CentralizedTrainer:
             selector = val_metrics[selection_metric]
             if np.isnan(selector):
                 selector = val_metrics["f1"]
+            # Loss is the one metric where smaller is better; negating keeps a
+            # single comparison instead of a second branch that could drift.
+            if selection_metric == "loss":
+                selector = -selector
             if selector > best_score:
                 best_score = selector
                 epochs_without_improvement = 0

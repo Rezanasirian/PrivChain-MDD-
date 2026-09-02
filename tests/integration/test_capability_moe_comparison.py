@@ -134,6 +134,79 @@ def test_manifest_records_what_the_claim_rests_on(workspace: tuple[Path, Path, P
     assert manifest["official_test_read"] is False
 
 
+def test_the_run_uses_the_single_loss_the_adr_specifies(
+    workspace: tuple[Path, Path, Path],
+) -> None:
+    """The committed config enables PHQ regression; this comparison must not.
+
+    Left on, the auxiliary head takes a different route in each arm — one shared
+    regressor after fusion in the baseline, three per-modality regressors mixed
+    by the gate in the MoE — so the arms would differ in more than the fusion
+    under test.
+    """
+    run_dir = _run(workspace)
+
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+
+    assert manifest["phq_loss_weight"] == 0.0
+    assert manifest["use_phq_regression"] is False
+
+
+def test_selection_is_on_a_set_that_does_not_move(workspace: tuple[Path, Path, Path]) -> None:
+    """A rotating selection split compares two epochs on different data."""
+    run_dir = _run(workspace)
+
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+
+    assert manifest["selection_metric"] == "loss"
+    assert "every capability" in manifest["selection_set"]
+    assert "training only" in manifest["selection_schedule"]
+
+
+def test_the_bootstrap_input_is_written_out(workspace: tuple[Path, Path, Path]) -> None:
+    """A reported CI that cannot be recomputed is a number, not a result."""
+    run_dir = _run(workspace)
+
+    rows = [
+        json.loads(line) for line in (run_dir / "oof_predictions.jsonl").read_text().splitlines()
+    ]
+
+    assert rows, "no out-of-fold predictions were written"
+    assert {"arm", "seed", "fold", "capability", "index", "label", "score"} <= set(rows[0])
+    assert {row["arm"] for row in rows} == ARMS
+    assert {row["capability"] for row in rows} == CAPABILITIES
+    # Every participant is scored exactly once per arm/seed/capability: the folds
+    # partition the pool, so a duplicate would mean a fold overlapped.
+    for arm in ARMS:
+        for capability in CAPABILITIES:
+            indices = [
+                row["index"]
+                for row in rows
+                if row["arm"] == arm and row["capability"] == capability
+            ]
+            assert len(indices) == len(set(indices))
+    # Positional indices only; nothing that could name a participant.
+    assert not any("pid" in row or "participant_id" in row for row in rows)
+
+
+def test_manifest_records_how_the_interval_was_computed(
+    workspace: tuple[Path, Path, Path],
+) -> None:
+    run_dir = _run(workspace)
+
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+
+    assert manifest["bootstrap_unit"] == "participant"
+    assert manifest["confidence_level"] == 0.95
+    assert manifest["bootstrap_resamples"] == 50
+    assert "bootstrap_seed" in manifest
+    assert "paired" in manifest["bootstrap_method"]
+    assert "averaged across seeds" in manifest["seed_aggregation"]
+    # `dirty` is always true once the run writes its own artifacts; the flag that
+    # answers "was the code modified" is the one that excludes experiments/.
+    assert "dirty_source" in manifest["git"]
+
+
 def test_gate_weights_are_reported_for_both_arms(workspace: tuple[Path, Path, Path]) -> None:
     """An MoE that learned to ignore audio should be visible, not inferred."""
     run_dir = _run(workspace)

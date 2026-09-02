@@ -68,6 +68,11 @@ from privchain.training.trainer import CentralizedTrainer
 #: it cannot become whichever capability the run happened to favour.
 PRIMARY_CAPABILITY = "audio_only"
 
+#: Checkpoint/early-stopping criterion: mean BCE over the fixed selection set,
+#: which holds every selection participant under every capability. Recorded in
+#: the manifest because it is a protocol decision, not a tuned knob.
+SELECTION_METRIC = "loss"
+
 #: The two arms. Both are segment-aligned and both train under the same schedule;
 #: the only difference is where the modalities meet.
 ARMS: dict[str, str] = {
@@ -187,14 +192,32 @@ def _run_fold(
         selection_fraction=base.train.selection_fraction,
         seed=seed,
     )
-    # Both the fitted split and the split that picks the epoch are shown the same
-    # capability mix: selecting on full-modality performance would choose the
-    # epoch that is best for the one client type the thesis is not about.
+    # Only *training* rotates capabilities. A scheduled selection split changes
+    # composition every epoch — simulating this schedule on ~17 participants, the
+    # audio_only count swings between 1 and 6 and some epochs contain no
+    # text_only at all — so two checkpoints would be compared on different data
+    # and early stopping could pick whichever epoch drew the easier mix.
     scheduler = CapabilityScheduler(patterns, seed=seed)
     scheduled_train = ScheduledCapabilityDataset(fold_train, scheduler)
-    scheduled_selection = ScheduledCapabilityDataset(selection, scheduler)
+    # The fixed selection set: every participant under every capability, so it is
+    # identical at every epoch and covers the mix the model must serve.
+    fixed_selection: Dataset[Sample] = ConcatDataset(
+        [_MaskedView(selection, capability_of(pattern)) for pattern in patterns]
+    )
 
-    model_config = base.model.model_copy(update={"architecture": architecture})
+    # ADR-0028 D5 specifies one loss. Left to the committed config this would run
+    # with phq_loss_weight 0.1, and the auxiliary head takes a *different route*
+    # in each arm — one shared regressor after fusion in the baseline, three
+    # per-modality regressors mixed by the gate in the MoE — so the arms would
+    # differ in more than the fusion under test. Overridden here rather than in
+    # the config so the committed defaults stay what other phases use.
+    model_config = base.model.model_copy(
+        update={
+            "architecture": architecture,
+            "phq_loss_weight": 0.0,
+            "use_phq_regression": False,
+        }
+    )
     model = build_depression_model(input_dims, model_config, quality_dims)
     pos_weight = (
         positive_class_weight(_loader(scheduled_train, batch_size))
@@ -219,17 +242,20 @@ def _run_fold(
 
     def _advance(epoch: int) -> None:
         scheduled_train.set_epoch(epoch)
-        scheduled_selection.set_epoch(epoch)
 
     started = time.monotonic()
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)
         trainer.fit(
             _loader(scheduled_train, batch_size, shuffle=True),
-            _loader(scheduled_selection, batch_size),
+            _loader(fixed_selection, batch_size),
             epochs=base.train.epochs,
             run_dir=run_dir,
-            selection_metric=base.train.selection_metric,
+            # Mean BCE across the four capabilities, not F1. On ~17 selection
+            # participants F1 moves ~0.06 on a single flipped prediction, and it
+            # would reward whichever epoch happened to sit near a threshold;
+            # the loss is continuous and is what training minimizes.
+            selection_metric=SELECTION_METRIC,
             early_stopping_patience=base.train.early_stopping_patience,
             on_epoch_start=_advance,
         )
@@ -467,7 +493,11 @@ def main() -> None:
     gate_weights: dict[str, dict[str, float]] = {}
     seconds: dict[str, float] = {}
 
-    with (run_dir / "results.jsonl").open("w", encoding="utf-8") as sink:
+    oof_path = run_dir / "oof_predictions.jsonl"
+    with (
+        (run_dir / "results.jsonl").open("w", encoding="utf-8") as sink,
+        oof_path.open("w", encoding="utf-8") as oof_sink,
+    ):
         for arm, architecture in ARMS.items():
             # Averaged over seeds, as in the segment ladder: the question is what
             # the procedure does, not what one lucky initialization did.
@@ -494,6 +524,25 @@ def main() -> None:
                     timings.append(elapsed)
                     if scored.gate_weights:
                         weights_seen.append(scored.gate_weights)
+                    # The bootstrap's own input, written out so the reported CI
+                    # can be recomputed without re-running the training. Only
+                    # positional indices: the file carries no participant id.
+                    for name, fold_scores in scored.by_capability.items():
+                        for position, index in enumerate(scored.indices):
+                            oof_sink.write(
+                                json.dumps(
+                                    {
+                                        "arm": arm,
+                                        "seed": seed,
+                                        "fold": fold_i,
+                                        "capability": name,
+                                        "index": int(index),
+                                        "label": int(pool_labels[index]),
+                                        "score": round(float(fold_scores[position]), 6),
+                                    }
+                                )
+                                + "\n"
+                            )
                 assembled = _assemble_oof(fold_results, len(pool_labels), capabilities)
                 per_seed.append(assembled)
                 for name, scores in assembled.items():
@@ -510,6 +559,7 @@ def main() -> None:
                         + "\n"
                     )
                 sink.flush()
+                oof_sink.flush()
                 print(f"  done {arm} seed={seed}", flush=True)
             oof[arm] = {
                 name: np.stack([run[name] for run in per_seed]).mean(axis=0)
@@ -590,6 +640,19 @@ def main() -> None:
             "capability_pattern_source": str(args.federated_config),
             "primary_capability": PRIMARY_CAPABILITY,
             "primary_capability_fixed_before_run": True,
+            "bootstrap_resamples": args.bootstrap_resamples,
+            "bootstrap_seed": base.seed,
+            "bootstrap_method": "paired percentile bootstrap over participants",
+            "bootstrap_unit": "participant",
+            "confidence_level": 0.95,
+            "seed_aggregation": "per-participant scores averaged across seeds before bootstrap",
+            # ADR-0028 D5: one loss. Overridden in the script, so the value the
+            # run actually used is recorded rather than the config default.
+            "phq_loss_weight": 0.0,
+            "use_phq_regression": False,
+            "selection_metric": SELECTION_METRIC,
+            "selection_set": "fixed: every selection participant under every capability",
+            "selection_schedule": "training only; the selection split never rotates",
             "gate_bias_initialization": dict(base.model.moe.gate_bias),
             "gate_bias_source": "pre-existing inner-CV result before MoE implementation",
             "gate_bias_swept": False,

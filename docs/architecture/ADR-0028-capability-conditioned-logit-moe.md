@@ -100,7 +100,14 @@ worst-capability metric. Extending the capability set is future work.
 
 ### D5 — One loss, no new coefficients
 
-`BCEWithLogitsLoss` on the fused logit. `phq_loss_weight: 0.0` for these runs.
+`BCEWithLogitsLoss` on the fused logit. `phq_loss_weight: 0.0`, `use_phq_regression: false`.
+
+This is **forced by the comparison script**, not left to `configs/baseline.yaml`, which ships
+`phq_loss_weight: 0.1` for the other phases. The first run of this comparison inherited that
+default and was invalid for it: the auxiliary head takes a different route in each arm — one
+shared regressor after fusion in the baseline, three per-modality regressors mixed by the
+gate in the MoE — so the arms differed in more than the fusion under test. The manifest now
+records the values the run actually used, and an integration test asserts them.
 
 Three terms were considered and rejected:
 
@@ -149,12 +156,49 @@ estimand is not fixed. It is reported with its argmin distribution, as descripti
 Also secondary, without tests: macro capability AUC, per-capability ROC/PR-AUC, the
 full-modality guardrail, and the learned gate weights.
 
-### D8 — Evaluation is counterfactual, not partitioned
+### D8 — Only training rotates; selection is fixed, and scored on loss
+
+The capability schedule applies to the **training** split alone. A scheduled selection split
+changes composition every epoch: simulating this schedule over ~17 selection participants,
+the `audio_only` count swings between 1 and 6 and some epochs contain no `text_only` at all.
+Two checkpoints would then be compared on different data, and early stopping could pick
+whichever epoch drew the easier mix rather than the better model.
+
+The selection set is therefore **every selection participant under every capability**,
+identical at every epoch and covering the mix the model must serve.
+
+The criterion is **mean BCE over that set**, not F1. On ~17 participants a single flipped
+prediction moves F1 by roughly 0.06, so F1 would reward whichever epoch happened to sit near
+a threshold; the loss is continuous and is what training minimizes. `CentralizedTrainer`
+gained a `loss` selection metric (minimized) for this. Both the rule and the set are recorded
+in the manifest.
+
+### D9 — Evaluation is counterfactual, not partitioned
 
 Every held-out participant is scored once under **each** capability. Splitting the fold four
 ways would shrink each estimate to a quarter of the data; scoring everyone under every mask
 keeps all 107 for each capability. The four estimates are then correlated, which the shared
 participant-level bootstrap preserves rather than pretends away.
+
+## What this design can and cannot conclude
+
+The two arms differ in more than where the modalities meet. The baseline ends in a
+non-linear classifier over the fused representation; each MoE expert ends in a single linear
+head on its own session vector — a deliberate choice (D1), since a deeper head per modality
+would triple the parameters that see only one modality's data.
+
+So a null or negative result licenses:
+
+> *This* capability-conditioned MoE was not adopted.
+
+and **not**:
+
+> Late-logit fusion is worse than embedding fusion.
+
+The same caution applies to reading per-capability drops. A drop under `text_only` cannot be
+caused by the gate: with only text present the masked softmax puts weight exactly 1 on text.
+It has to come from the text branch or head differing between arms, or from the shared
+capability training changing what that branch learns.
 
 ## Consequences
 

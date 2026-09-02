@@ -38,19 +38,34 @@ def create_run_dir(output_dir: str | Path, phase: str, run_name: str) -> Path:
 
 
 def _git_state() -> dict[str, Any]:
-    """Return the current commit and dirty flag without failing outside Git."""
+    """Return the current commit and dirty flags without failing outside Git.
+
+    Two flags, because one cannot answer the question a reader has. ``dirty``
+    covers the whole tree, and it is **always true here**: the manifest is written
+    after the run directory and its artifacts already exist under
+    ``experiments/``, so a perfectly clean checkout still reports dirty and the
+    flag carries no information. ``dirty_source`` ignores ``experiments/`` and so
+    answers the question that matters — was the code that produced this run
+    modified relative to its commit.
+
+    Returns:
+        ``{"commit", "dirty", "dirty_source"}``; the values are ``None`` outside
+        a Git checkout.
+    """
     try:
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], capture_output=True, check=True, text=True
         ).stdout.strip()
-        dirty = bool(
-            subprocess.run(
-                ["git", "status", "--porcelain"], capture_output=True, check=True, text=True
-            ).stdout.strip()
-        )
+        status = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, check=True, text=True
+        ).stdout.splitlines()
     except (OSError, subprocess.CalledProcessError):
-        return {"commit": None, "dirty": None}
-    return {"commit": commit, "dirty": dirty}
+        return {"commit": None, "dirty": None, "dirty_source": None}
+    # A porcelain line is "XY path"; renames read "XY old -> new", and the new
+    # path is the one that says where the change landed.
+    paths = [line[3:].split(" -> ")[-1].strip().strip('"') for line in status if line.strip()]
+    outside = [path for path in paths if not path.startswith("experiments/")]
+    return {"commit": commit, "dirty": bool(paths), "dirty_source": bool(outside)}
 
 
 def _dependency_versions() -> dict[str, str]:
