@@ -257,7 +257,9 @@ def evaluate_model(
             :func:`~privchain.eval.metrics.best_f1_threshold`.
 
     Returns:
-        Metric mapping including ``f1``, ``roc_auc``, ``accuracy``, ``loss``.
+        Metric mapping including ``f1``, ``roc_auc``, ``accuracy``, and ``loss``
+        — the latter a mean over **samples**, so it does not depend on how the
+        loader happened to batch them.
     """
     model.eval()
     all_scores: list[NDArray[Any]] = []
@@ -267,8 +269,16 @@ def evaluate_model(
     for raw_batch in loader:
         batch = move_batch_to_device(raw_batch, device)
         outputs = model(batch)
-        total_loss += float(objective(outputs, batch).item())
-        count += 1
+        # Weight each batch by its size. The objective already returns a mean
+        # over its batch, so accumulating those means and dividing by the batch
+        # *count* gives a short trailing batch the same say as a full one. That
+        # is not a rounding detail when the loss selects a checkpoint: a 68-row
+        # evaluation set at batch size 32 splits 32/32/4, and because
+        # ConcatDataset orders the capabilities, the 4-row tail is all one
+        # capability — which then carries ~47% of the criterion instead of 25%.
+        size = int(batch["label"].shape[0])
+        total_loss += float(objective(outputs, batch).item()) * size
+        count += size
         all_scores.append(torch.sigmoid(outputs["logit"]).cpu().numpy())
         all_labels.append(batch["label"].cpu().numpy())
 

@@ -167,7 +167,13 @@ whichever epoch drew the easier mix rather than the better model.
 The selection set is therefore **every selection participant under every capability**,
 identical at every epoch and covering the mix the model must serve.
 
-The criterion is **mean BCE over that set**, not F1. On ~17 participants a single flipped
+The criterion is **mean BCE over that set — a mean over samples, not over batches**, not F1.
+That distinction is not pedantry: `evaluate_model` used to average per-batch means, so at 17
+selection participants and batch size 32 the 68 rows split 32/32/4, and because the
+capabilities are laid out in blocks the 4-row tail was entirely `text_only`, which then
+carried ~47% of the criterion instead of 25%. The first corrected run selected its
+checkpoints under that skew; the loss is now sample-weighted and pinned by regression tests
+over several batch sizes and a reversed block order. On ~17 participants a single flipped
 prediction moves F1 by roughly 0.06, so F1 would reward whichever epoch happened to sit near
 a threshold; the loss is continuous and is what training minimizes. `CentralizedTrainer`
 gained a `loss` selection metric (minimized) for this. Both the rule and the set are recorded
@@ -204,8 +210,12 @@ capability training changing what that branch learns.
 
 - The comparison is two arms and one test, not a ladder. A null result is informative here
   in a way seven inconclusive rows were not.
-- Selection uses the same capability mix as training, so the chosen epoch is not the one that
-  happens to suit full-modality clients.
+- Selection uses the same capability **set** as training, with **equal macro weighting** —
+  each capability contributes one scored copy of every selection participant, so all four
+  weigh 25%. This is deliberately *not* the training mix (40/30/20/10): the objective is
+  robustness across access patterns, and weighting selection by population share would let
+  the commonest pattern pick the checkpoint. Because the criterion is a mean over samples,
+  the weighting is exactly equal regardless of batch size.
 - DP is untouched by construction: one masked view per participant per step. Phase 3 must
   still re-measure clipping rate and gradient norm on the new architecture and report utility
   again — the adjacency definition does not change, but the numbers will.

@@ -161,6 +161,9 @@ def test_selection_is_on_a_set_that_does_not_move(workspace: tuple[Path, Path, P
     assert manifest["selection_metric"] == "loss"
     assert "every capability" in manifest["selection_set"]
     assert "training only" in manifest["selection_schedule"]
+    # Equal macro weighting, and a mean over samples so batching cannot skew it.
+    assert "equal macro" in manifest["selection_weighting"]
+    assert "over samples" in manifest["selection_weighting"]
 
 
 def test_the_bootstrap_input_is_written_out(workspace: tuple[Path, Path, Path]) -> None:

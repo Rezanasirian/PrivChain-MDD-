@@ -254,7 +254,10 @@ def _run_fold(
             # Mean BCE across the four capabilities, not F1. On ~17 selection
             # participants F1 moves ~0.06 on a single flipped prediction, and it
             # would reward whichever epoch happened to sit near a threshold;
-            # the loss is continuous and is what training minimizes.
+            # the loss is continuous and is what training minimizes. It is a mean
+            # over samples, so each capability weighs exactly 25% whatever the
+            # batch size — averaging per-batch means gave the trailing block
+            # (one whole capability, by ConcatDataset's ordering) ~47%.
             selection_metric=SELECTION_METRIC,
             early_stopping_patience=base.train.early_stopping_patience,
             on_epoch_start=_advance,
@@ -652,6 +655,7 @@ def main() -> None:
             "use_phq_regression": False,
             "selection_metric": SELECTION_METRIC,
             "selection_set": "fixed: every selection participant under every capability",
+            "selection_weighting": "equal macro (25% per capability); mean BCE over samples",
             "selection_schedule": "training only; the selection split never rotates",
             "gate_bias_initialization": dict(base.model.moe.gate_bias),
             "gate_bias_source": "pre-existing inner-CV result before MoE implementation",
