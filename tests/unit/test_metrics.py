@@ -5,9 +5,11 @@ from __future__ import annotations
 import math
 
 import numpy as np
+import pytest
 
 from privchain.eval.metrics import (
     _rankdata,
+    average_precision,
     best_f1_threshold,
     binary_classification_metrics,
     roc_auc_score,
@@ -50,7 +52,15 @@ def test_single_class_auc_is_nan() -> None:
 
 def test_metrics_keys_present() -> None:
     m = binary_classification_metrics(np.array([0.3, 0.6]), np.array([0, 1]))
-    assert set(m) == {"accuracy", "precision", "recall", "f1", "roc_auc", "threshold"}
+    assert set(m) == {
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+        "roc_auc",
+        "pr_auc",
+        "threshold",
+    }
 
 
 def test_best_f1_threshold_finds_a_cut_below_one_half() -> None:
@@ -91,3 +101,44 @@ def test_tuned_threshold_never_lowers_f1() -> None:
     fixed = binary_classification_metrics(scores, labels, threshold=0.5)["f1"]
     tuned = binary_classification_metrics(scores, labels, threshold=None)["f1"]
     assert tuned >= fixed
+
+
+# ── Average precision (ADR-0027) ─────────────────────────────────────────────
+
+
+def test_average_precision_perfect_ranking() -> None:
+    labels = np.asarray([0, 0, 1, 1])
+    scores = np.asarray([0.1, 0.2, 0.8, 0.9])
+    assert average_precision(labels, scores) == pytest.approx(1.0)
+
+
+def test_average_precision_hand_computed() -> None:
+    """One negative ranked between two positives: AP = (1/1 + 2/3) / 2."""
+    labels = np.asarray([1, 0, 1])
+    scores = np.asarray([0.9, 0.8, 0.7])
+    assert average_precision(labels, scores) == pytest.approx((1.0 + 2.0 / 3.0) / 2.0)
+
+
+def test_average_precision_all_tied_scores_report_the_positive_rate() -> None:
+    """A constant predictor gains nothing from ties — it scores the prevalence."""
+    labels = np.asarray([1, 0, 0, 0])
+    scores = np.full(4, 0.5)
+    assert average_precision(labels, scores) == pytest.approx(0.25)
+
+
+def test_average_precision_is_undefined_without_positives() -> None:
+    assert np.isnan(average_precision(np.zeros(4, dtype=int), np.asarray([0.1, 0.2, 0.3, 0.4])))
+
+
+def test_average_precision_all_positive_is_one() -> None:
+    assert average_precision(np.ones(3, dtype=int), np.asarray([0.1, 0.5, 0.9])) == pytest.approx(
+        1.0
+    )
+
+
+def test_pr_auc_is_reported_alongside_roc_auc() -> None:
+    labels = np.asarray([0, 0, 1, 1])
+    scores = np.asarray([0.1, 0.2, 0.8, 0.9])
+    metrics = binary_classification_metrics(scores, labels)
+    assert metrics["pr_auc"] == pytest.approx(1.0)
+    assert metrics["roc_auc"] == pytest.approx(1.0)

@@ -20,7 +20,7 @@ from torch.nn.functional import binary_cross_entropy_with_logits
 
 from privchain.config import DistillationConfig
 from privchain.data.mock_daic_woz import MODALITIES, Batch
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.base import DepressionModelBase
 
 
 def distillation_loss(
@@ -51,7 +51,7 @@ def distillation_loss(
 
 
 def synthesize_anchors(
-    teacher: MultimodalDepressionModel,
+    teacher: DepressionModelBase,
     config: DistillationConfig,
     *,
     device: torch.device,

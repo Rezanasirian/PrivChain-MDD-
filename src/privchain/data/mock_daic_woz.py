@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 import numpy as np
 import torch
@@ -32,9 +32,19 @@ from privchain.config import DataConfig
 # Capability vector order used project-wide: [audio, video, text].
 MODALITIES: tuple[str, str, str] = ("audio", "video", "text")
 
+#: Index of the ``valid`` flag inside every per-timestep quality vector. Channel
+#: 0 is ``valid ∈ {0, 1}`` by contract for every modality (ADR-0027), so a
+#: consumer can mask a timestep without knowing which modality it came from.
+QUALITY_VALID_CHANNEL = 0
+
 
 class Sample(TypedDict):
-    """One synthetic session (variable-length, unbatched)."""
+    """One session (variable-length, unbatched).
+
+    ``quality`` is optional: only the segment-aligned real-data path produces it,
+    and a model that does not consume it must run unchanged without it (the
+    anchor-distillation batches, for one, are synthesized with no quality at all).
+    """
 
     audio: torch.Tensor  # (T_audio, n_mels)
     video: torch.Tensor  # (T_video, n_features)
@@ -42,6 +52,8 @@ class Sample(TypedDict):
     presence: dict[str, torch.Tensor]  # scalar 0/1 flag per modality
     phq8_score: torch.Tensor  # scalar long
     label: torch.Tensor  # scalar long in {0, 1}
+    # modality -> (T_m, Q_m); channel 0 is `valid`.
+    quality: NotRequired[dict[str, torch.Tensor]]
 
 
 class Batch(TypedDict):
@@ -56,6 +68,8 @@ class Batch(TypedDict):
     presence: dict[str, torch.Tensor]  # modality -> (B,) 0/1 flags
     phq8_score: torch.Tensor  # (B,)
     label: torch.Tensor  # (B,)
+    # modality -> (B, T_m_max, Q_m); absent unless every sample carried it.
+    quality: NotRequired[dict[str, torch.Tensor]]
 
 
 @dataclass(frozen=True)
@@ -169,10 +183,11 @@ def collate_fn(samples: list[Sample]) -> Batch:
 
     Returns:
         A :class:`Batch` with each modality padded to the batch's longest
-        sequence, accompanied by true per-modality length tensors.
+        sequence, accompanied by true per-modality length tensors, and a padded
+        ``quality`` entry when the samples carry one.
 
     Raises:
-        ValueError: If ``samples`` is empty.
+        ValueError: If ``samples`` is empty, or only some of them carry quality.
     """
     if not samples:
         raise ValueError("collate_fn received an empty batch")
@@ -181,7 +196,21 @@ def collate_fn(samples: list[Sample]) -> Batch:
     video, video_lengths = _pad_stack([s["video"] for s in samples])
     text, text_lengths = _pad_stack([s["text"] for s in samples])
 
-    return Batch(
+    # Quality is padded with zeros, which sets `valid = 0` on the padded steps —
+    # the same thing the length mask says, expressed in the channel a fusion gate
+    # reads. All-or-nothing: a batch mixing samples with and without quality
+    # would silently treat the missing ones as invalid everywhere.
+    quality: dict[str, torch.Tensor] | None = None
+    with_quality = [sample for sample in samples if "quality" in sample]
+    if with_quality:
+        if len(with_quality) != len(samples):
+            raise ValueError("collate_fn received a mix of samples with and without quality")
+        quality = {
+            modality: _pad_stack([sample["quality"][modality] for sample in samples])[0]
+            for modality in MODALITIES
+        }
+
+    batch = Batch(
         audio=audio,
         video=video,
         text=text,
@@ -195,6 +224,9 @@ def collate_fn(samples: list[Sample]) -> Batch:
         phq8_score=torch.stack([s["phq8_score"] for s in samples]),
         label=torch.stack([s["label"] for s in samples]),
     )
+    if quality is not None:
+        batch["quality"] = quality
+    return batch
 
 
 def build_dataloader(

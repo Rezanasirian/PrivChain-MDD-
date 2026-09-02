@@ -35,10 +35,12 @@ from privchain.federated.distillation import synthesize_anchors
 from privchain.federated.partition import ClientPartition, ModalityMaskedDataset
 from privchain.federated.reputation import ReputationTracker
 from privchain.federated.robust import flag_byzantine_updates
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.base import DepressionModelBase
+from privchain.fusion.factory import build_depression_model
 from privchain.training.experiment import JsonlMetricLogger
 from privchain.training.objective import (
     DepressionObjective,
+    build_objective,
     evaluate_model,
     positive_class_weight,
 )
@@ -127,6 +129,7 @@ def build_federated_clients(
     device: str = "cpu",
     client_dp: ClientDPConfig | None = None,
     class_weight_mode: ClassWeightMode = "off",
+    quality_dims: dict[str, int] | None = None,
 ) -> list[FederatedClient]:
     """Construct one :class:`FederatedClient` per partition.
 
@@ -145,6 +148,8 @@ def build_federated_clients(
         device: Torch device string.
         client_dp: Optional client-side DP-SGD configuration. Each constructed
             client receives an independently seeded accountant/mechanism.
+        quality_dims: Per-modality quality-vector widths, for the segment-gated
+            architecture; ``None`` for frame-level data.
         class_weight_mode: How each client weights its BCE term.
             ``"off"`` leaves the loss unweighted. ``"per_shard"`` uses
             ``n_neg / n_pos`` measured on that client's own partition, which is
@@ -185,7 +190,7 @@ def build_federated_clients(
             collate_fn=collate_fn,
             generator=torch.Generator().manual_seed(seed + partition.client_id),
         )
-        model = MultimodalDepressionModel(input_dims, model_config)
+        model = build_depression_model(input_dims, model_config, quality_dims)
         # Counted on an unshuffled pass over the same shard, so the weight a
         # client trains under is derived only from data it actually holds.
         if class_weight_mode == "per_shard":
@@ -206,6 +211,7 @@ def build_federated_clients(
                 weight_decay=weight_decay,
                 phq8_max=phq8_max,
                 phq_loss_weight=phq_loss_weight,
+                objective=build_objective(model_config, phq8_max, pos_weight),
                 device=device,
                 dp=(
                     client_dp
@@ -226,7 +232,7 @@ def build_federated_clients(
 
 
 def run_simulation(
-    global_model: MultimodalDepressionModel,
+    global_model: DepressionModelBase,
     clients: list[FederatedClient],
     val_loader: DataLoader[Sample],
     *,
@@ -320,7 +326,7 @@ def run_simulation(
 
 
 def _evaluate_capabilities(
-    global_model: MultimodalDepressionModel,
+    global_model: DepressionModelBase,
     capability_val_loaders: dict[str, DataLoader[Sample]] | None,
     objective: DepressionObjective,
     device: torch.device,
@@ -389,7 +395,7 @@ def _record_round_to_ledger(
 
 
 def run_capability_aware_simulation(
-    global_model: MultimodalDepressionModel,
+    global_model: DepressionModelBase,
     clients: list[FederatedClient],
     val_loader: DataLoader[Sample],
     *,
@@ -454,7 +460,7 @@ def run_capability_aware_simulation(
     distill = aggregation.distillation
 
     # A single reusable frozen teacher; its parameters are refreshed each round.
-    teacher: MultimodalDepressionModel | None = None
+    teacher: DepressionModelBase | None = None
     if aggregation.federated_distillation and distill.weight > 0.0:
         teacher = copy.deepcopy(global_model).to(torch_device)
         for param in teacher.parameters():

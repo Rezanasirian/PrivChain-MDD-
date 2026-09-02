@@ -37,11 +37,14 @@ from privchain.federated.simulation import (
     run_capability_aware_simulation,
     run_simulation,
 )
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
-from privchain.training.objective import DepressionObjective, evaluate_model
+from privchain.training.objective import (
+    build_objective,
+    evaluate_model,
+)
 
 
 def _val_indices(val_subset: Any) -> list[int]:
@@ -121,7 +124,7 @@ def main() -> None:
     input_dims = modality_input_dims(base.data)
 
     # Identical initial global parameters for both runs.
-    init_model = MultimodalDepressionModel(input_dims, base.model)
+    init_model = build_depression_model(input_dims, base.model)
     init_state: OrderedDict[str, torch.Tensor] = OrderedDict(
         (k, v.detach().cpu().clone()) for k, v in init_model.state_dict().items()
     )
@@ -137,7 +140,7 @@ def main() -> None:
     # ── Phase 2 baseline: plain FedAvg ───────────────────────────────────────
     baseline_dir = run_dir / "baseline_fedavg"
     baseline_dir.mkdir(parents=True, exist_ok=True)
-    baseline_model = MultimodalDepressionModel(input_dims, base.model)
+    baseline_model = build_depression_model(input_dims, base.model)
     baseline_model.load_state_dict(copy.deepcopy(init_state))
     baseline_clients = _build_clients(train_subset, partitions, input_dims, base, federation)
     run_simulation(
@@ -155,7 +158,7 @@ def main() -> None:
     # ── Phase 4 protocol: capability-aware aggregation ───────────────────────
     capability_dir = run_dir / "capability_aware"
     capability_dir.mkdir(parents=True, exist_ok=True)
-    capability_model = MultimodalDepressionModel(input_dims, base.model)
+    capability_model = build_depression_model(input_dims, base.model)
     capability_model.load_state_dict(copy.deepcopy(init_state))
     capability_clients = _build_clients(train_subset, partitions, input_dims, base, federation)
     run_capability_aware_simulation(
@@ -173,7 +176,7 @@ def main() -> None:
     )
 
     # ── Comparison table (overall + per modality-access pattern) ─────────────
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight)
+    objective = build_objective(base.model, base.data.phq8_max)
     device = torch.device("cpu")
     comparison: dict[str, dict[str, Any]] = {}
     loaders = {"overall": val_loader, **capability_val_loaders}

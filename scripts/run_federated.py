@@ -29,7 +29,7 @@ from privchain.config import (
 from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
 from privchain.federated.partition import build_client_partitions
 from privchain.federated.simulation import build_federated_clients, run_simulation
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
@@ -69,7 +69,7 @@ def main() -> None:
 
     partitions = build_client_partitions(len(train_subset), federation, base.seed)
     input_dims = modality_input_dims(base.data)
-    global_model = MultimodalDepressionModel(input_dims, base.model)
+    global_model = build_depression_model(input_dims, base.model)
 
     run_dir = create_run_dir(base.train.output_dir, "phase2", "phase2_fedavg_heterogeneous")
     save_config(run_dir, {"baseline": base.model_dump(), "federated": fed.model_dump()})

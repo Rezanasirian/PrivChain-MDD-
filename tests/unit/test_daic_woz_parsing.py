@@ -141,18 +141,21 @@ def test_feature_cache_is_written_and_reused(daic_root: Path) -> None:
     first = DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))
     baseline_audio = first[0]["audio"].clone()
     assert cache_dir.is_dir()
-    entries = {p.name for p in cache_dir.glob("*.npy")}
+    # `.npz`, not `.npy`: an entry now carries timestamps and quality columns
+    # beside the values, and the extension change retires the older files rather
+    # than loading them as bare matrices.
+    entries = {p.name for p in cache_dir.glob("*.npz")}
     assert entries, "expected cached feature matrices"
 
     # A second dataset reads the cache and yields identical tensors...
     second = DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))
     assert torch.equal(second[0]["audio"], baseline_audio)
-    assert {p.name for p in cache_dir.glob("*.npy")} == entries  # no new entries
+    assert {p.name for p in cache_dir.glob("*.npz")} == entries  # no new entries
 
     # ...while changing a parsing option keys to a different entry.
     config["audio"]["frame_stride"] = 2
     DaicWozDataset(config, split="train", text_vectorizer=HashingTextVectorizer(8))[0]
-    assert {p.name for p in cache_dir.glob("*.npy")} > entries
+    assert {p.name for p in cache_dir.glob("*.npz")} > entries
 
 
 def test_feature_cache_can_be_disabled(daic_root: Path) -> None:

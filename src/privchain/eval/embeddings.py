@@ -16,12 +16,12 @@ from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 from privchain.data.mock_daic_woz import Sample
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.base import DepressionModelBase
 
 
 @torch.no_grad()
 def extract_subject_embeddings(
-    model: MultimodalDepressionModel,
+    model: DepressionModelBase,
     dataset: Dataset[Sample],
     modality: str,
     *,

@@ -89,8 +89,12 @@ warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Run against `src/` without requiring an editable install.
-pythonpath = ["src"]
+# `src` so the package imports without an editable install; `.` so the shared
+# fixtures under `tests/fixtures/` import as `tests.fixtures` whichever way
+# pytest is invoked. Without the second entry, a bare `pytest` run fails at
+# collection ("No module named 'tests'") while `python -m pytest` succeeds,
+# because only the latter puts the working directory on sys.path.
+pythonpath = ["src", "."]
 addopts = "-ra"
 markers = [
     "integration: end-to-end pipeline tests (may be slower)",

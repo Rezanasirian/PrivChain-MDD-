@@ -59,11 +59,12 @@ from privchain.federated.simulation import (
     run_capability_aware_simulation,
     run_simulation,
 )
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.base import DepressionModelBase
+from privchain.fusion.factory import build_depression_model
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
-    DepressionObjective,
+    build_objective,
     collect_scores,
     evaluate_model,
     evaluate_with_selected_threshold,
@@ -151,7 +152,7 @@ def main() -> None:
         if train_cfg.class_weighting
         else None
     )
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight, pos_weight).to(
+    objective = build_objective(base.model, base.data.phq8_max, pos_weight).to(
         torch_device
     )
 
@@ -189,7 +190,7 @@ def main() -> None:
         f"seeds={list(seeds)}\n"
     )
 
-    def finalize(model: MultimodalDepressionModel) -> RunResult:
+    def finalize(model: DepressionModelBase) -> RunResult:
         """Read the untouched split once, at a threshold chosen on selection."""
         metrics = evaluate_with_selected_threshold(
             model, selection_loader, report_loader, objective, torch_device
@@ -211,13 +212,13 @@ def main() -> None:
     def initial_state(seed: int) -> OrderedDict[str, torch.Tensor]:
         """The shared starting point every arm of this seed departs from."""
         seed_everything(seed)
-        model = MultimodalDepressionModel(input_dims, base.model)
+        model = build_depression_model(input_dims, base.model, splits.quality_dims)
         return OrderedDict((k, v.detach().cpu().clone()) for k, v in model.state_dict().items())
 
     def run_centralized(seed: int) -> RunResult:
         """The non-federated reference: one model over the pooled training split."""
         seed_everything(seed)
-        model = MultimodalDepressionModel(input_dims, base.model)
+        model = build_depression_model(input_dims, base.model, splits.quality_dims)
         arm_dir = run_dir / "centralized" / f"seed_{seed}"
         arm_dir.mkdir(parents=True, exist_ok=True)
         CentralizedTrainer(
@@ -245,7 +246,7 @@ def main() -> None:
         arm_dir = run_dir / arm.replace("+", "_") / f"seed_{seed}"
         arm_dir.mkdir(parents=True, exist_ok=True)
 
-        model = MultimodalDepressionModel(input_dims, base.model)
+        model = build_depression_model(input_dims, base.model, splits.quality_dims)
         model.load_state_dict(copy.deepcopy(initial_state(seed)))
         clients = build_federated_clients(
             splits.train,

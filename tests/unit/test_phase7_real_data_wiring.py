@@ -112,7 +112,9 @@ def test_folds_pool_train_and_dev_but_reserve_the_official_test(
 ) -> None:
     """The fold pool is train+dev; the official test sits outside it."""
     monkeypatch.chdir(daic_config_file.parent)
-    dataset, pool_labels, input_dims, official_idx = _build_corpus(None, daic_config_file)
+    dataset, pool_labels, input_dims, official_idx, _ = _build_corpus(
+        None, daic_config_file
+    )
 
     # 3 train + 2 dev sessions are poolable; the 2 test sessions are not.
     assert len(pool_labels) == 5
@@ -126,7 +128,7 @@ def test_folds_pool_train_and_dev_but_reserve_the_official_test(
 
 def test_official_test_indices_resolve_to_the_test_split(daic_config_file: Path) -> None:
     """Indices past the pool address the AVEC2017 test sessions, PHQ_* headers and all."""
-    dataset, pool_labels, _, official_idx = _build_corpus(None, daic_config_file)
+    dataset, pool_labels, _, official_idx, _ = _build_corpus(None, daic_config_file)
 
     scores = [int(dataset[i]["phq8_score"].item()) for i in official_idx]
     assert scores == [12, 3]  # read via the split_label_columns override

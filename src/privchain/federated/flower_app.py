@@ -32,7 +32,7 @@ from privchain.federated.partition import ClientPartition
 from privchain.federated.simulation import build_federated_clients
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from privchain.fusion.baseline_model import MultimodalDepressionModel
+    from privchain.fusion.base import DepressionModelBase
 
 
 def state_to_ndarrays(model: torch.nn.Module) -> list[NDArray[Any]]:
@@ -55,7 +55,7 @@ def run_flower_simulation(
     *,
     input_dims: dict[str, int],
     model_config: ModelConfig,
-    global_model: MultimodalDepressionModel,
+    global_model: DepressionModelBase,
     num_rounds: int,
     clients_per_round: int,
     batch_size: int,

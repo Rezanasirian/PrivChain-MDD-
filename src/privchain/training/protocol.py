@@ -47,11 +47,16 @@ class Splits:
         train: Fits model parameters.
         selection: Chooses epoch and decision threshold. Never reported.
         report: Read once at the end; never selected on.
+        quality_dims: Per-modality quality-vector widths when the data is
+            segment-aligned, else ``None``. Carried here rather than returned
+            separately so adding it did not change ``build_splits``'s signature
+            for the ten scripts that already unpack it.
     """
 
     train: Dataset[Sample]
     selection: Dataset[Sample]
     report: Dataset[Sample]
+    quality_dims: dict[str, int] | None = None
 
 
 @dataclass
@@ -289,10 +294,12 @@ def build_splits(
         full_train: Dataset[Sample] = train_dataset
         report: Dataset[Sample] = build_daic_woz_dataset(daic_cfg, split="dev")
         input_dims = train_dataset.feature_dims
+        quality_dims = train_dataset.quality_dims
     else:
         full = MockDaicWozDataset(config.data, seed=config.seed)
         full_train, report = split_dataset(full, config.train.val_fraction, config.seed)
         input_dims = modality_input_dims(config.data)
+        quality_dims = None
 
     train, selection = carve_selection_split(
         full_train,
@@ -300,7 +307,8 @@ def build_splits(
         selection_fraction=config.train.selection_fraction,
         seed=config.seed,
     )
-    return Splits(train=train, selection=selection, report=report), input_dims
+    splits = Splits(train=train, selection=selection, report=report, quality_dims=quality_dims)
+    return splits, input_dims
 
 
 def labels_of(dataset: Any) -> list[int]:

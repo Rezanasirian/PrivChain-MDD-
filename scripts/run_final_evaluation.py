@@ -71,7 +71,7 @@ from privchain.federated.simulation import (
     run_capability_aware_simulation,
     run_simulation,
 )
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.privacy.budget_allocator import (
     PerModalityBudgetAllocator,
     allocate_target_epsilons,
@@ -88,7 +88,7 @@ from privchain.privacy.dp_sgd import (
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
-    DepressionObjective,
+    build_objective,
     evaluate_with_selected_threshold,
     positive_class_weight,
 )
@@ -125,7 +125,7 @@ def _loader(
 
 def _build_corpus(
     base: Any, daic_config: Path | None
-) -> tuple[Any, list[int], dict[str, int], list[int]]:
+) -> tuple[Any, list[int], dict[str, int], list[int], dict[str, int] | None]:
     """Assemble the pool the folds are drawn from, plus the reserved test split.
 
     On real data the folds come from the **pooled official train+dev split**, and
@@ -142,13 +142,14 @@ def _build_corpus(
         daic_config: Real-data config path, or ``None`` for mock data.
 
     Returns:
-        ``(dataset, pool_labels, input_dims, official_test_idx)``. The label list
-        covers the pool only; ``official_test_idx`` is empty on the mock path,
-        which has no official split to reserve.
+        ``(dataset, pool_labels, input_dims, official_test_idx, quality_dims)``.
+        The label list covers the pool only; ``official_test_idx`` is empty on
+        the mock path, which has no official split to reserve, and
+        ``quality_dims`` is ``None`` there for the same reason.
     """
     if daic_config is None:
         mock = MockDaicWozDataset(base.data, seed=base.seed)
-        return mock, labels_of(mock), modality_input_dims(base.data), []
+        return mock, labels_of(mock), modality_input_dims(base.data), [], None
 
     # Imported lazily so the mock path keeps no real-data dependencies.
     from privchain.data.daic_woz import build_daic_woz_dataset
@@ -166,6 +167,7 @@ def _build_corpus(
         pool_labels,
         train_ds.feature_dims,
         official_idx,
+        train_ds.quality_dims,
     )
 
 
@@ -192,6 +194,7 @@ def _eval_centralized(
     *,
     base: Any,
     input_dims: dict[str, int],
+    quality_dims: dict[str, int] | None,
     labels_all: list[int],
     device: torch.device,
     epochs: int,
@@ -220,7 +223,7 @@ def _eval_centralized(
         if base.train.class_weighting
         else None
     )
-    model = MultimodalDepressionModel(input_dims, base.model)
+    model = build_depression_model(input_dims, base.model, quality_dims)
     trainer = CentralizedTrainer(
         model,
         learning_rate=base.train.learning_rate,
@@ -241,7 +244,7 @@ def _eval_centralized(
             early_stopping_patience=base.train.early_stopping_patience,
         )
         model.load_state_dict(torch.load(run_dir / "best_model.pt", map_location=device))
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
+    objective = build_objective(base.model, base.data.phq8_max).to(device)
     return evaluate_with_selected_threshold(
         model, selection_loader, _loader(full, test_idx, batch_size), objective, device
     )
@@ -255,6 +258,7 @@ def _eval_centralized_dp(
     base: Any,
     priv: Any,
     input_dims: dict[str, int],
+    quality_dims: dict[str, int] | None,
     labels_all: list[int],
     device: torch.device,
     epochs: int,
@@ -274,9 +278,7 @@ def _eval_centralized_dp(
         if base.train.class_weighting
         else None
     )
-    objective = DepressionObjective(
-        base.data.phq8_max, base.model.phq_loss_weight, dp_pos_weight
-    ).to(device)
+    objective = build_objective(base.model, base.data.phq8_max, dp_pos_weight).to(device)
 
     risks = {m: priv.per_modality[m].reidentification_risk for m in MODALITIES}
     n_train = len(fold_train)  # type: ignore[arg-type]
@@ -304,7 +306,7 @@ def _eval_centralized_dp(
     )
     group_sigmas = resolve_group_sigmas(allocator.noise_multipliers())
 
-    model = MultimodalDepressionModel(input_dims, base.model).to(device)
+    model = build_depression_model(input_dims, base.model, quality_dims).to(device)
     dp_model = wrap_for_per_sample_grads(model)
     groups = map_parameter_groups(dp_model)
     optimizer = torch.optim.SGD(dp_model.parameters(), lr=base.train.learning_rate)
@@ -343,6 +345,7 @@ def _eval_federated(
     base: Any,
     fed: Any,
     input_dims: dict[str, int],
+    quality_dims: dict[str, int] | None,
     labels_all: list[int],
     device: torch.device,
     rounds: int,
@@ -389,8 +392,9 @@ def _eval_federated(
         seed=seed,
         device=str(device),
         class_weight_mode="per_shard" if base.train.class_weighting else "off",
+        quality_dims=quality_dims,
     )
-    global_model = MultimodalDepressionModel(input_dims, base.model).to(device)
+    global_model = build_depression_model(input_dims, base.model, quality_dims).to(device)
     batch_size = base.train.batch_size
     selection_loader: DataLoader[Sample] = DataLoader(
         selection, batch_size=batch_size, collate_fn=collate_fn
@@ -418,7 +422,7 @@ def _eval_federated(
         )
     checkpoint = checkpoint_dir / "best_global_model.pt"
     global_model.load_state_dict(torch.load(checkpoint, map_location=device))
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
+    objective = build_objective(base.model, base.data.phq8_max).to(device)
     return evaluate_with_selected_threshold(
         global_model.to(device),
         selection_loader,
@@ -513,7 +517,9 @@ def main() -> None:
     fed = fed.model_copy(update={"federation": federation})
     device = torch.device(resolve_device(base.train.device))
 
-    full, labels_all, input_dims, official_idx = _build_corpus(base, args.daic_config)
+    full, labels_all, input_dims, official_idx, quality_dims = _build_corpus(
+        base, args.daic_config
+    )
     n = len(labels_all)
     # Stratify on the binary depression label: on an imbalanced corpus an
     # unstratified 10-fold split yields single-class folds whose ROC-AUC is
@@ -569,6 +575,7 @@ def main() -> None:
                 base=base,
                 fed=fed,
                 input_dims=input_dims,
+                quality_dims=quality_dims,
                 labels_all=labels_all,
                 device=device,
                 rounds=rounds,
@@ -587,6 +594,7 @@ def main() -> None:
             te,
             base=base,
             input_dims=input_dims,
+            quality_dims=quality_dims,
             labels_all=labels_all,
             device=device,
             epochs=centralized_epochs,
@@ -638,6 +646,7 @@ def main() -> None:
                 base=base,
                 priv=priv,
                 input_dims=input_dims,
+                quality_dims=quality_dims,
                 labels_all=labels_all,
                 device=device,
                 epochs=dp_epochs,
@@ -652,7 +661,7 @@ def main() -> None:
 
     # Inference latency across batch sizes.
     seed_everything(base.seed)
-    latency_model = MultimodalDepressionModel(input_dims, base.model)
+    latency_model = build_depression_model(input_dims, base.model, quality_dims)
     latency = measure_inference_latency(
         latency_model,
         full,

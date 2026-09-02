@@ -29,16 +29,15 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from torch import nn
 
 from privchain.config import CAPABILITY_MODALITIES, load_baseline_config, resolve_device
-from privchain.data.mock_daic_woz import Batch
 from privchain.eval.metrics import paired_bootstrap_auc_difference
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.eval.modality_masking import MaskedModalityModel
+from privchain.fusion.factory import build_depression_model
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
-    DepressionObjective,
+    build_objective,
     collect_scores,
     evaluate_with_selected_threshold,
     positive_class_weight,
@@ -53,50 +52,6 @@ from privchain.training.protocol import (
     uncertainty_report,
 )
 from privchain.training.trainer import CentralizedTrainer
-
-
-class MaskedModalityModel(nn.Module):
-    """Wraps the baseline model, hiding all modalities outside ``present``.
-
-    Zeroing the features *and* the fusion presence flag is what "the modality is
-    absent" means elsewhere in the project (Phase 2 clients), so an ablation arm
-    here matches a capability-restricted client there.
-
-    Args:
-        model: The full multimodal model.
-        present: Modalities the model is allowed to see.
-    """
-
-    def __init__(self, model: MultimodalDepressionModel, present: frozenset[str]) -> None:
-        super().__init__()
-        self.model = model
-        self.present = present
-
-    def forward(
-        self, batch: Batch, presence: dict[str, torch.Tensor] | None = None
-    ) -> dict[str, torch.Tensor]:
-        """Blank the hidden modalities, then delegate to the wrapped model.
-
-        Args:
-            batch: A collated batch.
-            presence: Ignored; this wrapper derives presence from ``present``.
-
-        Returns:
-            The wrapped model's outputs.
-        """
-        masked = dict(batch)
-        batch_size = batch["label"].shape[0]
-        flags: dict[str, torch.Tensor] = {}
-        for modality in CAPABILITY_MODALITIES:
-            visible = modality in self.present
-            if not visible:
-                masked[modality] = torch.zeros_like(batch[modality])
-            flags[modality] = torch.full(
-                (batch_size,),
-                float(visible),
-                device=batch["label"].device,
-            )
-        return self.model(masked, flags)  # type: ignore[arg-type]
 
 
 def main() -> None:
@@ -141,9 +96,7 @@ def main() -> None:
         if train_cfg.class_weighting
         else None
     )
-    objective = DepressionObjective(
-        config.data.phq8_max, config.model.phq_loss_weight, pos_weight
-    ).to(device)
+    objective = build_objective(config.model, config.data.phq8_max, pos_weight).to(device)
 
     run_dir = create_run_dir(train_cfg.output_dir, "phase1", "phase1_modality_ablation")
     save_config(run_dir, {"baseline": config.model_dump(), "daic_overrides": overrides})
@@ -159,7 +112,9 @@ def main() -> None:
             seed=seed,
             num_workers=train_cfg.num_workers,
         )
-        model = MaskedModalityModel(MultimodalDepressionModel(input_dims, config.model), present)
+        model = MaskedModalityModel(
+            build_depression_model(input_dims, config.model, splits.quality_dims), present
+        )
         trainer = CentralizedTrainer(
             model,  # type: ignore[arg-type]
             learning_rate=train_cfg.learning_rate,
@@ -168,6 +123,7 @@ def main() -> None:
             phq_loss_weight=config.model.phq_loss_weight,
             device=str(device),
             pos_weight=pos_weight,
+            objective=build_objective(config.model, config.data.phq8_max, pos_weight),
         )
         arm_dir = run_dir / "_".join(sorted(present)) / f"seed_{seed}"
         arm_dir.mkdir(parents=True, exist_ok=True)

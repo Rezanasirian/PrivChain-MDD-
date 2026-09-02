@@ -45,6 +45,7 @@ from torch.nn.functional import binary_cross_entropy_with_logits
 from torch.utils.data import DataLoader, Dataset
 
 from privchain.config import (
+    ModelConfig,
     load_attack_config,
     load_baseline_config,
     load_privacy_config,
@@ -61,6 +62,7 @@ from privchain.eval.attackers import (
 from privchain.eval.embeddings import extract_subject_embeddings, split_enroll_probe
 from privchain.eval.session_views import build_views, concat_views
 from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import require_baseline_architecture
 from privchain.privacy.budget_allocator import (
     PerModalityBudgetAllocator,
     allocate_target_epsilons,
@@ -76,7 +78,7 @@ from privchain.privacy.dp_sgd import (
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.loaders import split_dataset
-from privchain.training.objective import DepressionObjective, move_batch_to_device
+from privchain.training.objective import build_objective, move_batch_to_device
 from privchain.training.protocol import build_splits
 
 MODALITIES = ("audio", "video", "text")
@@ -90,14 +92,14 @@ def _train_non_private(
     batch_size: int,
     learning_rate: float,
     phq8_max: int,
-    phq_loss_weight: float,
+    model_config: ModelConfig,
     device: torch.device,
 ) -> None:
     """Fit the model on the member split with no privacy (the ε = ∞ reference)."""
     loader: DataLoader[Sample] = DataLoader(
         members, batch_size=batch_size, shuffle=True, collate_fn=collate_fn
     )
-    objective = DepressionObjective(phq8_max, phq_loss_weight)
+    objective = build_objective(model_config, phq8_max)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     model.train()
     for _ in range(epochs):
@@ -118,7 +120,7 @@ def _train_private(
     batch_size: int,
     learning_rate: float,
     phq8_max: int,
-    phq_loss_weight: float,
+    model_config: ModelConfig,
     device: torch.device,
     seed: int,
 ) -> dict[str, float]:
@@ -137,7 +139,7 @@ def _train_private(
         batch_size: Nominal batch size, setting the sampling rate ``q``.
         learning_rate: SGD learning rate.
         phq8_max: Maximum PHQ-8 score (loss normalisation).
-        phq_loss_weight: Weight of the PHQ-8 regression term.
+        model_config: Model configuration, for the PHQ-8 loss the arms share.
         device: Torch device.
         seed: Seed for the Poisson draws and the DP noise.
 
@@ -164,7 +166,7 @@ def _train_private(
         dp_model,
         members,
         poisson_batches(num_items, sample_rate, steps, generator),
-        DepressionObjective(phq8_max, phq_loss_weight),
+        build_objective(model_config, phq8_max),
         groups=map_parameter_groups(dp_model),
         group_sigmas=group_sigmas,
         max_grad_norm=priv.max_grad_norm,
@@ -213,6 +215,8 @@ def main() -> None:
     args = parser.parse_args()
 
     base = load_baseline_config(args.config)
+    # This evaluation trains and probes the encode-then-fuse encoders directly.
+    require_baseline_architecture(base.model, "the attacker evaluation")
     priv = load_privacy_config(args.privacy_config).privacy
     atk = load_attack_config(args.attack_config).attack
     seed_everything(base.seed)
@@ -255,7 +259,7 @@ def main() -> None:
                 batch_size=base.train.batch_size,
                 learning_rate=base.train.learning_rate,
                 phq8_max=base.data.phq8_max,
-                phq_loss_weight=base.model.phq_loss_weight,
+                model_config=base.model,
                 device=device,
             )
         else:
@@ -268,7 +272,7 @@ def main() -> None:
                 batch_size=base.train.batch_size,
                 learning_rate=base.train.learning_rate,
                 phq8_max=base.data.phq8_max,
-                phq_loss_weight=base.model.phq_loss_weight,
+                model_config=base.model,
                 device=device,
                 seed=base.seed,
             )

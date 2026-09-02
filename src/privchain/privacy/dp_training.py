@@ -32,7 +32,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from privchain.config import BaselineConfig, ModelConfig, PrivacySettings
 from privchain.data.mock_daic_woz import Sample
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.privacy.dp_sgd import (
     dp_train_steps,
     map_parameter_groups,
@@ -43,6 +43,7 @@ from privchain.privacy.dp_sgd import (
 from privchain.seeding import seed_everything
 from privchain.training.objective import (
     DepressionObjective,
+    build_objective,
     collect_scores,
     evaluate_model,
     evaluate_with_selected_threshold,
@@ -62,6 +63,7 @@ class DpArmConfig:
 
     input_dims: dict[str, int]
     model: ModelConfig
+    quality_dims: dict[str, int] | None
     train_subset: Dataset[Sample]
     selection_loader: DataLoader[Sample]
     report_loader: DataLoader[Sample]
@@ -123,12 +125,11 @@ def build_dp_arm_config(
     return DpArmConfig(
         input_dims=input_dims,
         model=base.model,
+        quality_dims=splits.quality_dims,
         train_subset=splits.train,
         selection_loader=make_loader(splits.selection, batch_size=batch_size, shuffle=False),
         report_loader=make_loader(splits.report, batch_size=batch_size, shuffle=False),
-        objective=DepressionObjective(
-            base.data.phq8_max, base.model.phq_loss_weight, pos_weight
-        ).to(device),
+        objective=build_objective(base.model, base.data.phq8_max, pos_weight).to(device),
         sample_rate=sample_rate,
         expected_batch_size=sample_rate * n_train,
         planned_steps=steps_for_epochs(n_train, batch_size, priv.sweep.epochs),
@@ -163,7 +164,9 @@ def train_dp_arm(config: DpArmConfig, group_sigmas: dict[str, float], seed: int)
         RuntimeError: If the step budget produced no trained epoch.
     """
     seed_everything(seed)
-    model = MultimodalDepressionModel(config.input_dims, config.model).to(config.device)
+    model = build_depression_model(
+        config.input_dims, config.model, config.quality_dims
+    ).to(config.device)
     dp_model = wrap_for_per_sample_grads(model)
     groups = map_parameter_groups(dp_model)
     optimizer = torch.optim.Adam(

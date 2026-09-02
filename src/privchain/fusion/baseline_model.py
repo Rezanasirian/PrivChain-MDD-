@@ -22,10 +22,11 @@ from privchain.data.mock_daic_woz import MODALITIES, Batch
 from privchain.encoders.audio import AudioEncoder
 from privchain.encoders.text import TextEncoder
 from privchain.encoders.video import VideoEncoder
+from privchain.fusion.base import DepressionModelBase
 from privchain.fusion.multimodal_fusion import build_fusion
 
 
-class MultimodalDepressionModel(nn.Module):
+class MultimodalDepressionModel(DepressionModelBase):
     """Encoders + fusion + (classification, optional regression) heads.
 
     Args:

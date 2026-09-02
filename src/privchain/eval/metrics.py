@@ -60,6 +60,55 @@ def roc_auc_score(labels: NDArray[np.int_], scores: NDArray[np.float64]) -> floa
     return (sum_pos_ranks - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg)
 
 
+def average_precision(labels: NDArray[np.int_], scores: NDArray[np.float64]) -> float:
+    """Compute average precision — the step-wise summary of the PR curve.
+
+    This is **average precision**, not a trapezoidal integral of the
+    precision-recall curve. The two are routinely both called "PR-AUC" and they
+    disagree: linear interpolation between PR points is optimistic, because the
+    segment between two operating points is not achievable by any threshold. AP
+    sums ``(R_k - R_{k-1}) * P_k`` over thresholds instead, which is the
+    convention DAIC-WOZ/AVEC work reports.
+
+    AP is quoted alongside ROC-AUC because this corpus is ~28% positive: ROC-AUC
+    is insensitive to prevalence, so it can look healthy while the positive-class
+    ranking is poor.
+
+    Ties are handled by treating equal scores as one operating point — a model
+    that assigns every session the same score scores the positive rate, not 1.0.
+
+    Args:
+        labels: Binary ground-truth labels in ``{0, 1}``, shape ``(N,)``.
+        scores: Predicted scores/probabilities, shape ``(N,)``.
+
+    Returns:
+        Average precision in ``[0, 1]``, or ``nan`` when no positive is present
+        (recall, and therefore AP, is undefined).
+    """
+    labels = np.asarray(labels)
+    scores = np.asarray(scores, dtype=np.float64)
+    n_pos = int((labels == 1).sum())
+    if n_pos == 0:
+        return float("nan")
+
+    order = np.argsort(-scores, kind="mergesort")
+    sorted_scores = scores[order]
+    positives = (labels[order] == 1).astype(np.float64)
+
+    true_positives = np.cumsum(positives)
+    predicted = np.arange(1, len(scores) + 1, dtype=np.float64)
+
+    # Collapse tied scores onto their last index: every sample sharing a score
+    # enters the prediction set together, so they form a single operating point.
+    is_last_of_tie = np.ones(len(scores), dtype=bool)
+    is_last_of_tie[:-1] = sorted_scores[:-1] != sorted_scores[1:]
+
+    precision = true_positives[is_last_of_tie] / predicted[is_last_of_tie]
+    recall = true_positives[is_last_of_tie] / n_pos
+    recall_gain = np.diff(recall, prepend=0.0)
+    return float((precision * recall_gain).sum())
+
+
 def best_f1_threshold(scores: NDArray[np.float64], labels: NDArray[np.int_]) -> float:
     """Find the decision threshold maximizing F1 on these scores.
 
@@ -128,7 +177,7 @@ def binary_classification_metrics(
 
     Returns:
         Mapping with keys ``accuracy``, ``precision``, ``recall``, ``f1``,
-        ``roc_auc``, ``threshold``.
+        ``roc_auc``, ``pr_auc``, ``threshold``.
 
     Raises:
         ValueError: If ``scores`` and ``labels`` differ in length or are empty.
@@ -160,6 +209,8 @@ def binary_classification_metrics(
         "recall": recall,
         "f1": f1,
         "roc_auc": roc_auc_score(labels, scores),
+        # Average precision, not trapezoidal PR-AUC — see `average_precision`.
+        "pr_auc": average_precision(labels, scores),
         "threshold": float(threshold),
     }
 

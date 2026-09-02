@@ -43,10 +43,11 @@ from privchain.config import load_baseline_config, resolve_device
 from privchain.data.mock_daic_woz import Sample, collate_fn
 from privchain.eval.benchmark import stratified_k_fold_indices
 from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import require_baseline_architecture
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
-    DepressionObjective,
+    build_objective,
     evaluate_with_selected_threshold,
     positive_class_weight,
 )
@@ -141,7 +142,7 @@ def _run_fold(
         )
         model.load_state_dict(torch.load(run_dir / "best_model.pt", map_location=device))
 
-    objective = DepressionObjective(base.data.phq8_max, model_config.phq_loss_weight).to(device)
+    objective = build_objective(model_config, base.data.phq8_max).to(device)
     metrics = evaluate_with_selected_threshold(
         model.to(device),
         selection_loader,
@@ -226,6 +227,9 @@ def main() -> None:
     args = parser.parse_args()
 
     base = load_baseline_config(args.config)
+    # The ladder sweeps this model's text encoder; a segment_gated config here
+    # would report the wrong architecture under the arm names below.
+    require_baseline_architecture(base.model, "the text-representation ladder")
     seeds = args.seeds if args.seeds else list(base.train.seeds)
     seed_everything(base.seed)
     device = torch.device(resolve_device(base.train.device))
@@ -275,7 +279,12 @@ def main() -> None:
         manifest_extra={
             "dataset": "daic_woz" if args.daic_config else "mock",
             "protocol": "nested-inner-cv-train-split-only",
-            "official_dev_read": False,
+            # `build_splits` constructs the dev dataset (and parses one dev
+            # session for feature dims); it is never trained on, selected on, or
+            # scored here.
+            "official_dev_scored": False,
+            "official_dev_selected_on": False,
+            "official_dev_constructed": True,
             "official_test_read": False,
             "pool_size": len(pool_labels),
             "inner_folds": args.inner_folds,

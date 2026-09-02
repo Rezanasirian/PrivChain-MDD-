@@ -79,6 +79,31 @@ class DataConfig(_Strict):
     text: TextConfig
 
 
+class ModalityPattern(_Strict):
+    """A modality-access pattern and its share of the population.
+
+    Used both for the federated client population (Phase 2) and for centralized
+    modality dropout (Phase 1), which draws from the same kind of distribution so
+    the pre-federated model has already seen the capability mixes it will meet.
+    """
+
+    name: str
+    capability: list[int]  # [audio, video, text], values in {0, 1}
+    fraction: float = Field(gt=0.0, le=1.0)
+
+    @field_validator("capability")
+    @classmethod
+    def _check_capability(cls, value: list[int]) -> list[int]:
+        """Validate the capability vector has length 3, is binary, and non-empty."""
+        if len(value) != len(CAPABILITY_MODALITIES):
+            raise ValueError(f"capability must have length {len(CAPABILITY_MODALITIES)}")
+        if any(v not in (0, 1) for v in value):
+            raise ValueError("capability entries must be 0 or 1")
+        if sum(value) == 0:
+            raise ValueError("a client must have at least one modality")
+        return value
+
+
 class EncoderConfig(_Strict):
     """Per-modality sequence-encoder hyperparameters (Phase 1)."""
 
@@ -108,7 +133,12 @@ class FusionConfig(_Strict):
     #        concatenating, so a branch that carries mostly noise on this corpus
     #        (audio alone is near chance) can be attenuated rather than forcing
     #        the classifier to suppress it.
-    type: Literal["concat", "gated"] = "concat"
+    # quality_gated: competitive masked softmax over the modalities, scored from
+    #        the embedding *and* that modality's measured data quality. Only used
+    #        by the `segment_gated` architecture, which fuses per segment and can
+    #        therefore trust audio in one stretch of the interview and not another
+    #        (ADR-0027).
+    type: Literal["concat", "gated", "quality_gated"] = "concat"
     hidden_dim: int = Field(gt=0)
     dropout: float = Field(default=0.0, ge=0.0, le=1.0)
 
@@ -120,9 +150,31 @@ class HeadConfig(_Strict):
     dropout: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
+class TemporalConfig(_Strict):
+    """Session-level pooling over the fused segment sequence (ADR-0027).
+
+    Only read by the ``segment_gated`` architecture: once each segment has been
+    fused into one vector, the session still has to be summarized. Additive
+    attention rather than a recurrent layer, for the same reason the encoders use
+    it — fewer parameters to carry DP noise at ~107 training sessions.
+    """
+
+    attention_dim: int = Field(default=64, gt=0)
+    # Fixed sinusoidal position codes, so the pooler can use *where* in the
+    # interview a segment sat and not only what it contained.
+    positional: bool = True
+    dropout: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
 class ModelConfig(_Strict):
     """Multimodal baseline-model schema (Phase 1)."""
 
+    # encode_then_fuse: each modality is pooled to one session vector, then the
+    #        three are fused (the committed Phase 1 model).
+    # segment_gated: the interview is cut into aligned segments, the modalities
+    #        are fused *per segment*, and the segment sequence is pooled by
+    #        attention (ADR-0027). Requires `daic_woz.segments.enabled`.
+    architecture: Literal["encode_then_fuse", "segment_gated"] = "encode_then_fuse"
     encoder: EncoderConfig
     # Partial per-modality overrides layered onto `encoder`, e.g. giving text a
     # different encoder type. Text arrives as a document-level embedding (a
@@ -131,8 +183,17 @@ class ModelConfig(_Strict):
     encoder_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
     fusion: FusionConfig
     head: HeadConfig
+    temporal: TemporalConfig = Field(default_factory=TemporalConfig)
     use_phq_regression: bool = True
     phq_loss_weight: float = Field(default=0.1, ge=0.0)
+    # PHQ-8 regression loss. Huber is the more defensible choice on 107 sessions:
+    # a single participant scoring 24 dominates an MSE gradient.
+    phq_loss: Literal["mse", "huber"] = "mse"
+    # IN NORMALIZED UNITS. The regression target is `phq8_score / phq8_max`, so
+    # delta lives in [0, 1]: 0.1 is ~2.4 PHQ-8 points, while 1.0 would keep every
+    # achievable error inside the quadratic region and be indistinguishable
+    # from MSE.
+    huber_delta: float = Field(default=0.1, gt=0.0)
 
     @field_validator("encoder_overrides")
     @classmethod
@@ -164,6 +225,39 @@ class ModelConfig(_Strict):
         if not override:
             return self.encoder
         return EncoderConfig.model_validate({**self.encoder.model_dump(), **override})
+
+
+class ModalityDropoutConfig(_Strict):
+    """Randomly hide modalities during centralized training (ADR-0027).
+
+    The centralized model currently sees all three modalities in every step, then
+    meets Phase 2 clients that hold one or two. That distribution shift is a
+    plausible part of the federated ROC-AUC drop, and it is free to remove: draw
+    a capability vector per sample and clear the presence flags it says are
+    absent. Training only — evaluation always sees what the split actually holds.
+    """
+
+    enabled: bool = False
+    patterns: list[ModalityPattern] = Field(default_factory=list)
+
+    def validated(self) -> ModalityDropoutConfig:
+        """Return self after checking the pattern mix.
+
+        Returns:
+            The same instance, once validated.
+
+        Raises:
+            ValueError: If enabled with no patterns, or the fractions do not sum
+                to 1 (a mix that silently renormalizes hides a config typo).
+        """
+        if not self.enabled:
+            return self
+        if not self.patterns:
+            raise ValueError("modality_dropout is enabled but no patterns are configured")
+        total = sum(pattern.fraction for pattern in self.patterns)
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError(f"modality_dropout pattern fractions must sum to 1, got {total}")
+        return self
 
 
 class TrainConfig(_Strict):
@@ -205,6 +299,8 @@ class TrainConfig(_Strict):
     # A 34-session report split moves ~0.03 F1 on one flipped prediction, so a
     # single seed is not a result. Every real-data figure is a mean ± std.
     seeds: list[int] = Field(default_factory=lambda: [42])
+
+    modality_dropout: ModalityDropoutConfig = Field(default_factory=ModalityDropoutConfig)
 
     @field_validator("seeds")
     @classmethod
@@ -288,32 +384,15 @@ def load_baseline_config(path: str | Path) -> BaselineConfig:
         path: Path to the baseline config file.
 
     Returns:
-        The validated :class:`BaselineConfig`.
+        The validated :class:`BaselineConfig` (with the modality-dropout mix
+        cross-checked).
     """
-    return BaselineConfig.model_validate(load_yaml(path))
+    config = BaselineConfig.model_validate(load_yaml(path))
+    config.train.modality_dropout.validated()
+    return config
 
 
 # ── Federated configuration (Phase 2) ────────────────────────────────────────
-
-
-class ModalityPattern(_Strict):
-    """A client modality-access pattern and its share of the population."""
-
-    name: str
-    capability: list[int]  # one-hot-ish [audio, video, text], values in {0, 1}
-    fraction: float = Field(gt=0.0, le=1.0)
-
-    @field_validator("capability")
-    @classmethod
-    def _check_capability(cls, value: list[int]) -> list[int]:
-        """Validate the capability vector has length 3, is binary, and non-empty."""
-        if len(value) != len(CAPABILITY_MODALITIES):
-            raise ValueError(f"capability must have length {len(CAPABILITY_MODALITIES)}")
-        if any(v not in (0, 1) for v in value):
-            raise ValueError("capability entries must be 0 or 1")
-        if sum(value) == 0:
-            raise ValueError("a client must have at least one modality")
-        return value
 
 
 class PartitionConfig(_Strict):

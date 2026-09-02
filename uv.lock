@@ -1951,6 +1951,7 @@ source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "opacus" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -1977,9 +1978,6 @@ ml = [
 nlp = [
     { name = "transformers" },
 ]
-privacy = [
-    { name = "opacus" },
-]
 viz = [
     { name = "matplotlib" },
 ]
@@ -1991,7 +1989,7 @@ requires-dist = [
     { name = "matplotlib", marker = "extra == 'viz'", specifier = ">=3.8" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "numpy", specifier = ">=1.26" },
-    { name = "opacus", marker = "extra == 'privacy'", specifier = ">=1.4" },
+    { name = "opacus", specifier = ">=1.4" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
@@ -2002,7 +2000,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.2" },
     { name = "transformers", marker = "extra == 'nlp'", specifier = ">=4.40" },
 ]
-provides-extras = ["audio", "nlp", "ml", "privacy", "federated", "viz", "dev"]
+provides-extras = ["audio", "nlp", "ml", "federated", "viz", "dev"]
 
 [[package]]
 name = "protobuf"

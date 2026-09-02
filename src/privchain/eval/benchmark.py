@@ -33,7 +33,7 @@ import torch
 from torch.utils.data import Dataset
 
 from privchain.data.mock_daic_woz import Sample, collate_fn
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.base import DepressionModelBase
 from privchain.training.objective import move_batch_to_device
 
 
@@ -214,7 +214,7 @@ def aggregate_metrics(per_fold: list[dict[str, float]]) -> dict[str, float]:
 
 @torch.no_grad()
 def measure_inference_latency(
-    model: MultimodalDepressionModel,
+    model: DepressionModelBase,
     dataset: Dataset[Sample],
     *,
     batch_sizes: list[int],

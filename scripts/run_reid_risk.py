@@ -58,6 +58,7 @@ from privchain.eval.session_views import (
     run_reidentification,
 )
 from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import require_baseline_architecture
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import positive_class_weight
@@ -104,6 +105,7 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_baseline_config(args.config)
+    require_baseline_architecture(config.model, "the re-identification risk study")
     seg = load_attack_config(args.attack_config).attack.segments
     privacy = load_privacy_config(args.privacy_config).privacy
     configured_risk = {m: privacy.per_modality[m].reidentification_risk for m in MODALITIES}

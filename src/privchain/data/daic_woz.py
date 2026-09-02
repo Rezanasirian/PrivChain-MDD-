@@ -12,6 +12,12 @@ the mock dataset, so the Phase 1 model/trainer run unchanged on real data:
   (``turns``)
 * **label** — ``PHQ8_Binary``; **phq8_score** — ``PHQ8_Score`` from the split file
 
+Setting ``daic_woz.segments.enabled`` switches all three modalities to the
+segment-aligned view instead (ADR-0027): the session becomes ``segments.count``
+rows cut at the same places in every branch — text embeddings per group of turns,
+audio/video functionals over the frames those turns span — each row carrying a
+small quality vector. See :mod:`privchain.data.segment_alignment`.
+
 To keep memory and IO bounded over ~15-minute interviews, feature rows are
 subsampled (``frame_stride``) and truncated (``max_frames``), then optionally
 normalized under the configured scheme (``session``/``corpus``/``none``, see
@@ -28,6 +34,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -37,8 +45,45 @@ from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 from privchain.data.mock_daic_woz import MODALITIES, Sample
+from privchain.data.segment_alignment import (
+    NUM_FUNCTIONALS,
+    QUALITY_DIMS,
+    SegmentPlan,
+    TimedTurn,
+    build_frame_segments,
+    build_text_quality,
+    pad_to_count,
+    plan_segments,
+    segment_texts,
+)
 from privchain.data.text_vectorizers import TextVectorizer, build_text_vectorizer
 from privchain.segmentation import contiguous_spans
+
+
+@dataclass(frozen=True)
+class ParsedFeatures:
+    """One modality's parsed frames, with everything derived from the same rows.
+
+    Features, timestamps and quality columns are produced by a **single** pass so
+    they cannot disagree about which rows survived. A second parser reading the
+    metadata columns separately would only have to skip one malformed line
+    differently to attach every quality value to the wrong frame.
+
+    Attributes:
+        values: Feature matrix, shape ``(T, D)``, as recorded.
+        source_rows: Each kept row's index in the original file, **before**
+            striding and before any malformed row was skipped. Audio timestamps
+            are derived from this (COVAREP carries no clock of its own), so a
+            dropped row cannot shift every later frame in time.
+        columns: Extra named columns kept for quality, each shape ``(T,)``.
+        skipped: How many rows were unparseable (diagnostic; a nonzero count on a
+            real session means the file is damaged).
+    """
+
+    values: NDArray[np.float32]
+    source_rows: NDArray[np.int64]
+    columns: dict[str, NDArray[np.float32]]
+    skipped: int
 
 
 def _load_feature_matrix(
@@ -49,8 +94,9 @@ def _load_feature_matrix(
     drop_columns: list[str],
     max_frames: int,
     frame_stride: int,
-) -> NDArray[np.float32]:
-    """Stream a CSV/TXT feature file into a subsampled ``(T, D)`` matrix.
+    quality_columns: list[str] | dict[str, int] | None = None,
+) -> ParsedFeatures:
+    """Stream a CSV/TXT feature file into a subsampled :class:`ParsedFeatures`.
 
     Returns the values **as recorded**. Normalization is applied afterwards by
     :func:`apply_normalization`, so switching normalization mode does not force a
@@ -60,30 +106,53 @@ def _load_feature_matrix(
         path: Feature file path.
         delimiter: Field delimiter.
         has_header: Whether the first row is a header (used to resolve
-            ``drop_columns`` by name).
+            ``drop_columns``/``quality_columns`` by name).
         drop_columns: Header names of metadata columns to drop (requires
             ``has_header``).
         max_frames: Maximum number of (subsampled) frames to keep.
         frame_stride: Keep every ``frame_stride``-th row.
+        quality_columns: Columns to keep aside as quality signals rather than
+            model features. A list of header names for a file that has a header;
+            a ``{name: column_index}`` mapping for one that does not (COVAREP is
+            headerless, but its voiced/unvoiced flag is still at a known index).
 
     Returns:
-        Float32 matrix of shape ``(T, D)`` with ``T >= 1``.
+        The parsed features, with ``T >= 1``.
 
     Raises:
         FileNotFoundError: If ``path`` does not exist.
-        ValueError: If no usable feature rows are found.
+        ValueError: If no usable feature rows are found, or a requested quality
+            column is not in the header.
     """
     if not path.is_file():
         raise FileNotFoundError(f"DAIC-WOZ feature file not found: {path}")
 
+    by_index = dict(quality_columns) if isinstance(quality_columns, dict) else {}
+    wanted = [] if isinstance(quality_columns, dict) else list(quality_columns or [])
     keep_idx: list[int] | None = None
+    quality_idx: dict[str, int] = dict(by_index)
     rows: list[list[float]] = []
+    source_rows: list[int] = []
+    extras: dict[str, list[float]] = {name: [] for name in (*wanted, *by_index)}
+    skipped = 0
+
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.reader(handle, delimiter=delimiter, skipinitialspace=True)
         if has_header:
             header = [col.strip() for col in next(reader)]
             drop = {name.strip() for name in drop_columns}
             keep_idx = [i for i, name in enumerate(header) if name not in drop]
+            missing = [name for name in wanted if name not in header]
+            if missing:
+                raise ValueError(
+                    f"{path.name}: quality column(s) {missing} not in header {header}"
+                )
+            quality_idx.update({name: header.index(name) for name in wanted})
+        elif wanted:
+            raise ValueError(
+                f"{path.name}: this file has no header, so quality columns must be given "
+                "as a {name: column_index} mapping"
+            )
 
         for row_num, raw in enumerate(reader):
             if frame_stride > 1 and row_num % frame_stride != 0:
@@ -93,16 +162,27 @@ def _load_feature_matrix(
                 continue
             selected = [raw[i] for i in keep_idx] if keep_idx is not None else fields
             try:
-                rows.append([float(value) for value in selected])
-            except ValueError:
-                continue  # skip malformed lines defensively
+                values = [float(value) for value in selected]
+                extra_values = {name: float(raw[i]) for name, i in quality_idx.items()}
+            except (ValueError, IndexError):
+                skipped += 1  # skip malformed lines defensively
+                continue
+            rows.append(values)
+            source_rows.append(row_num)
+            for name, value in extra_values.items():
+                extras[name].append(value)
             if len(rows) >= max_frames:
                 break
 
     if not rows:
         raise ValueError(f"No usable feature rows parsed from {path}")
 
-    return np.asarray(rows, dtype=np.float32)
+    return ParsedFeatures(
+        values=np.asarray(rows, dtype=np.float32),
+        source_rows=np.asarray(source_rows, dtype=np.int64),
+        columns={name: np.asarray(vals, dtype=np.float32) for name, vals in extras.items()},
+        skipped=skipped,
+    )
 
 
 def apply_normalization(
@@ -149,7 +229,7 @@ def apply_normalization(
 
 def _cached_feature_matrix(
     path: Path, cache_dir: Path | None, **options: Any
-) -> NDArray[np.float32]:
+) -> ParsedFeatures:
     """Load a feature matrix, memoizing the parsed result on disk.
 
     Parsing dominates runtime: a COVAREP file is ~36 MB and ~90k rows, and the
@@ -168,7 +248,7 @@ def _cached_feature_matrix(
         **options: Parsing options forwarded to :func:`_load_feature_matrix`.
 
     Returns:
-        Float32 matrix of shape ``(T, D)``.
+        The parsed features.
     """
     if cache_dir is None:
         return _load_feature_matrix(path, **options)
@@ -180,29 +260,65 @@ def _cached_feature_matrix(
         default=str,
     )
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
-    cache_path = cache_dir / f"{path.stem}.{digest}.npy"
+    # `.npz`, not `.npy`: the entry now holds timestamps and quality columns
+    # beside the values. The extension change also retires every cache file
+    # written by the values-only parser, which could not supply them.
+    cache_path = cache_dir / f"{path.stem}.{digest}.npz"
 
     if cache_path.is_file():
-        cached: NDArray[np.float32] = np.load(cache_path)
-        return cached
+        with np.load(cache_path) as cached:
+            names = [str(name) for name in cached["column_names"]]
+            stacked = cached["column_values"]
+            return ParsedFeatures(
+                values=cached["values"],
+                source_rows=cached["source_rows"],
+                columns={name: stacked[i] for i, name in enumerate(names)},
+                skipped=int(cached["skipped"]),
+            )
 
-    matrix = _load_feature_matrix(path, **options)
+    parsed = _load_feature_matrix(path, **options)
     cache_dir.mkdir(parents=True, exist_ok=True)
     # Write via a temp file so a crash mid-write cannot leave a truncated cache
     # entry that later runs would happily load.
-    tmp_path = cache_path.with_suffix(".tmp.npy")
-    np.save(tmp_path, matrix)
+    tmp_path = cache_path.with_suffix(".tmp.npz")
+    names = list(parsed.columns)
+    stacked = (
+        np.stack([parsed.columns[name] for name in names])
+        if names
+        else np.zeros((0, parsed.values.shape[0]), dtype=np.float32)
+    )
+    np.savez(
+        tmp_path,
+        values=parsed.values,
+        source_rows=parsed.source_rows,
+        skipped=np.asarray(parsed.skipped, dtype=np.int64),
+        # Names in a unicode array and values in one stacked array, rather than
+        # one entry per column: `np.load` refuses pickled arrays by default, and
+        # a cache that needs `allow_pickle` is a cache that can execute code.
+        column_names=np.asarray(names, dtype="<U64"),
+        column_values=stacked,
+    )
     tmp_path.replace(cache_path)
-    return matrix
+    return parsed
 
 
 def _read_participant_turns(
-    path: Path, *, delimiter: str, speaker_column: str, value_column: str, participant_speaker: str
-) -> list[str]:
+    path: Path,
+    *,
+    delimiter: str,
+    speaker_column: str,
+    value_column: str,
+    participant_speaker: str,
+    start_column: str | None = None,
+    stop_column: str | None = None,
+) -> list[TimedTurn]:
     """Read the participant's transcript turns in chronological order.
 
-    DAIC-WOZ transcripts are written in time order, so file order is turn order;
-    no timestamp parsing is needed to slice a session into contiguous stretches.
+    DAIC-WOZ transcripts are written in time order, so file order is turn order.
+    The timestamps are read too: they are what lets the audio and video branches
+    be cut at the same places as the text (ADR-0027). A turn whose timestamps are
+    missing or unparseable keeps its text and gets a zero-length interval, so it
+    still contributes to the transcript while contributing no frames.
 
     Args:
         path: Transcript file path.
@@ -210,6 +326,8 @@ def _read_participant_turns(
         speaker_column: Header name of the speaker column.
         value_column: Header name of the utterance-text column.
         participant_speaker: Speaker label identifying the participant's turns.
+        start_column: Header name of the utterance start time, in seconds.
+        stop_column: Header name of the utterance end time, in seconds.
 
     Returns:
         The participant's non-empty utterances, in chronological order.
@@ -219,7 +337,7 @@ def _read_participant_turns(
     """
     if not path.is_file():
         raise FileNotFoundError(f"DAIC-WOZ transcript not found: {path}")
-    turns: list[str] = []
+    turns: list[TimedTurn] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle, delimiter=delimiter)
         for row in reader:
@@ -227,9 +345,52 @@ def _read_participant_turns(
             if speaker != participant_speaker:
                 continue
             value = (row.get(value_column) or "").strip()
-            if value:
-                turns.append(value)
+            if not value:
+                continue
+            start = _parse_seconds(row.get(start_column) if start_column else None)
+            stop = _parse_seconds(row.get(stop_column) if stop_column else None)
+            turns.append(_timed_turn(start, stop, value))
     return turns
+
+
+def _parse_seconds(raw: str | None) -> float | None:
+    """Parse a transcript timestamp in seconds, or ``None`` if it is unusable.
+
+    ``None`` covers a missing column, an unparseable field, and a non-finite
+    value: ``float("nan")`` and ``float("inf")`` both parse happily and would
+    then select either no frames or every frame in the session.
+    """
+    if raw is None:
+        return None
+    try:
+        seconds = float(raw.strip())
+    except ValueError:
+        return None
+    return seconds if math.isfinite(seconds) else None
+
+
+def _timed_turn(start: float | None, stop: float | None, text: str) -> TimedTurn:
+    """Build a turn, degrading a damaged timestamp pair to a zero-length interval.
+
+    A turn whose timings cannot be trusted must contribute its text and **no
+    frames**. Filling in one missing endpoint would be worse than dropping both:
+    a turn with an unreadable start and a stop of 120 would claim the interview's
+    first two minutes of audio, and the mis-attribution would be invisible —
+    every segment would still look full.
+
+    Args:
+        start: Parsed start time, or ``None``.
+        stop: Parsed stop time, or ``None``.
+        text: The utterance text.
+
+    Returns:
+        The turn, with ``start == stop`` whenever either endpoint was unusable or
+        the pair runs backwards.
+    """
+    if start is None or stop is None:
+        anchor = start if start is not None else (stop if stop is not None else 0.0)
+        return TimedTurn(start=anchor, stop=anchor, text=text)
+    return TimedTurn(start=start, stop=max(stop, start), text=text)
 
 
 def _read_participant_transcript(
@@ -251,7 +412,8 @@ def _read_participant_transcript(
         FileNotFoundError: If ``path`` does not exist.
     """
     return " ".join(
-        _read_participant_turns(
+        turn.text
+        for turn in _read_participant_turns(
             path,
             delimiter=delimiter,
             speaker_column=speaker_column,
@@ -359,6 +521,15 @@ class DaicWozDataset(Dataset[Sample]):
         self._text_num_segments = int(self._text_cfg.get("num_segments", 8))
         if self._text_num_segments < 1:
             raise ValueError("text.num_segments must be positive")
+        # Segment-aligned mode (ADR-0027) replaces the per-modality
+        # representations entirely: all three branches become `count` rows cut at
+        # the same places, so it is a session-level switch rather than a text
+        # setting.
+        segments_cfg = dict(config.get("segments", {}))
+        self._segments_enabled = bool(segments_cfg.get("enabled", False))
+        self._segment_count = int(segments_cfg.get("count", 8))
+        if self._segment_count < 1:
+            raise ValueError("segments.count must be positive")
         self._dir_template = config.get("participant_dir_template", "{pid}_P")
         # Parsed-feature memoization; set `feature_cache_dir: null` to disable.
         cache_name: str | None = config.get("feature_cache_dir", "_feature_cache")
@@ -400,6 +571,9 @@ class DaicWozDataset(Dataset[Sample]):
             "drop_columns": cfg.get("drop_columns", []),
             "max_frames": int(cfg["max_frames"]),
             "frame_stride": int(cfg.get("frame_stride", 1)),
+            # Passed through as-is: a list of header names, or a
+            # {name: index} mapping for a headerless file.
+            "quality_columns": cfg.get("quality_columns") or [],
         }
 
     def _corpus_statistics(
@@ -453,7 +627,7 @@ class DaicWozDataset(Dataset[Sample]):
             try:
                 matrix = _cached_feature_matrix(
                     self._file(record["pid"], cfg["file_template"]), self._cache_dir, **options
-                ).astype(np.float64)
+                ).values.astype(np.float64)
             except (FileNotFoundError, ValueError):
                 continue  # a session missing this modality contributes nothing
             sums = matrix.sum(axis=0) if sums is None else sums + matrix.sum(axis=0)
@@ -479,15 +653,50 @@ class DaicWozDataset(Dataset[Sample]):
 
     def _load_normalized(
         self, pid: int, modality: str, cfg: dict[str, Any], *, default_header: bool
-    ) -> NDArray[np.float32]:
-        """Load one modality's raw matrix and apply the configured normalization."""
+    ) -> ParsedFeatures:
+        """Load one modality's frames and apply the configured normalization.
+
+        The timestamps and quality columns ride along untouched — only the model
+        features are normalized.
+        """
         options = self._parse_options(cfg, default_header=default_header)
-        matrix = _cached_feature_matrix(
+        parsed = _cached_feature_matrix(
             self._file(pid, cfg["file_template"]), self._cache_dir, **options
         )
         mode = str(cfg.get("normalization", "session"))
         stats = self._corpus_statistics(modality, cfg, options) if mode == "corpus" else None
-        return apply_normalization(matrix, mode, stats)
+        return ParsedFeatures(
+            values=apply_normalization(parsed.values, mode, stats),
+            source_rows=parsed.source_rows,
+            columns=parsed.columns,
+            skipped=parsed.skipped,
+        )
+
+    def _timestamps(self, parsed: ParsedFeatures, cfg: dict[str, Any]) -> NDArray[np.float64]:
+        """Return per-row timestamps in seconds for a parsed modality.
+
+        A modality that records its own clock (OpenFace ``timestamp``) is
+        believed. COVAREP has none, so the time comes from the row's index **in
+        the source file** at the configured sample rate — never from its position
+        in the retained matrix, which shifts whenever a row is dropped.
+
+        Args:
+            parsed: The parsed frames.
+            cfg: That modality's config section.
+
+        Returns:
+            Timestamps in seconds, shape ``(T,)``.
+        """
+        column = str(cfg.get("timestamp_column", "") or "")
+        if column and column in parsed.columns:
+            return parsed.columns[column].astype(np.float64)
+        rate = float(cfg.get("sample_rate_hz", 0.0) or 0.0)
+        if rate <= 0:
+            raise ValueError(
+                "cannot derive timestamps: set either `timestamp_column` (kept via "
+                "`quality_columns`) or a positive `sample_rate_hz` for this modality"
+            )
+        return parsed.source_rows.astype(np.float64) / rate
 
     def _participant_dir(self, pid: int) -> Path:
         """Return the participant's directory path."""
@@ -498,10 +707,10 @@ class DaicWozDataset(Dataset[Sample]):
         """Resolve a per-participant file path from a ``{pid}`` template."""
         return self._participant_dir(pid) / template.format(pid=pid)
 
-    def _load_audio(self, pid: int) -> NDArray[np.float32]:
+    def _load_audio(self, pid: int) -> ParsedFeatures:
         return self._load_normalized(pid, "audio", self._audio_cfg, default_header=False)
 
-    def _load_video(self, pid: int) -> NDArray[np.float32]:
+    def _load_video(self, pid: int) -> ParsedFeatures:
         return self._load_normalized(pid, "video", self._video_cfg, default_header=True)
 
     def _text_cache_path(self, path: Path, kind: str) -> Path | None:
@@ -528,9 +737,11 @@ class DaicWozDataset(Dataset[Sample]):
             # Bumped when the text pipeline changes shape. Without it a cache
             # written by the old (1, D) document path would be loaded as though
             # it were a segment matrix.
-            "text_schema": 2,
+            "text_schema": 3,
             "representation": self._text_representation,
             "num_segments": self._text_num_segments,
+            "segments_enabled": self._segments_enabled,
+            "segment_count": self._segment_count,
         }
         key = json.dumps(identity, sort_keys=True, default=str)
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
@@ -545,8 +756,8 @@ class DaicWozDataset(Dataset[Sample]):
         np.save(tmp_path, array)
         tmp_path.replace(cache_path)
 
-    def _participant_turns(self, pid: int) -> list[str]:
-        """Read one participant's utterances in chronological order."""
+    def _participant_turns(self, pid: int) -> list[TimedTurn]:
+        """Read one participant's utterances, with timings, in chronological order."""
         cfg = self._text_cfg
         return _read_participant_turns(
             self._file(pid, cfg["file_template"]),
@@ -554,6 +765,8 @@ class DaicWozDataset(Dataset[Sample]):
             speaker_column=cfg.get("speaker_column", "speaker"),
             value_column=cfg.get("value_column", "value"),
             participant_speaker=cfg.get("participant_speaker", "Participant"),
+            start_column=cfg.get("start_column"),
+            stop_column=cfg.get("stop_column"),
         )
 
     def _load_text(self, pid: int) -> NDArray[np.float32]:
@@ -587,7 +800,8 @@ class DaicWozDataset(Dataset[Sample]):
             cached: NDArray[np.float32] = np.load(cache_path)
             return cached
 
-        turns = self._participant_turns(pid)
+        timed = self._participant_turns(pid)
+        turns = [turn.text for turn in timed]
         if representation == "document":
             matrix = self._vectorizer.transform(" ".join(turns))[None, :]
         elif representation == "turns":
@@ -634,7 +848,7 @@ class DaicWozDataset(Dataset[Sample]):
             cached: NDArray[np.float32] = np.load(cache_path)
             return cached
 
-        turns = self._participant_turns(pid)
+        turns = [turn.text for turn in self._participant_turns(pid)]
         try:
             spans = contiguous_spans(len(turns), num_segments)
         except ValueError as error:
@@ -647,7 +861,12 @@ class DaicWozDataset(Dataset[Sample]):
         return vectors
 
     def _infer_feature_dims(self) -> dict[str, int]:
-        """Infer per-modality feature dims from the first available session."""
+        """Infer per-modality feature dims from the first available session.
+
+        In segment mode the frame modalities arrive as functionals, so their
+        width is ``NUM_FUNCTIONALS`` times the raw channel count. Reporting the
+        raw width there would size the model's projections wrongly.
+        """
         for record in self._records:
             pid = record["pid"]
             try:
@@ -655,14 +874,99 @@ class DaicWozDataset(Dataset[Sample]):
                 video = self._load_video(pid)
             except (FileNotFoundError, ValueError):
                 continue
+            scale = NUM_FUNCTIONALS if self._segments_enabled else 1
             return {
-                "audio": int(audio.shape[1]),
-                "video": int(video.shape[1]),
+                "audio": int(audio.values.shape[1]) * scale,
+                "video": int(video.values.shape[1]) * scale,
                 "text": self._vectorizer.dim,
             }
         raise RuntimeError(
             "Could not infer feature dims: no readable participant found under "
             f"{self._root}. Check configs/daic_woz.yaml paths/templates."
+        )
+
+    @property
+    def quality_dims(self) -> dict[str, int]:
+        """Per-modality quality-vector widths, for sizing the fusion gate."""
+        return dict(QUALITY_DIMS)
+
+    def _segment_text(self, pid: int, plan: SegmentPlan) -> NDArray[np.float32]:
+        """Embed each aligned segment's transcript, padded to ``plan.count``.
+
+        Args:
+            pid: Participant id.
+            plan: The session's shared segmentation.
+
+        Returns:
+            Array of shape ``(K, dim)``; padded rows are zero.
+        """
+        path = self._file(pid, self._text_cfg["file_template"])
+        cache_path = self._text_cache_path(path, f"aligned{plan.count}")
+        if cache_path is not None and cache_path.is_file():
+            cached: NDArray[np.float32] = np.load(cache_path)
+            return cached
+
+        texts = segment_texts(plan)
+        if texts:
+            matrix = pad_to_count(
+                np.ascontiguousarray(self._vectorizer.transform_many(texts), dtype=np.float32),
+                plan.count,
+            )
+        else:
+            matrix = np.zeros((plan.count, self._vectorizer.dim), dtype=np.float32)
+        self._write_text_cache(cache_path, matrix)
+        return matrix
+
+    def _aligned_sample(self, record: dict[str, int]) -> Sample:
+        """Assemble one session as ``K`` segment-aligned, quality-tagged rows.
+
+        All three modalities consume one :class:`SegmentPlan`, so segment ``k``
+        is the same stretch of interview everywhere. Audio is restricted to the
+        participant's own speech intervals; video keeps the group's full envelope
+        (ADR-0027).
+
+        Args:
+            record: The split record for this session.
+
+        Returns:
+            The assembled :class:`Sample`, including per-modality quality.
+        """
+        pid = record["pid"]
+        plan = plan_segments(self._participant_turns(pid), self._segment_count)
+
+        audio = self._load_audio(pid)
+        video = self._load_video(pid)
+        audio_features, audio_quality = build_frame_segments(
+            audio.values,
+            self._timestamps(audio, self._audio_cfg),
+            plan,
+            modality="audio",
+            use_envelope=False,
+            voiced=audio.columns.get(str(self._audio_cfg.get("voiced_column", "") or "")),
+        )
+        video_features, video_quality = build_frame_segments(
+            video.values,
+            self._timestamps(video, self._video_cfg),
+            plan,
+            modality="video",
+            use_envelope=True,
+            confidence=video.columns.get("confidence"),
+            success=video.columns.get("success"),
+        )
+        text_features = self._segment_text(pid, plan)
+
+        return Sample(
+            audio=torch.from_numpy(audio_features),
+            video=torch.from_numpy(video_features),
+            text=torch.from_numpy(text_features),
+            quality={
+                "audio": torch.from_numpy(audio_quality),
+                "video": torch.from_numpy(video_quality),
+                "text": torch.from_numpy(build_text_quality(plan)),
+            },
+            presence={m: torch.tensor(1, dtype=torch.long) for m in MODALITIES},
+            phq8_score=torch.tensor(record["score"], dtype=torch.long),
+            label=torch.tensor(record["label"], dtype=torch.long),
         )
 
     def __len__(self) -> int:
@@ -683,9 +987,15 @@ class DaicWozDataset(Dataset[Sample]):
             return self._cache[index]
 
         record = self._records[index]
+        if self._segments_enabled:
+            aligned = self._aligned_sample(record)
+            if self._cache is not None:
+                self._cache[index] = aligned
+            return aligned
+
         pid = record["pid"]
-        audio = self._load_audio(pid)
-        video = self._load_video(pid)
+        audio = self._load_audio(pid).values
+        video = self._load_video(pid).values
         text = self._load_text(pid)  # (T_text, D_text)
 
         sample = Sample(

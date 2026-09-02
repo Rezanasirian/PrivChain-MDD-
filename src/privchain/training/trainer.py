@@ -1,6 +1,6 @@
 """Centralized training loop for the multimodal baseline (Phase 1, H4/H5).
 
-Trains :class:`~privchain.fusion.baseline_model.MultimodalDepressionModel` with a
+Trains any :class:`~privchain.fusion.base.DepressionModelBase` with a
 binary cross-entropy objective plus an optional (normalized) PHQ-8 regression
 term, evaluating F1/ROC-AUC each epoch and logging to an experiment run dir. The
 loss/eval logic is shared with the federated clients via
@@ -17,8 +17,9 @@ import torch
 from torch.utils.data import DataLoader
 
 from privchain.data.mock_daic_woz import Sample
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.base import DepressionModelBase
 from privchain.training.experiment import JsonlMetricLogger
+from privchain.training.modality_dropout import ModalityDropout
 from privchain.training.objective import DepressionObjective, evaluate_model, move_batch_to_device
 
 
@@ -30,15 +31,21 @@ class CentralizedTrainer:
         learning_rate: Adam learning rate.
         weight_decay: Adam weight decay (L2).
         phq8_max: Maximum PHQ-8 score, used to normalize the regression target.
-        phq_loss_weight: Weight on the PHQ-8 regression MSE term.
+        phq_loss_weight: Weight on the PHQ-8 regression term.
         device: Torch device string (default ``"cpu"``).
         pos_weight: Optional positive-class weight for the BCE term; see
             :func:`~privchain.training.objective.positive_class_weight`.
+        objective: Optional pre-built objective, normally from
+            :func:`~privchain.training.objective.build_objective`. Config-driven
+            callers pass it so the loss the config asks for (Huber vs MSE) is the
+            loss that actually runs; when omitted, the MSE default is used.
+        modality_dropout: Optional per-sample capability dropout, applied to
+            training steps only (ADR-0027).
     """
 
     def __init__(
         self,
-        model: MultimodalDepressionModel,
+        model: DepressionModelBase,
         *,
         learning_rate: float,
         weight_decay: float,
@@ -46,13 +53,18 @@ class CentralizedTrainer:
         phq_loss_weight: float,
         device: str = "cpu",
         pos_weight: float | None = None,
+        objective: DepressionObjective | None = None,
+        modality_dropout: ModalityDropout | None = None,
     ) -> None:
         self.device = torch.device(device)
         self.model = model.to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
-        self.objective = DepressionObjective(phq8_max, phq_loss_weight, pos_weight).to(self.device)
+        self.objective = (
+            objective or DepressionObjective(phq8_max, phq_loss_weight, pos_weight)
+        ).to(self.device)
+        self.modality_dropout = modality_dropout
 
     def train_epoch(self, loader: DataLoader[Sample]) -> float:
         """Run one training epoch.
@@ -69,7 +81,10 @@ class CentralizedTrainer:
         for raw_batch in loader:
             batch = move_batch_to_device(raw_batch, self.device)
             self.optimizer.zero_grad()
-            outputs = self.model(batch)
+            # Dropout is applied here and nowhere else: `evaluate` must see the
+            # modalities the split actually holds.
+            presence = self.modality_dropout(batch) if self.modality_dropout else None
+            outputs = self.model(batch, presence)
             loss = self.objective(outputs, batch)
             loss.backward()  # type: ignore[no-untyped-call]
             self.optimizer.step()

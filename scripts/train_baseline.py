@@ -26,11 +26,12 @@ from pathlib import Path
 import torch
 
 from privchain.config import load_baseline_config, resolve_device
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
+from privchain.training.modality_dropout import ModalityDropout
 from privchain.training.objective import (
-    DepressionObjective,
+    build_objective,
     collect_scores,
     evaluate_with_selected_threshold,
     positive_class_weight,
@@ -98,7 +99,7 @@ def main() -> None:
             seed=seed,
             num_workers=train_cfg.num_workers,
         )
-        model = MultimodalDepressionModel(input_dims, config.model)
+        model = build_depression_model(input_dims, config.model, splits.quality_dims)
         trainer = CentralizedTrainer(
             model,
             learning_rate=train_cfg.learning_rate,
@@ -107,6 +108,12 @@ def main() -> None:
             phq_loss_weight=config.model.phq_loss_weight,
             device=device,
             pos_weight=pos_weight,
+            objective=build_objective(config.model, config.data.phq8_max, pos_weight),
+            modality_dropout=(
+                ModalityDropout(train_cfg.modality_dropout, seed)
+                if train_cfg.modality_dropout.enabled
+                else None
+            ),
         )
 
         seed_dir = run_dir / f"seed_{seed}"
@@ -127,7 +134,7 @@ def main() -> None:
             model,
             selection_loader,
             report_loader,
-            DepressionObjective(config.data.phq8_max, config.model.phq_loss_weight, pos_weight).to(
+            build_objective(config.model, config.data.phq8_max, pos_weight).to(
                 torch.device(device)
             ),
             torch.device(device),

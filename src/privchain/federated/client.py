@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 
 from privchain.data.mock_daic_woz import Batch, Sample
 from privchain.federated.distillation import capability_masked_anchor, distillation_loss
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.base import DepressionModelBase
 from privchain.privacy.accountant import (
     Mechanism,
     compose_epsilon,
@@ -103,7 +103,7 @@ class FederatedClient:
         self,
         client_id: int,
         capability: tuple[int, int, int],
-        model: MultimodalDepressionModel,
+        model: DepressionModelBase,
         train_loader: DataLoader[Sample],
         *,
         local_epochs: int,
@@ -114,6 +114,7 @@ class FederatedClient:
         device: str = "cpu",
         dp: ClientDPConfig | None = None,
         pos_weight: float | None = None,
+        objective: DepressionObjective | None = None,
     ) -> None:
         self.client_id = client_id
         self.capability = capability
@@ -123,7 +124,9 @@ class FederatedClient:
         self.local_epochs = local_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.objective = DepressionObjective(phq8_max, phq_loss_weight, pos_weight).to(self.device)
+        self.objective = (
+            objective or DepressionObjective(phq8_max, phq_loss_weight, pos_weight)
+        ).to(self.device)
         self.pos_weight = pos_weight
         self.last_work = LocalWork(0, 0, 0)
         self.dp = dp
@@ -204,7 +207,7 @@ class FederatedClient:
         self,
         global_state: OrderedDict[str, torch.Tensor],
         *,
-        teacher: MultimodalDepressionModel | None = None,
+        teacher: DepressionModelBase | None = None,
         distill_weight: float = 0.0,
         distill_temperature: float = 1.0,
         anchor: Batch | None = None,
@@ -312,7 +315,7 @@ class FederatedClient:
 
     def _distill_anchor(
         self,
-        teacher: MultimodalDepressionModel | None,
+        teacher: DepressionModelBase | None,
         anchor: Batch | None,
         optimizer: torch.optim.Optimizer,
         weight: float,

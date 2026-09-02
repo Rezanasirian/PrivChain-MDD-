@@ -153,22 +153,41 @@ class AdditiveAttentionPool(nn.Module):
             nn.Linear(attn_dim, 1),
         )
 
-    def forward(self, hidden: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        hidden: torch.Tensor,
+        lengths: torch.Tensor,
+        valid: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """Pool ``(B, T, H)`` to ``(B, H)`` over valid timesteps only.
 
         Args:
             hidden: Padded per-timestep vectors.
             lengths: True per-sample lengths.
+            valid: Optional ``(B, T)`` boolean mask, used instead of ``lengths``.
+                A length can only express a valid *prefix*, but a segmented
+                session can have an empty stretch in the middle — a participant
+                who said nothing while Ellie talked — and that segment must be
+                excluded without truncating everything after it.
 
         Returns:
-            Attention-weighted mean of shape ``(B, H)``.
+            Attention-weighted mean of shape ``(B, H)``. A sample with no valid
+            timestep pools to zeros rather than ``NaN``: a softmax over all
+            ``-inf`` is undefined, and this case is reachable (a silent
+            participant, or modality dropout that removes every branch).
         """
         scores = self.score(hidden).squeeze(-1)  # (B, T)
-        time_index = torch.arange(hidden.shape[1], device=hidden.device).unsqueeze(0)
-        valid = time_index < lengths.unsqueeze(1)
+        if valid is None:
+            time_index = torch.arange(hidden.shape[1], device=hidden.device).unsqueeze(0)
+            valid = time_index < lengths.unsqueeze(1)
         # Padding must not win any weight; -inf keeps softmax exactly zero there.
         scores = scores.masked_fill(~valid, float("-inf"))
+        any_valid = valid.any(dim=1, keepdim=True)  # (B, 1)
+        # Neutralize the all-invalid rows *before* the softmax so no NaN is ever
+        # created; their contribution is then zeroed by `any_valid` below.
+        scores = torch.where(any_valid, scores, torch.zeros_like(scores))
         weights = torch.softmax(scores, dim=1).unsqueeze(-1)  # (B, T, 1)
+        weights = weights * any_valid.unsqueeze(-1).to(weights.dtype)
         pooled: torch.Tensor = (hidden * weights).sum(dim=1)
         return pooled
 

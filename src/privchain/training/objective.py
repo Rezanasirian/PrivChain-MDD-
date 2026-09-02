@@ -15,6 +15,7 @@ from numpy.typing import NDArray
 from torch import nn
 from torch.utils.data import DataLoader
 
+from privchain.config import ModelConfig
 from privchain.data.mock_daic_woz import Batch, Sample
 from privchain.eval.metrics import binary_classification_metrics
 
@@ -31,36 +32,62 @@ def move_batch_to_device(batch: Batch, device: torch.device) -> Batch:
     """
     moved: dict[str, object] = {}
     for key, value in batch.items():
-        if key == "presence":
-            masks = cast("dict[str, torch.Tensor]", value)
-            moved[key] = {name: tensor.to(device) for name, tensor in masks.items()}
+        # `presence` and `quality` are per-modality mappings, not tensors. Keying
+        # off the *type* rather than the name means a new mapping-valued field
+        # cannot be moved onto the wrong device by being forgotten here.
+        if isinstance(value, dict):
+            mapping = cast("dict[str, torch.Tensor]", value)
+            moved[key] = {name: tensor.to(device) for name, tensor in mapping.items()}
         else:
             moved[key] = cast("torch.Tensor", value).to(device)
     return cast("Batch", moved)
 
 
 class DepressionObjective:
-    """Multi-task loss: BCE on the binary head + optional PHQ-8 MSE.
+    """Multi-task loss: BCE on the binary head + optional PHQ-8 regression.
 
     Args:
         phq8_max: Maximum PHQ-8 score, used to normalize the regression target.
-        phq_loss_weight: Weight on the PHQ-8 regression MSE term (0 disables it).
+        phq_loss_weight: Weight on the PHQ-8 regression term (0 disables it).
         pos_weight: Optional weight on the positive class in the BCE term,
             counteracting DAIC-WOZ's ~28%-positive imbalance. Typically
             ``n_negative / n_positive`` over the training split; ``None`` leaves
             the loss unweighted.
+        phq_loss: ``"mse"`` or ``"huber"``. Huber is the more defensible choice
+            on 107 sessions, where one participant scoring 24 can dominate an MSE
+            gradient.
+        huber_delta: Huber transition point **in normalized units** — the target
+            is ``phq8_score / phq8_max``, so 0.1 is about 2.4 PHQ-8 points. A
+            delta of 1.0 would keep every achievable error inside the quadratic
+            region, making Huber indistinguishable from MSE.
+
+    Raises:
+        ValueError: If ``phq_loss`` is not a known loss name.
     """
 
     def __init__(
-        self, phq8_max: int, phq_loss_weight: float, pos_weight: float | None = None
+        self,
+        phq8_max: int,
+        phq_loss_weight: float,
+        pos_weight: float | None = None,
+        *,
+        phq_loss: str = "mse",
+        huber_delta: float = 0.1,
     ) -> None:
         self.bce = nn.BCEWithLogitsLoss(
             pos_weight=None if pos_weight is None else torch.tensor(float(pos_weight))
         )
-        self.mse = nn.MSELoss()
+        if phq_loss == "mse":
+            self.regression: nn.Module = nn.MSELoss()
+        elif phq_loss == "huber":
+            self.regression = nn.HuberLoss(delta=huber_delta)
+        else:
+            raise ValueError(f"unknown phq_loss {phq_loss!r}; expected mse or huber")
         self.phq8_max = float(phq8_max)
         self.phq_loss_weight = phq_loss_weight
         self.pos_weight = pos_weight
+        self.phq_loss = phq_loss
+        self.huber_delta = huber_delta
 
     def to(self, device: torch.device) -> DepressionObjective:
         """Move the loss's internal buffers (``pos_weight``) to ``device``.
@@ -87,9 +114,36 @@ class DepressionObjective:
         loss: torch.Tensor = self.bce(outputs["logit"], batch["label"].float())
         if "phq_pred" in outputs and self.phq_loss_weight > 0:
             target = batch["phq8_score"].float() / self.phq8_max
-            mse = cast("torch.Tensor", self.mse(outputs["phq_pred"], target))
-            loss = loss + self.phq_loss_weight * mse
+            regression = cast("torch.Tensor", self.regression(outputs["phq_pred"], target))
+            loss = loss + self.phq_loss_weight * regression
         return loss
+
+
+def build_objective(
+    model_config: ModelConfig, phq8_max: int, pos_weight: float | None = None
+) -> DepressionObjective:
+    """Construct the objective a model config asks for.
+
+    Every config-driven arm goes through this. Constructing
+    :class:`DepressionObjective` by hand is what let one arm keep MSE while
+    another, under the same config, got Huber — a difference that would show up
+    as a method effect in the Chapter 4 comparison.
+
+    Args:
+        model_config: Validated model configuration.
+        phq8_max: Maximum PHQ-8 score, for normalizing the regression target.
+        pos_weight: Optional positive-class weight for the BCE term.
+
+    Returns:
+        The configured objective.
+    """
+    return DepressionObjective(
+        phq8_max,
+        model_config.phq_loss_weight,
+        pos_weight,
+        phq_loss=model_config.phq_loss,
+        huber_delta=model_config.huber_delta,
+    )
 
 
 def evaluate_with_selected_threshold(

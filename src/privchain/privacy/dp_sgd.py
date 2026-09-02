@@ -19,10 +19,12 @@ Two properties make the reported ``ε`` actually valid (ADR-0004, ADR-0009):
   ``microbatch`` path recomputes them one sample at a time. A unit test asserts
   the two agree, so the fast path is never trusted blindly.
 
-Parameter→modality grouping (by name prefix on ``MultimodalDepressionModel``):
-``encoders.audio`` → audio, ``encoders.video`` → video, ``encoders.text`` → text,
-everything else (fusion + heads) → ``shared``. The shared group sees all
-modalities, so it conservatively takes the **largest** ``σ`` among modalities.
+Parameter→modality grouping is delegated to
+:func:`privchain.federated.capability.param_group`, so DP budgets and
+capability-aware aggregation cannot drift apart: ``encoders.<modality>`` (and a
+gated fusion's ``fusion.gates.<modality>``) → that modality, everything else
+(fusion + heads) → ``shared``. The shared group sees all modalities, so it
+conservatively takes the **largest** ``σ`` among modalities.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ from torch import nn
 
 from privchain.config import CAPABILITY_MODALITIES
 from privchain.data.mock_daic_woz import Sample, collate_fn
+from privchain.federated.capability import param_group
 from privchain.training.objective import DepressionObjective, move_batch_to_device
 
 SHARED_GROUP = "shared"
@@ -62,7 +65,8 @@ def map_parameter_groups(
     stripped before matching).
 
     Args:
-        model: A :class:`MultimodalDepressionModel` (or compatible) instance.
+        model: A :class:`~privchain.fusion.base.DepressionModelBase` instance,
+            optionally wrapped in :class:`opacus.GradSampleModule`.
         capability: Optional ``[audio, video, text]`` availability flags. When
             supplied, absent encoder groups are omitted entirely.
 
@@ -81,14 +85,14 @@ def map_parameter_groups(
     groups[SHARED_GROUP] = []
     for raw_name, param in model.named_parameters():
         name = _strip_wrapper_prefix(raw_name)
-        if name.startswith("encoders.audio") and "audio" in groups:
-            groups["audio"].append(param)
-        elif name.startswith("encoders.video") and "video" in groups:
-            groups["video"].append(param)
-        elif name.startswith("encoders.text") and "text" in groups:
-            groups["text"].append(param)
-        elif not name.startswith("encoders."):
+        # One rule, shared with capability-aware aggregation, so a parameter can
+        # never be charged to one modality's privacy budget while being averaged
+        # in another group.
+        owner = param_group(name)
+        if owner == SHARED_GROUP:
             groups[SHARED_GROUP].append(param)
+        elif owner in groups:
+            groups[owner].append(param)
     return groups
 
 

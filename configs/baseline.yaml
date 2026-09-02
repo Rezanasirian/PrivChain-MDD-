@@ -36,6 +36,12 @@ data:
 # section above (audio.n_mels / video.n_features / text.embed_dim), so the same
 # model config works for mock and real DAIC-WOZ features.
 model:
+  # encode_then_fuse: pool each modality to one session vector, then fuse (the
+  #   committed Phase 1 model).
+  # segment_gated: cut the interview into aligned segments, fuse the modalities
+  #   per segment under a quality-aware gate, then pool the segments by attention
+  #   (ADR-0027). Requires daic_woz.segments.enabled.
+  architecture: encode_then_fuse
   encoder:
     # stats: AVEC2017-style session functionals + MLP. The default for real data —
     #        a GRU over ~3000 timesteps does not fit on 107 sessions (ADR-0012).
@@ -64,8 +70,21 @@ model:
   head:
     hidden_dim: 64
     dropout: 0.1
+  # Session-level pooling over the fused segment sequence. Only read by the
+  # `segment_gated` architecture.
+  temporal:
+    attention_dim: 64
+    positional: true         # let the pooler use *where* in the interview a segment sat
+    dropout: 0.1
+
   use_phq_regression: true   # auxiliary PHQ-8 score regression alongside the binary head
-  phq_loss_weight: 0.1       # weight of the (normalized) PHQ-8 MSE term
+  phq_loss_weight: 0.1       # weight of the (normalized) PHQ-8 regression term
+  # mse | huber. Huber resists the single participant scoring 24 dominating the
+  # gradient on 107 sessions.
+  phq_loss: mse
+  # IN NORMALIZED UNITS: the target is phq8_score / phq8_max, so 0.1 is about
+  # 2.4 PHQ-8 points. A delta of 1.0 is quadratic everywhere, i.e. plain MSE.
+  huber_delta: 0.1
 
 # ── Training (Phase 1: centralized, no federation, no privacy) ───────────────
 train:
@@ -102,3 +121,16 @@ train:
   # never selected against. Every arm in the Chapter-4 comparison uses this.
   selection_fraction: 0.2
   seeds: [42, 7, 2024]
+
+  # Randomly hide modalities during *training* so the centralized model has met
+  # the capability mixes it will face in federation (ADR-0027). Fractions must
+  # sum to 1; capability vectors are [audio, video, text]. Off by default: the
+  # committed Phase 1 numbers are trained on all three modalities.
+  modality_dropout:
+    enabled: false
+    patterns:
+      - {name: text_only,  capability: [0, 0, 1], fraction: 0.30}
+      - {name: audio_text, capability: [1, 0, 1], fraction: 0.20}
+      - {name: video_text, capability: [0, 1, 1], fraction: 0.20}
+      - {name: full,       capability: [1, 1, 1], fraction: 0.20}
+      - {name: audio_only, capability: [1, 0, 0], fraction: 0.10}

@@ -23,6 +23,15 @@ from privchain.config import CAPABILITY_MODALITIES
 # Group name for parameters shared across all modalities (fusion + heads).
 SHARED_GROUP = "shared"
 
+#: Name prefixes that mark a parameter as belonging to one modality. The second
+#: entry covers :class:`~privchain.fusion.multimodal_fusion.GatedFusion`, whose
+#: per-modality gate heads sit under ``fusion.gates.<modality>``: they read one
+#: modality's embedding and nothing else, so aggregating them in the shared pool
+#: mixes in clients that never held that modality and charges their DP noise to
+#: the wrong budget. Matching by prefix (rather than moving the parameters) keeps
+#: every checkpoint written before ADR-0027 loadable.
+_MODALITY_PREFIXES: tuple[str, ...] = ("encoders.{modality}", "fusion.gates.{modality}")
+
 
 def param_group(param_name: str) -> str:
     """Map a ``state_dict`` key to its aggregation group.
@@ -32,10 +41,11 @@ def param_group(param_name: str) -> str:
 
     Returns:
         The owning modality (``"audio"``/``"video"``/``"text"``) when the
-        parameter belongs to a modality encoder, else :data:`SHARED_GROUP`.
+        parameter belongs to a modality encoder or that modality's fusion gate,
+        else :data:`SHARED_GROUP`.
     """
     for modality in CAPABILITY_MODALITIES:
-        if param_name.startswith(f"encoders.{modality}"):
+        if any(param_name.startswith(p.format(modality=modality)) for p in _MODALITY_PREFIXES):
             return modality
     return SHARED_GROUP
 

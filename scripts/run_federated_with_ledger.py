@@ -34,7 +34,7 @@ from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
 from privchain.federated.client import ClientDPConfig
 from privchain.federated.partition import build_client_partitions
 from privchain.federated.simulation import build_federated_clients, run_capability_aware_simulation
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.privacy.budget_allocator import allocate_target_epsilons
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
@@ -100,7 +100,7 @@ def main() -> None:
             seed=base.seed,
         ),
     )
-    global_model = MultimodalDepressionModel(input_dims, base.model)
+    global_model = build_depression_model(input_dims, base.model)
 
     ledger = build_ledger(blockchain.ledger)
     run_dir = create_run_dir(base.train.output_dir, "phase5", "phase5_federated_with_ledger")

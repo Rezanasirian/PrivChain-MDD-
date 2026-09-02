@@ -32,10 +32,13 @@ import torch
 from privchain.config import load_baseline_config, load_federated_config, resolve_device
 from privchain.federated.partition import build_client_partitions
 from privchain.federated.simulation import build_federated_clients, run_simulation
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
-from privchain.training.objective import DepressionObjective, evaluate_model
+from privchain.training.objective import (
+    build_objective,
+    evaluate_model,
+)
 from privchain.training.protocol import build_splits, labels_of, make_loader
 
 # Both backends run the identical protocol on identical data, so anything beyond
@@ -68,7 +71,7 @@ def main() -> None:
     selection_loader = make_loader(
         splits.selection, batch_size=base.train.batch_size, shuffle=False
     )
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(torch_device)
+    objective = build_objective(base.model, base.data.phq8_max).to(torch_device)
 
     federation = fed.federation.model_copy(update={"num_rounds": args.rounds})
     partitions = build_client_partitions(
@@ -80,7 +83,7 @@ def main() -> None:
 
     # One starting point, so any divergence is orchestration and not init.
     seed_everything(seed)
-    init_model = MultimodalDepressionModel(input_dims, base.model)
+    init_model = build_depression_model(input_dims, base.model, splits.quality_dims)
     init_state: OrderedDict[str, torch.Tensor] = OrderedDict(
         (k, v.detach().cpu().clone()) for k, v in init_model.state_dict().items()
     )
@@ -103,7 +106,7 @@ def main() -> None:
     # ── In-house simulator ───────────────────────────────────────────────────
     sim_dir = run_dir / "in_house"
     sim_dir.mkdir(parents=True, exist_ok=True)
-    sim_model = MultimodalDepressionModel(input_dims, base.model)
+    sim_model = build_depression_model(input_dims, base.model, splits.quality_dims)
     sim_model.load_state_dict(copy.deepcopy(init_state))
     run_simulation(
         sim_model,
@@ -122,7 +125,7 @@ def main() -> None:
     # ── Flower ───────────────────────────────────────────────────────────────
     from privchain.federated.flower_app import run_flower_simulation
 
-    flower_model = MultimodalDepressionModel(input_dims, base.model)
+    flower_model = build_depression_model(input_dims, base.model, splits.quality_dims)
     flower_model.load_state_dict(copy.deepcopy(init_state))
     _history, final_state = run_flower_simulation(
         splits.train,

@@ -214,8 +214,16 @@ class ModalityMaskedDataset(Dataset[Sample]):
     def __getitem__(self, index: int) -> Sample:
         """Return the masked sample at local position ``index``.
 
-        Absent modalities are replaced by a length-1 zero sequence with the same
-        feature dimension, so encoders still receive a valid (signal-free) input.
+        How an absent modality is blanked depends on what the sample is:
+
+        * **Segment-aligned samples** (they carry ``quality``) keep their length.
+          Segment ``k`` must mean the same stretch of interview in every branch,
+          so collapsing one modality to a single row would break the alignment
+          the architecture rests on. The quality vectors are zeroed too, which
+          sets ``valid = 0`` at every segment.
+        * **Frame-level samples** collapse to a single zero frame, as before.
+          Nothing aligns them, and keeping 3000 zero frames per absent modality
+          would make every capability-restricted client pay to encode padding.
 
         Args:
             index: Local index in ``[0, len(self))``.
@@ -226,9 +234,19 @@ class ModalityMaskedDataset(Dataset[Sample]):
         sample = self._base[self._indices[index]]
         masked: Sample = dict(sample)  # type: ignore[assignment]
         masked["presence"] = dict(sample["presence"])
+        aligned = "quality" in sample
+        if aligned:
+            masked["quality"] = dict(sample["quality"])
         for modality in CAPABILITY_MODALITIES:
             if self._capability[modality] == 0:
-                feat_dim = sample[modality].shape[1]  # type: ignore[literal-required]
-                masked[modality] = torch.zeros((1, feat_dim), dtype=sample[modality].dtype)  # type: ignore[literal-required]
+                features = sample[modality]  # type: ignore[literal-required]
+                blank = (
+                    torch.zeros_like(features)
+                    if aligned
+                    else torch.zeros((1, features.shape[1]), dtype=features.dtype)
+                )
+                masked[modality] = blank  # type: ignore[literal-required]
                 masked["presence"][modality] = torch.tensor(0, dtype=torch.long)
+                if aligned:
+                    masked["quality"][modality] = torch.zeros_like(sample["quality"][modality])
         return masked

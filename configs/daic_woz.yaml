@@ -20,6 +20,15 @@ daic_woz:
 
   participant_dir_template: "{pid}_P"
 
+  # Segment-aligned mode (ADR-0027). When enabled, ALL THREE modalities become
+  # `count` rows cut at the same places: the participant's turns are grouped into
+  # `count` contiguous groups, text is embedded per group, and audio/video
+  # functionals are computed over the frames those groups span. Off by default —
+  # the committed Phase 1 results use the session-level view above.
+  segments:
+    enabled: false
+    count: 8
+
   # Parsed/subsampled feature matrices are memoized here (relative to `root`),
   # keyed by the parsing options below so a stride change invalidates them.
   # Re-parsing the ~36 MB COVAREP files on every run cost minutes; set to null
@@ -64,6 +73,16 @@ daic_woz:
     # 100 Hz x 900 s = ~90k frames; 30 x 3000 = 90k -> full session at ~3.3 Hz.
     max_frames: 3000
     frame_stride: 30
+    # COVAREP has no header and no clock, so a frame's time comes from its row
+    # index in the source file at this rate — 100 Hz, i.e. one row per 10 ms.
+    # Used only in segment mode, to place frames inside a turn's time window.
+    sample_rate_hz: 100
+    # Per-frame quality signals kept aside from the model features. COVAREP has
+    # no header, so these are given as {name: column_index}. Column 1 is the
+    # voiced/unvoiced flag in the AVEC2017 COVAREP layout; set `quality_columns`
+    # to {} to report a voiced ratio of 0, which the gate then cannot use.
+    quality_columns: {voiced: 1}
+    voiced_column: voiced
     # session | corpus | none  (ADR-0019). `session` z-scores each channel WITHIN
     # the session, which forces every participant to per-channel mean 0 / std 1 and
     # so deletes absolute pitch level, formant positions and overall energy — the
@@ -80,6 +99,12 @@ daic_woz:
     # 30 Hz x 900 s = ~27k frames; 10 x 3000 = 30k -> full session at 3 Hz.
     max_frames: 3000
     frame_stride: 10
+    # OpenFace records its own clock, so segment mode reads the time directly
+    # rather than inferring it. `timestamp` is dropped from the model features
+    # (above) and kept here alongside the tracker-quality columns the fusion
+    # gate reads.
+    timestamp_column: timestamp
+    quality_columns: [timestamp, confidence, success]
     # session | corpus | none  (ADR-0019). `session` z-scores each channel WITHIN
     # the session, which forces every participant to per-channel mean 0 / std 1 and
     # so deletes absolute pitch level, formant positions and overall energy — the
@@ -94,6 +119,10 @@ daic_woz:
     speaker_column: speaker
     value_column: value
     participant_speaker: Participant     # keep only the participant's turns
+    # Utterance timings. These are what let audio and video be cut at the same
+    # places as the text (ADR-0027); without them segment mode has no clock.
+    start_column: start_time
+    stop_column: stop_time
 
     # hashing: pure-NumPy bag-of-words, no downloads (used by CI and mock runs).
     # transformer: contextual embeddings. Text is the strongest DAIC-WOZ

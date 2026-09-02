@@ -68,11 +68,11 @@ from privchain.federated.simulation import (
     run_capability_aware_simulation,
     run_simulation,
 )
-from privchain.fusion.baseline_model import MultimodalDepressionModel
+from privchain.fusion.factory import build_depression_model
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
-    DepressionObjective,
+    build_objective,
     evaluate_with_selected_threshold,
     positive_class_weight,
 )
@@ -163,6 +163,7 @@ def _run_federated_fold(
     base: Any,
     fed: Any,
     input_dims: dict[str, int],
+    quality_dims: dict[str, int] | None,
     device: torch.device,
     seed: int,
     arm: str,
@@ -183,6 +184,7 @@ def _run_federated_fold(
         base: Validated baseline config.
         fed: Validated federated config.
         input_dims: Per-modality input dims.
+        quality_dims: Per-modality quality widths (segment-gated data only).
         device: Torch device.
         seed: Seed for this repetition; also reseeds the partition.
         arm: ``"fedavg"`` or ``"proposed"``.
@@ -242,8 +244,9 @@ def _run_federated_fold(
         seed=seed,
         device=str(device),
         class_weight_mode=weight_mode,
+        quality_dims=quality_dims,
     )
-    global_model = MultimodalDepressionModel(input_dims, base.model).to(device)
+    global_model = build_depression_model(input_dims, base.model, quality_dims).to(device)
     selection_loader = _loader(selection, batch_size)
     common: dict[str, Any] = {
         "num_rounds": rounds,
@@ -274,7 +277,7 @@ def _run_federated_fold(
             torch.load(run_dir / "best_global_model.pt", map_location=device)
         )
 
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
+    objective = build_objective(base.model, base.data.phq8_max).to(device)
     metrics = evaluate_with_selected_threshold(
         global_model.to(device),
         selection_loader,
@@ -302,6 +305,7 @@ def _run_centralized_fold(
     *,
     base: Any,
     input_dims: dict[str, int],
+    quality_dims: dict[str, int] | None,
     device: torch.device,
     seed: int,
 ) -> dict[str, float]:
@@ -314,6 +318,7 @@ def _run_centralized_fold(
         pool_labels: Binary label per pool item.
         base: Validated baseline config.
         input_dims: Per-modality input dims.
+        quality_dims: Per-modality quality widths (segment-gated data only).
         device: Torch device.
         seed: Seed for this repetition.
 
@@ -333,7 +338,7 @@ def _run_centralized_fold(
         if base.train.class_weighting
         else None
     )
-    model = MultimodalDepressionModel(input_dims, base.model)
+    model = build_depression_model(input_dims, base.model, quality_dims)
     trainer = CentralizedTrainer(
         model,
         learning_rate=base.train.learning_rate,
@@ -355,7 +360,7 @@ def _run_centralized_fold(
             early_stopping_patience=base.train.early_stopping_patience,
         )
         model.load_state_dict(torch.load(run_dir / "best_model.pt", map_location=device))
-    objective = DepressionObjective(base.data.phq8_max, base.model.phq_loss_weight).to(device)
+    objective = build_objective(base.model, base.data.phq8_max).to(device)
     return evaluate_with_selected_threshold(
         model.to(device),
         selection_loader,
@@ -482,6 +487,7 @@ def main() -> None:
                     base=base,
                     fed=fed,
                     input_dims=input_dims,
+                    quality_dims=splits.quality_dims,
                     device=device,
                     seed=seed + fold_i,
                     arm=arm,
@@ -513,6 +519,7 @@ def main() -> None:
                         pool_labels,
                         base=base,
                         input_dims=input_dims,
+                        quality_dims=splits.quality_dims,
                         device=device,
                         seed=seed + fold_i,
                     )
