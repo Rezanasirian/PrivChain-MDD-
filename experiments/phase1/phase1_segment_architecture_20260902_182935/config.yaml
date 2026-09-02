@@ -1,0 +1,98 @@
+baseline:
+  seed: 42
+  data:
+    num_sessions: 32
+    root: data/mock
+    phq8_max: 24
+    depression_cutoff: 10
+    audio:
+      min_frames: 80
+      max_frames: 200
+      n_mels: 40
+    video:
+      min_frames: 40
+      max_frames: 100
+      n_features: 49
+    text:
+      embed_dim: 64
+      min_tokens: 20
+      max_tokens: 60
+  model:
+    architecture: encode_then_fuse
+    encoder:
+      type: stats
+      hidden_dim: 128
+      out_dim: 128
+      bidirectional: true
+      dropout: 0.3
+      attention_dim: 64
+      positional: false
+    encoder_overrides:
+      text:
+        type: mean
+    fusion:
+      type: concat
+      hidden_dim: 128
+      dropout: 0.1
+    head:
+      hidden_dim: 64
+      dropout: 0.1
+    temporal:
+      attention_dim: 64
+      positional: true
+      dropout: 0.1
+    use_phq_regression: true
+    phq_loss_weight: 0.1
+    phq_loss: mse
+    huber_delta: 0.1
+  train:
+    batch_size: 32
+    epochs: 200
+    learning_rate: 0.0003
+    weight_decay: 0.0001
+    val_fraction: 0.25
+    num_workers: 0
+    output_dir: experiments
+    run_name: phase1_centralized_baseline
+    class_weighting: true
+    selection_metric: f1
+    early_stopping_patience: 40
+    device: auto
+    selection_fraction: 0.2
+    seeds:
+    - 42
+    - 7
+    - 2024
+    modality_dropout:
+      enabled: false
+      patterns:
+      - name: text_only
+        capability:
+        - 0
+        - 0
+        - 1
+        fraction: 0.3
+      - name: audio_text
+        capability:
+        - 1
+        - 0
+        - 1
+        fraction: 0.2
+      - name: video_text
+        capability:
+        - 0
+        - 1
+        - 1
+        fraction: 0.2
+      - name: full
+        capability:
+        - 1
+        - 1
+        - 1
+        fraction: 0.2
+      - name: audio_only
+        capability:
+        - 1
+        - 0
+        - 0
+        fraction: 0.1
