@@ -1,0 +1,76 @@
+{
+  "adaptive": {
+    "cv": {
+      "num_folds": 10.0,
+      "accuracy_num_valid_folds": 10.0,
+      "accuracy_mean": 0.3727272727272727,
+      "accuracy_std": 0.12931265632334465,
+      "f1_num_valid_folds": 10.0,
+      "f1_mean": 0.3757142857142857,
+      "f1_std": 0.14958589012188805,
+      "loss_num_valid_folds": 10.0,
+      "loss_mean": 1.0050666511058808,
+      "loss_std": 0.043115985755213304,
+      "macro_f1_num_valid_folds": 10.0,
+      "macro_f1_mean": 0.3344688644688644,
+      "macro_f1_std": 0.1420339037081201,
+      "pr_auc_num_valid_folds": 10.0,
+      "pr_auc_mean": 0.36588684463684457,
+      "pr_auc_std": 0.15035728529326925,
+      "precision_num_valid_folds": 10.0,
+      "precision_mean": 0.26478354978354973,
+      "precision_std": 0.10625479395823613,
+      "recall_num_valid_folds": 10.0,
+      "recall_mean": 0.6833333333333333,
+      "recall_std": 0.32015621187164245,
+      "roc_auc_num_valid_folds": 10.0,
+      "roc_auc_mean": 0.409375,
+      "roc_auc_std": 0.2195941055232484,
+      "threshold_num_valid_folds": 10.0,
+      "threshold_mean": 0.48976017981767656,
+      "threshold_std": 0.02410663146654825
+    },
+    "held_out": {
+      "f1": 0.4137931034482759,
+      "roc_auc": 0.55,
+      "accuracy": 0.39285714285714285
+    }
+  },
+  "uniform": {
+    "cv": {
+      "num_folds": 10.0,
+      "accuracy_num_valid_folds": 10.0,
+      "accuracy_mean": 0.35530303030303023,
+      "accuracy_std": 0.11748287881044815,
+      "f1_num_valid_folds": 10.0,
+      "f1_mean": 0.36759462759462763,
+      "f1_std": 0.14669963771892655,
+      "loss_num_valid_folds": 10.0,
+      "loss_mean": 1.0050539910793304,
+      "loss_std": 0.04311938201533725,
+      "macro_f1_num_valid_folds": 10.0,
+      "macro_f1_mean": 0.3178882228882229,
+      "macro_f1_std": 0.1307219443189631,
+      "pr_auc_num_valid_folds": 10.0,
+      "pr_auc_mean": 0.36588684463684457,
+      "pr_auc_std": 0.15035728529326925,
+      "precision_num_valid_folds": 10.0,
+      "precision_mean": 0.2553391053391053,
+      "precision_std": 0.10000866700321252,
+      "recall_num_valid_folds": 10.0,
+      "recall_mean": 0.6833333333333333,
+      "recall_std": 0.32015621187164245,
+      "roc_auc_num_valid_folds": 10.0,
+      "roc_auc_mean": 0.409375,
+      "roc_auc_std": 0.2195941055232484,
+      "threshold_num_valid_folds": 10.0,
+      "threshold_mean": 0.48970032185316087,
+      "threshold_std": 0.024134122817958462
+    },
+    "held_out": {
+      "f1": 0.4137931034482759,
+      "roc_auc": 0.5625,
+      "accuracy": 0.39285714285714285
+    }
+  }
+}

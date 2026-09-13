@@ -89,6 +89,7 @@ from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
 from privchain.training.objective import (
     build_objective,
+    collect_scores,
     evaluate_with_selected_threshold,
     positive_class_weight,
 )
@@ -97,6 +98,30 @@ from privchain.training.trainer import CentralizedTrainer
 
 MODALITIES = ("audio", "video", "text")
 FoldRunner = Callable[[list[int], list[int], int], dict[str, float]]
+
+#: Optional collector for participant-level predictions. A metric summary cannot
+#: support a paired comparison — that needs the scores themselves (ADR-0020) —
+#: and retraining to recover them is what the official-test protocol forbids, so
+#: the campaign writes them while it has them.
+ScoreSink = list[dict[str, Any]] | None
+
+
+class _ScoreCollector:
+    """Collects participant-level predictions during the official-test read only.
+
+    The cross-validation folds are summarized by their metrics; it is the single
+    official-test read that cannot be repeated, so only that phase is recorded.
+    """
+
+    def __init__(self) -> None:
+        self.enabled = False
+        self.per_method: dict[str, list[dict[str, Any]]] = {}
+
+    def sink(self, method: str) -> ScoreSink:
+        """Return this method's collector while enabled, else ``None``."""
+        if not self.enabled:
+            return None
+        return self.per_method.setdefault(method, [])
 PRE_REGISTRATION = "docs/evaluation/PRE-REGISTRATION-2026-09-13.md"
 
 
@@ -120,6 +145,40 @@ def _loader(
     """Build a padded DataLoader over a subset of ``dataset``."""
     return DataLoader(
         Subset(dataset, indices), batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+    )
+
+
+def _record_scores(
+    sink: ScoreSink,
+    model: Any,
+    test_loader: DataLoader[Sample],
+    test_idx: list[int],
+    device: torch.device,
+    seed: int,
+    metrics: dict[str, float],
+) -> None:
+    """Append this fold's participant-level predictions to ``sink``.
+
+    Args:
+        sink: Collector, or ``None`` to record nothing.
+        model: The fitted model being reported.
+        test_loader: Loader over the reported indices, in their order.
+        test_idx: The reported dataset indices, so scores stay addressable.
+        device: Torch device.
+        seed: Seed this fit used.
+        metrics: The fold's metrics, for the threshold that produced them.
+    """
+    if sink is None:
+        return
+    scores, labels = collect_scores(model, test_loader, device)
+    sink.append(
+        {
+            "seed": seed,
+            "indices": list(test_idx),
+            "scores": [float(v) for v in scores],
+            "labels": [int(v) for v in labels],
+            "threshold": float(metrics["threshold"]),
+        }
     )
 
 
@@ -199,6 +258,7 @@ def _eval_centralized(
     device: torch.device,
     epochs: int,
     seed: int,
+    score_sink: ScoreSink = None,
 ) -> dict[str, float]:
     """Train the centralized baseline on a fold and score the test split.
 
@@ -245,9 +305,12 @@ def _eval_centralized(
         )
         model.load_state_dict(torch.load(run_dir / "best_model.pt", map_location=device))
     objective = build_objective(base.model, base.data.phq8_max).to(device)
-    return evaluate_with_selected_threshold(
-        model, selection_loader, _loader(full, test_idx, batch_size), objective, device
+    test_loader = _loader(full, test_idx, batch_size)
+    metrics = evaluate_with_selected_threshold(
+        model, selection_loader, test_loader, objective, device
     )
+    _record_scores(score_sink, model, test_loader, test_idx, device, seed, metrics)
+    return metrics
 
 
 def _eval_centralized_dp(
@@ -264,6 +327,7 @@ def _eval_centralized_dp(
     epochs: int,
     seed: int,
     mode: str,
+    score_sink: ScoreSink = None,
 ) -> dict[str, float]:
     """Train centralized per-modality DP-SGD (adaptive or uniform ε) on a fold."""
     seed_everything(seed)
@@ -328,13 +392,12 @@ def _eval_centralized_dp(
     selection_loader: DataLoader[Sample] = DataLoader(
         selection, batch_size=batch_size, collate_fn=collate_fn
     )
-    return evaluate_with_selected_threshold(
-        model,
-        selection_loader,
-        _loader(full, test_idx, batch_size),
-        objective,
-        device,
+    test_loader = _loader(full, test_idx, batch_size)
+    metrics = evaluate_with_selected_threshold(
+        model, selection_loader, test_loader, objective, device
     )
+    _record_scores(score_sink, model, test_loader, test_idx, device, seed, metrics)
+    return metrics
 
 
 def _eval_federated(
@@ -353,6 +416,7 @@ def _eval_federated(
     strategy: str,
     aggregation: AggregationConfig,
     checkpoint_dir: Path,
+    score_sink: ScoreSink = None,
 ) -> dict[str, float]:
     """Train a federated variant on a fold and score the held-out test split.
 
@@ -425,13 +489,12 @@ def _eval_federated(
     checkpoint = checkpoint_dir / "best_global_model.pt"
     global_model.load_state_dict(torch.load(checkpoint, map_location=device))
     objective = build_objective(base.model, base.data.phq8_max).to(device)
-    return evaluate_with_selected_threshold(
-        global_model.to(device),
-        selection_loader,
-        _loader(full, test_idx, batch_size),
-        objective,
-        device,
+    test_loader = _loader(full, test_idx, batch_size)
+    metrics = evaluate_with_selected_threshold(
+        global_model.to(device), selection_loader, test_loader, objective, device
     )
+    _record_scores(score_sink, global_model, test_loader, test_idx, device, seed, metrics)
+    return metrics
 
 
 def _cross_validate(
@@ -563,6 +626,8 @@ def main() -> None:
         },
     )
 
+    collector = _ScoreCollector()
+
     def federated(name: str, strategy: str, aggregation: AggregationConfig) -> FoldRunner:
         """Bind one federated variant into a fold runner."""
 
@@ -583,6 +648,7 @@ def main() -> None:
                 strategy=strategy,
                 aggregation=aggregation,
                 checkpoint_dir=run_dir / name / fold_id / str(seed),
+                score_sink=collector.sink(name),
             )
 
         return run
@@ -599,6 +665,7 @@ def main() -> None:
             device=device,
             epochs=centralized_epochs,
             seed=s,
+            score_sink=collector.sink("centralized"),
         ),
         "fedavg": federated("fedavg", "fedavg", fed.aggregation),
         "personalized": federated(
@@ -628,11 +695,19 @@ def main() -> None:
     official: dict[str, dict[str, Any]] = {}
     if official_idx and args.official_campaign:
         pool_idx = list(range(len(labels_all)))
+        collector.enabled = True
         for name, runner in methods.items():
             print(f"  official test: {name} ...")
             official[name] = aggregate_metrics(
                 [runner(pool_idx, official_idx, s) for s in base.train.seeds]
             )
+        collector.enabled = False
+        # A metric summary cannot answer "is this arm better than that one";
+        # a paired participant-level bootstrap can, and it must not cost a
+        # second read of the test split.
+        (run_dir / "official_test_scores.json").write_text(
+            json.dumps(collector.per_method, indent=2), encoding="utf-8"
+        )
 
     # DP privacy–utility: adaptive vs uniform allocation (centralized DP-SGD).
     dp_results: dict[str, dict[str, Any]] = {}

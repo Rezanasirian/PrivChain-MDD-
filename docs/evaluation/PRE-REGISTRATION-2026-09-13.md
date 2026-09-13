@@ -90,6 +90,22 @@ No hyperparameter will be changed to reconcile them.
 3. Failures may be rerun only for a documented infrastructure error, preserving
    the same config and seed.
 
+## Amendment, 2026-09-13, after the first campaign run
+
+The campaign of `experiments/phase7/phase7_final_evaluation_20260913_091911`
+completed and its official-test metrics are reported: centralized 0.705, proposed
+0.584, proposed−reputation 0.573, personalized 0.483, FedAvg 0.452 ROC-AUC across
+three seeds. It wrote metric summaries only, so no paired comparison between arms
+can be computed from it, and this protocol's reporting rules require
+participant-level bootstrap.
+
+Under clause 4 the campaign is rerun once, with **identical configuration and
+identical seeds**, for the documented infrastructure reason that predictions were
+not persisted. The code change is confined to writing
+`official_test_scores.json`; no arm, threshold rule, hyperparameter or seed
+changes, and the already-observed metrics above stand as the reported numbers.
+Any difference between the two runs' metrics would itself be a reportable defect.
+
 ## Uncertainty and reporting
 
 - Bootstrap resampling is at participant level; a participant's predictions are
