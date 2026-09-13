@@ -31,11 +31,14 @@ download turned up, including the corrupt archive for participant 440).
 
 from __future__ import annotations
 
+import bisect
 import csv
 import hashlib
 import json
 import math
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +49,7 @@ from torch.utils.data import Dataset
 
 from privchain.data.mock_daic_woz import MODALITIES, Sample
 from privchain.data.segment_alignment import (
+    CTD_DIM,
     NUM_FUNCTIONALS,
     QUALITY_DIMS,
     SegmentPlan,
@@ -58,6 +62,20 @@ from privchain.data.segment_alignment import (
 )
 from privchain.data.text_vectorizers import TextVectorizer, build_text_vectorizer
 from privchain.segmentation import contiguous_spans
+
+
+class FeatureConfigError(ValueError):
+    """A feature-loading setting is wrong, as opposed to one session being damaged.
+
+    The loader deliberately tolerates data faults: a participant missing a
+    modality, or a transcript whose timings are unreadable, is skipped while
+    feature dims are inferred and while corpus statistics are fitted, because one
+    bad session must not stop a run (ADR-0010). A *configuration* fault has the
+    opposite requirement — a speech mask with no clock, or an unknown downsample
+    mode, is wrong for every session — and reporting it as "no readable
+    participant found" sends the reader looking for a missing file. Subclasses
+    ``ValueError`` so callers that already catch that keep working.
+    """
 
 
 @dataclass(frozen=True)
@@ -86,6 +104,382 @@ class ParsedFeatures:
     skipped: int
 
 
+#: How ``frame_stride`` source rows collapse into one retained row.
+#:
+#: * ``decimate`` — keep the first row of each stride window and discard the rest.
+#:   Plain subsampling with no anti-alias filter, so variation faster than
+#:   ``rate / (2 * stride)`` folds down into the retained band. Kept as the default
+#:   because every committed result was produced under it. A validity mask cannot
+#:   be honoured here — dropping an invalid row would change the frame count, and a
+#:   channel-wise mask has no meaning when only one row survives — so configuring
+#:   both raises rather than silently ignoring the mask.
+#: * ``mean`` — average each window. A boxcar low-pass followed by decimation:
+#:   crude attenuation before downsampling, not an ideal anti-alias filter. It can
+#:   consume a measurement-validity mask.
+#: * ``window_functionals`` — replace each window with ``[mean, std, min, max,
+#:   mean|diff|]`` per channel, matching :func:`masked_statistics`. Recovers the
+#:   full-rate mean/min/max exactly and keeps the within-window variability that
+#:   ``mean`` throws away, at five times the feature width.
+DOWNSAMPLE_MODES = ("decimate", "mean", "window_functionals")
+# Bump whenever parsing/aggregation semantics change. Source metadata and config
+# alone cannot invalidate entries written by an older implementation.
+FEATURE_CACHE_SCHEMA_VERSION = 3
+
+
+@dataclass(frozen=True)
+class SpeechWindow:
+    """Which rows of a feature file fall inside the participant's own speech.
+
+    The session-level view of a DAIC-WOZ interview used to hand the acoustic
+    branch **every** frame of a ~15-minute recording: the participant, Ellie's
+    questions, and the silence between them. Functionals computed over that
+    mixture describe the interview's structure more than the participant's voice,
+    and the audio branch scored at chance because of it (ADR-0031). This restricts
+    the frames to the intervals the transcript attributes to the participant —
+    the same rule the segment-aligned path already applied per segment
+    (:meth:`~privchain.data.segment_alignment.SegmentPlan.intervals`).
+
+    A row's time comes from the modality's own clock: ``timestamp_column`` for a
+    file that records one (OpenFace), else ``row index / sample_rate_hz`` for one
+    that does not (COVAREP). Both are resolved against the **source** row index,
+    so a dropped malformed row cannot shift every later frame in time.
+
+    Attributes:
+        intervals: Merged, sorted ``(start, stop)`` spans in seconds. Empty means
+            the transcript carried no usable timing, which is an error rather than
+            a reason to fall back to the whole session.
+        sample_rate_hz: Frame rate, when the clock is the row index.
+        timestamp_column: Header name carrying the row's own time, when it has one.
+    """
+
+    intervals: tuple[tuple[float, float], ...]
+    sample_rate_hz: float = 0.0
+    timestamp_column: str = ""
+
+    @classmethod
+    def from_turns(
+        cls,
+        turns: Sequence[TimedTurn],
+        *,
+        pad_seconds: float = 0.0,
+        sample_rate_hz: float = 0.0,
+        timestamp_column: str = "",
+    ) -> SpeechWindow:
+        """Build a window from a participant's turns, padded and merged.
+
+        Zero-length turns are dropped: :func:`_timed_turn` collapses a turn whose
+        timestamps were unreadable to ``start == stop`` precisely so it
+        contributes text and no frames, and padding one would hand it a slice of
+        the interview it has no claim to.
+
+        Args:
+            turns: The participant's timed turns, in any order.
+            pad_seconds: Margin added either side of each turn, absorbing the
+                transcript's alignment error at turn boundaries.
+            sample_rate_hz: Frame rate for a file whose clock is the row index.
+            timestamp_column: Header name of the row's own time, if it has one.
+
+        Returns:
+            The window, with overlapping spans merged.
+
+        Raises:
+            ValueError: If ``pad_seconds`` is negative.
+        """
+        if pad_seconds < 0.0:
+            raise ValueError(f"pad_seconds must be non-negative, got {pad_seconds}")
+        spans = sorted(
+            (max(0.0, turn.start - pad_seconds), turn.stop + pad_seconds)
+            for turn in turns
+            if turn.stop > turn.start
+        )
+        merged: list[tuple[float, float]] = []
+        for start, stop in spans:
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], stop))
+            else:
+                merged.append((start, stop))
+        return cls(
+            intervals=tuple(merged),
+            sample_rate_hz=sample_rate_hz,
+            timestamp_column=timestamp_column,
+        )
+
+    @cached_property
+    def _starts(self) -> list[float]:
+        """Interval start times, so membership costs one bisect per row.
+
+        A COVAREP file is ~90k rows and a session has a few hundred turns; a
+        linear scan per row would dominate the parse it is meant to refine.
+        """
+        return [start for start, _ in self.intervals]
+
+    def contains(self, seconds: float) -> bool:
+        """Whether ``seconds`` falls inside any speech interval.
+
+        Args:
+            seconds: The row's time.
+
+        Returns:
+            ``True`` when the time is inside a span.
+        """
+        index = bisect.bisect_right(self._starts, seconds) - 1
+        if index < 0:
+            return False
+        return seconds <= self.intervals[index][1]
+
+
+def _validity_mask(
+    values: NDArray[np.float32],
+    columns: dict[str, NDArray[np.float32]],
+    spec: dict[str, Any] | None,
+) -> NDArray[np.bool_] | None:
+    """Mark which ``(frame, channel)`` entries are real measurements.
+
+    Two kinds of invalidity occur in DAIC-WOZ and they have different shapes:
+
+    * **Row-wise** (video). OpenFace reports ``success``/``confidence`` per frame.
+      When the tracker did not fit the face, no action-unit intensity on that row
+      is a measurement, so the whole row is masked.
+    * **Channel-wise** (audio). COVAREP reports a voiced/unvoiced flag. On an
+      unvoiced frame the AVEC2017 documentation says F0 and the glottal
+      parameters must not be used, but the spectral channels on the same row are
+      still fine — so only the declared columns are masked.
+
+    Args:
+        values: The parsed feature matrix, shape ``(T, D)``.
+        columns: Quality columns kept aside by the parser, each shape ``(T,)``.
+        spec: The modality's ``validity`` config block, or ``None``. The block
+            carries the declared columns and thresholds even while switched
+            off, so they stay versioned config rather than script constants;
+            ``enabled: false`` means the values are declared but not applied.
+
+    Returns:
+        A boolean mask of shape ``(T, D)``, or ``None`` when the block is
+        absent, disabled, or declares no rule.
+
+    Raises:
+        ValueError: If a configured quality column was not kept, or a declared
+            channel index falls outside the parsed width.
+    """
+    if not spec or not spec.get("enabled"):
+        return None
+    valid = np.ones(values.shape, dtype=bool)
+    configured = False
+
+    def _column(name: str) -> NDArray[np.float32]:
+        column = columns.get(name)
+        if column is None:
+            raise ValueError(f"validity needs quality column {name!r}; add it to quality_columns")
+        return column
+
+    success_column = str(spec.get("success_column", "") or "")
+    if spec.get("require_success") and success_column:
+        valid &= (_column(success_column) > 0.5)[:, None]
+        configured = True
+
+    confidence_column = str(spec.get("confidence_column", "") or "")
+    min_confidence = spec.get("min_confidence")
+    if min_confidence is not None and confidence_column:
+        valid &= (_column(confidence_column) >= float(min_confidence))[:, None]
+        configured = True
+
+    unvoiced_columns = [int(index) for index in (spec.get("invalid_when_unvoiced") or [])]
+    voiced_column = str(spec.get("voiced_column", "") or "")
+    if unvoiced_columns and voiced_column:
+        width = values.shape[1]
+        out_of_range = [index for index in unvoiced_columns if not 0 <= index < width]
+        if out_of_range:
+            raise ValueError(
+                f"invalid_when_unvoiced names column(s) {out_of_range} but the parsed matrix "
+                f"is {width} wide; verify the feature layout before masking"
+            )
+        unvoiced = _column(voiced_column) <= 0.5
+        valid[np.ix_(unvoiced, np.asarray(unvoiced_columns, dtype=int))] = False
+        configured = True
+
+    return valid if configured else None
+
+
+def _row_clock(
+    speech: SpeechWindow | None, path: Path, header: list[str] | None
+) -> Callable[[int, Sequence[str]], float | None] | None:
+    """Build the row → seconds function a speech mask needs, or ``None``.
+
+    Resolved once per file rather than per row, and against the same header the
+    feature columns were resolved against, so the mask and the features cannot
+    disagree about which column carries the clock.
+
+    Args:
+        speech: The speech window, or ``None`` when no mask is configured.
+        path: Feature file path, for error messages.
+        header: The file's header row, when it has one.
+
+    Returns:
+        A callable taking ``(row_index, raw_row)`` and returning the row's time,
+        or ``None`` when the row's timestamp is unusable. ``None`` overall when
+        no mask is configured.
+
+    Raises:
+        ValueError: If the window names a timestamp column the file does not
+            have, or gives neither a column nor a positive sample rate.
+    """
+    if speech is None:
+        return None
+
+    if speech.timestamp_column:
+        if header is None or speech.timestamp_column not in header:
+            raise FeatureConfigError(
+                f"{path.name}: the speech mask needs timestamp column "
+                f"{speech.timestamp_column!r}, which this file does not have"
+            )
+        index = header.index(speech.timestamp_column)
+
+        def from_column(row_index: int, raw: Sequence[str]) -> float | None:
+            try:
+                seconds = float(raw[index])
+            except (ValueError, IndexError):
+                return None
+            return seconds if math.isfinite(seconds) else None
+
+        return from_column
+
+    if speech.sample_rate_hz <= 0.0:
+        raise FeatureConfigError(
+            f"{path.name}: the speech mask needs a clock — set `timestamp_column` "
+            "for a file that records one, or a positive `sample_rate_hz`"
+        )
+    rate = speech.sample_rate_hz
+
+    def from_index(row_index: int, raw: Sequence[str]) -> float | None:
+        return row_index / rate
+
+    return from_index
+
+
+def _window_view(array: NDArray[Any], factor: int, fill: Any) -> NDArray[Any]:
+    """Reshape ``(T, ...)`` into ``(W, factor, ...)``, padding the tail with ``fill``."""
+    remainder = (-array.shape[0]) % factor
+    if remainder:
+        pad_shape = (remainder, *array.shape[1:])
+        array = np.concatenate([array, np.full(pad_shape, fill, dtype=array.dtype)], axis=0)
+    return array.reshape(-1, factor, *array.shape[1:])
+
+
+def _masked_functionals(
+    windows: NDArray[np.float32], mask: NDArray[np.bool_]
+) -> list[NDArray[np.float32]]:
+    """Per-window functionals over masked entries: mean, std, min, max, mean|diff|.
+
+    Mirrors :func:`~privchain.encoders.sequence_encoder.masked_statistics` so that
+    a window aggregate and a session aggregate mean the same thing. First
+    differences count only where **both** endpoints are valid, for the same reason
+    the session version requires both to be inside the valid prefix.
+
+    Args:
+        windows: Values, shape ``(W, factor, D)``.
+        mask: Which entries count, same shape.
+
+    Returns:
+        Five arrays of shape ``(W, D)``, in the order the docstring names.
+    """
+    weights = mask.astype(np.float32)
+    count = weights.sum(axis=1)
+    safe = np.maximum(count, 1.0)
+
+    mean = (windows * weights).sum(axis=1) / safe
+    variance = (((windows - mean[:, None, :]) ** 2) * weights).sum(axis=1) / safe
+    std = np.sqrt(np.maximum(variance, 0.0))
+    minimum = np.where(mask, windows, np.inf).min(axis=1)
+    maximum = np.where(mask, windows, -np.inf).max(axis=1)
+
+    pairs = mask[:, 1:, :] & mask[:, :-1, :]
+    deltas = np.abs(windows[:, 1:, :] - windows[:, :-1, :]) * pairs
+    delta_mean = deltas.sum(axis=1) / np.maximum(pairs.sum(axis=1), 1)
+
+    empty = count == 0
+    for statistic in (mean, std, minimum, maximum, delta_mean):
+        statistic[empty] = 0.0
+    return [
+        mean.astype(np.float32),
+        std.astype(np.float32),
+        minimum.astype(np.float32),
+        maximum.astype(np.float32),
+        delta_mean.astype(np.float32),
+    ]
+
+
+def _aggregate_windows(
+    parsed: ParsedFeatures,
+    *,
+    factor: int,
+    mode: str,
+    valid: NDArray[np.bool_] | None,
+) -> ParsedFeatures:
+    """Collapse every ``factor`` frames into one, honouring the validity mask.
+
+    A window with no valid entry for a channel must not fall back to the invalid
+    measurements: doing so would silently reintroduce the COVAREP/OpenFace defect
+    this mask exists to remove. Instead it receives that channel/statistic's mean
+    over the session's non-empty windows. This is neutral for the later session
+    mean, keeps invalid zeros out of extrema, and leaves VUV/success quality
+    columns to describe how much of the window was measurable. A channel with no
+    valid measurement anywhere in the session receives zero.
+
+    ``source_rows`` becomes each window's **first** source row, which keeps
+    :meth:`DaicWozDataset._timestamps` monotonic and correctly scaled for the
+    headerless COVAREP files whose only clock is the row index.
+
+    Args:
+        parsed: Full-rate parsed features.
+        factor: Source rows per output row.
+        mode: ``mean`` or ``window_functionals``.
+        valid: Validity mask, or ``None`` to treat every entry as valid.
+
+    Returns:
+        The aggregated features.
+
+    Raises:
+        ValueError: If ``mode`` is not an aggregating mode.
+    """
+    if mode not in ("mean", "window_functionals"):
+        raise ValueError(f"{mode!r} does not aggregate; expected one of {DOWNSAMPLE_MODES}")
+
+    values = parsed.values
+    # Real COVAREP/OpenFace exports occasionally contain NaN/Inf in individual
+    # channels. They are missing measurements, not extreme observations. Mask
+    # them before arithmetic: multiplying Inf by a zero mask still produces NaN.
+    present = np.isfinite(values)
+    values = np.where(present, values, 0.0).astype(np.float32)
+    windows = _window_view(values, factor, 0.0)
+    effective_valid = present if valid is None else (present & valid)
+    valid_windows = _window_view(effective_valid, factor, False)
+
+    keep = 1 if mode == "mean" else NUM_FUNCTIONALS
+    stats = _masked_functionals(windows, valid_windows)[:keep]
+    empty = valid_windows.sum(axis=1) == 0
+    filled: list[NDArray[np.float32]] = []
+    for statistic in stats:
+        nonempty = ~empty
+        count = nonempty.sum(axis=0)
+        channel_mean = (statistic * nonempty).sum(axis=0) / np.maximum(count, 1)
+        filled.append(np.where(empty, channel_mean[None, :], statistic).astype(np.float32))
+    aggregated = np.concatenate(filled, axis=1).astype(np.float32)
+
+    real = _window_view(np.ones(values.shape[0], dtype=np.float32), factor, 0.0)
+    real_count = np.maximum(real.sum(axis=1), 1.0)
+    quality = {
+        name: (_window_view(column, factor, 0.0) * real).sum(axis=1).astype(np.float32) / real_count
+        for name, column in parsed.columns.items()
+    }
+
+    return ParsedFeatures(
+        values=aggregated,
+        source_rows=_window_view(parsed.source_rows, factor, -1)[:, 0],
+        columns={name: value.astype(np.float32) for name, value in quality.items()},
+        skipped=parsed.skipped,
+    )
+
+
 def _load_feature_matrix(
     path: Path,
     *,
@@ -95,6 +489,9 @@ def _load_feature_matrix(
     max_frames: int,
     frame_stride: int,
     quality_columns: list[str] | dict[str, int] | None = None,
+    validity: dict[str, Any] | None = None,
+    downsample: str = "decimate",
+    speech: SpeechWindow | None = None,
 ) -> ParsedFeatures:
     """Stream a CSV/TXT feature file into a subsampled :class:`ParsedFeatures`.
 
@@ -115,20 +512,58 @@ def _load_feature_matrix(
             model features. A list of header names for a file that has a header;
             a ``{name: column_index}`` mapping for one that does not (COVAREP is
             headerless, but its voiced/unvoiced flag is still at a known index).
+        validity: Which entries are real measurements; see
+            :func:`_validity_mask`. Applied only when its ``enabled`` flag is
+            set, and only meaningful when ``downsample`` aggregates, because
+            there is nothing to average an invalid entry away with otherwise.
+        downsample: One of :data:`DOWNSAMPLE_MODES`. ``decimate`` keeps the
+            first row of each ``frame_stride`` window (the committed default);
+            the others read every row and collapse the window.
+        speech: Restrict the kept rows to the participant's own speech (ADR-0031).
+            Applied **before** striding and aggregation, so a retained row is
+            always a speech frame and an aggregating window groups
+            ``frame_stride`` consecutive *speech* rows — which may span a silence
+            gap, and is the intended reading: the window is a stretch of the
+            participant talking, not a stretch of the recording.
 
     Returns:
         The parsed features, with ``T >= 1``.
 
     Raises:
         FileNotFoundError: If ``path`` does not exist.
-        ValueError: If no usable feature rows are found, or a requested quality
-            column is not in the header.
+        ValueError: If no usable feature rows are found, a requested quality
+            column is not in the header, ``downsample`` is unknown, a validity
+            mask is configured alongside ``decimate``, or a speech window is
+            given without a clock to place its rows on.
     """
     if not path.is_file():
         raise FileNotFoundError(f"DAIC-WOZ feature file not found: {path}")
+    if downsample not in DOWNSAMPLE_MODES:
+        raise FeatureConfigError(
+            f"unknown downsample mode {downsample!r}; expected one of {DOWNSAMPLE_MODES}"
+        )
+    if validity and validity.get("enabled") and downsample == "decimate":
+        raise FeatureConfigError(
+            "a validity mask cannot be honoured under `decimate`, which keeps one row "
+            "per window and so has nothing to average an invalid entry away with; use "
+            "`mean` or `window_functionals`, or drop the `validity` block"
+        )
+    if speech is not None and not speech.intervals:
+        raise ValueError(
+            f"{path.name}: the participant-speech mask is enabled but the transcript "
+            "yielded no usable turn timings, so every frame would be discarded. Check "
+            "`text.start_column`/`text.stop_column`, or exclude the participant."
+        )
+    # `decimate` keeps one row in every `frame_stride`; the aggregating modes read
+    # all of them and collapse each window, so both cover the same source rows.
+    factor = max(int(frame_stride), 1)
+    aggregating = downsample != "decimate"
+    read_stride = 1 if aggregating else factor
+    row_limit = max_frames * factor if aggregating else max_frames
 
     by_index = dict(quality_columns) if isinstance(quality_columns, dict) else {}
     wanted = [] if isinstance(quality_columns, dict) else list(quality_columns or [])
+    header: list[str] | None = None
     keep_idx: list[int] | None = None
     quality_idx: dict[str, int] = dict(by_index)
     rows: list[list[float]] = []
@@ -144,9 +579,7 @@ def _load_feature_matrix(
             keep_idx = [i for i, name in enumerate(header) if name not in drop]
             missing = [name for name in wanted if name not in header]
             if missing:
-                raise ValueError(
-                    f"{path.name}: quality column(s) {missing} not in header {header}"
-                )
+                raise ValueError(f"{path.name}: quality column(s) {missing} not in header {header}")
             quality_idx.update({name: header.index(name) for name in wanted})
         elif wanted:
             raise ValueError(
@@ -154,9 +587,29 @@ def _load_feature_matrix(
                 "as a {name: column_index} mapping"
             )
 
+        speech_time = _row_clock(speech, path, header)
+        # With a speech mask, striding counts the rows that survive the mask
+        # rather than the rows in the file, so `decimate` keeps one of every
+        # `frame_stride` *speech* frames and an aggregating window collapses
+        # exactly that many. Unmasked, the stride stays on the file's own row
+        # index — the committed behaviour, which selects the same frames as
+        # before this option existed.
+        speech_rows = 0
         for row_num, raw in enumerate(reader):
-            if frame_stride > 1 and row_num % frame_stride != 0:
-                continue
+            if speech_time is None:
+                if read_stride > 1 and row_num % read_stride != 0:
+                    continue
+            else:
+                seconds = speech_time(row_num, raw)
+                if seconds is None:
+                    skipped += 1
+                    continue
+                if not speech.contains(seconds):  # type: ignore[union-attr]
+                    continue
+                position = speech_rows
+                speech_rows += 1
+                if read_stride > 1 and position % read_stride != 0:
+                    continue
             fields = [f for f in raw if f != ""]
             if not fields:
                 continue
@@ -171,17 +624,25 @@ def _load_feature_matrix(
             source_rows.append(row_num)
             for name, value in extra_values.items():
                 extras[name].append(value)
-            if len(rows) >= max_frames:
+            if len(rows) >= row_limit:
                 break
 
     if not rows:
         raise ValueError(f"No usable feature rows parsed from {path}")
 
-    return ParsedFeatures(
+    parsed = ParsedFeatures(
         values=np.asarray(rows, dtype=np.float32),
         source_rows=np.asarray(source_rows, dtype=np.int64),
         columns={name: np.asarray(vals, dtype=np.float32) for name, vals in extras.items()},
         skipped=skipped,
+    )
+    if not aggregating:
+        return parsed
+    return _aggregate_windows(
+        parsed,
+        factor=factor,
+        mode=downsample,
+        valid=_validity_mask(parsed.values, parsed.columns, validity),
     )
 
 
@@ -227,9 +688,7 @@ def apply_normalization(
     return normalized
 
 
-def _cached_feature_matrix(
-    path: Path, cache_dir: Path | None, **options: Any
-) -> ParsedFeatures:
+def _cached_feature_matrix(path: Path, cache_dir: Path | None, **options: Any) -> ParsedFeatures:
     """Load a feature matrix, memoizing the parsed result on disk.
 
     Parsing dominates runtime: a COVAREP file is ~36 MB and ~90k rows, and the
@@ -255,7 +714,12 @@ def _cached_feature_matrix(
 
     stat = path.stat()
     key = json.dumps(
-        {**options, "_size": stat.st_size, "_mtime_ns": stat.st_mtime_ns},
+        {
+            **options,
+            "_cache_schema": FEATURE_CACHE_SCHEMA_VERSION,
+            "_size": stat.st_size,
+            "_mtime_ns": stat.st_mtime_ns,
+        },
         sort_keys=True,
         default=str,
     )
@@ -560,11 +1024,53 @@ class DaicWozDataset(Dataset[Sample]):
         # Corpus normalization statistics are fitted on the *train* split, whatever
         # split this dataset is, and memoized per modality (ADR-0019).
         self._corpus_stats: dict[str, tuple[NDArray[np.float32], NDArray[np.float32]]] = {}
+        # Turns are memoized per participant: the speech mask needs them for
+        # every modality and again for the corpus-statistics pass, and each miss
+        # is a transcript read.
+        self._turns_cache: dict[int, list[TimedTurn]] = {}
         self.phq8_max: int = int(config.get("phq8_max", 24))
         self.feature_dims: dict[str, int] = self._infer_feature_dims()
 
+    def _sources(self, cfg: dict[str, Any]) -> list[dict[str, Any]]:
+        """The files backing one modality, in concatenation order.
+
+        A modality is one file unless it declares ``sources`` (ADR-0031). DAIC-WOZ
+        ships several OpenFace exports per session — action units, gaze, head pose
+        — and the video branch only ever read the action units; the acoustic side
+        likewise ignores ``FORMANT``. Declaring extra sources concatenates them
+        channel-wise rather than needing a new modality.
+
+        A source inherits every file-level key it does not state, so the
+        single-file section is just the one-source case and configs written
+        before this option behave identically.
+
+        Args:
+            cfg: That modality's config section.
+
+        Returns:
+            One mapping per file, each carrying at least ``file_template``.
+
+        Raises:
+            FeatureConfigError: If ``sources`` is empty or a source names no file.
+        """
+        declared = cfg.get("sources")
+        if not declared:
+            return [cfg]
+        # Everything is inherited except the file itself: a source that inherited
+        # `file_template` would silently parse the primary export twice.
+        inherited = {
+            key: value for key, value in cfg.items() if key not in ("sources", "file_template")
+        }
+        sources: list[dict[str, Any]] = []
+        for index, source in enumerate(declared):
+            merged = {**inherited, **dict(source)}
+            if not merged.get("file_template"):
+                raise FeatureConfigError(f"sources[{index}] declares no file_template")
+            sources.append(merged)
+        return sources
+
     def _parse_options(self, cfg: dict[str, Any], *, default_header: bool) -> dict[str, Any]:
-        """Parsing options for one modality, shared by loading and stat-fitting."""
+        """Parsing options for one source file, shared by loading and stat-fitting."""
         return {
             "delimiter": cfg.get("delimiter", ","),
             "has_header": cfg.get("has_header", default_header),
@@ -574,10 +1080,124 @@ class DaicWozDataset(Dataset[Sample]):
             # Passed through as-is: a list of header names, or a
             # {name: index} mapping for a headerless file.
             "quality_columns": cfg.get("quality_columns") or [],
+            "validity": cfg.get("validity") or None,
+            "downsample": str(cfg.get("downsample", "decimate")),
         }
 
+    def _parse_modality(
+        self, pid: int, cfg: dict[str, Any], *, default_header: bool
+    ) -> ParsedFeatures:
+        """Parse every file backing one modality and concatenate them channel-wise.
+
+        Sources are aligned on the **source row index**, not on position in the
+        retained matrix: two OpenFace exports of the same session can differ in
+        length or skip a damaged row, and lining them up by position would pair
+        frame ``k`` of one file with a different moment in the other. Only rows
+        every source kept survive, so a channel is never filled in from a
+        neighbouring frame. This assumes the sources share a frame grid — true of
+        the per-session OpenFace exports and of COVAREP/FORMANT, which are all
+        written frame-by-frame for the same recording.
+
+        Quality columns and timestamps come from the first source, which is the
+        one the fusion gate and the segment alignment already read.
+
+        Args:
+            pid: Participant id.
+            cfg: That modality's config section.
+            default_header: Whether this modality's files carry a header unless
+                the config says otherwise.
+
+        Returns:
+            The modality's parsed frames, as recorded.
+
+        Raises:
+            ValueError: If the sources share no rows.
+        """
+        speech = self._speech_window(pid, cfg)
+        parsed = [
+            _cached_feature_matrix(
+                self._file(pid, source["file_template"]),
+                self._cache_dir,
+                **self._parse_options(source, default_header=default_header),
+                speech=speech,
+            )
+            for source in self._sources(cfg)
+        ]
+        if len(parsed) == 1:
+            return parsed[0]
+
+        shared = parsed[0].source_rows
+        for other in parsed[1:]:
+            shared = np.intersect1d(shared, other.source_rows)
+        if shared.size == 0:
+            templates = [source["file_template"] for source in self._sources(cfg)]
+            raise ValueError(
+                f"participant {pid}: sources {templates} share no frames, so they cannot "
+                "be concatenated; check that they come from the same session"
+            )
+
+        picks = [np.isin(entry.source_rows, shared) for entry in parsed]
+        primary = parsed[0]
+        return ParsedFeatures(
+            values=np.concatenate(
+                [entry.values[pick] for entry, pick in zip(parsed, picks, strict=True)], axis=1
+            ),
+            source_rows=primary.source_rows[picks[0]],
+            columns={name: column[picks[0]] for name, column in primary.columns.items()},
+            skipped=sum(entry.skipped for entry in parsed),
+        )
+
+    def _speech_mask_spec(self, cfg: dict[str, Any]) -> dict[str, Any] | None:
+        """This modality's enabled ``speech_mask`` block, or ``None``.
+
+        Off unless the config says otherwise, so a config written before ADR-0031
+        keeps the session-wide frames it was measured with.
+
+        Args:
+            cfg: That modality's config section.
+
+        Returns:
+            The block, or ``None`` when absent or disabled.
+
+        Raises:
+            ValueError: If the block names an unsupported ``source``.
+        """
+        spec = cfg.get("speech_mask") or None
+        if not spec or not spec.get("enabled"):
+            return None
+        source = str(spec.get("source", "transcript"))
+        if source != "transcript":
+            raise FeatureConfigError(
+                f"unknown speech_mask.source {source!r}; only 'transcript' is implemented"
+            )
+        return dict(spec)
+
+    def _speech_window(self, pid: int, cfg: dict[str, Any]) -> SpeechWindow | None:
+        """The participant's speech window for one modality, or ``None``.
+
+        The window itself is per participant and shared between modalities; the
+        clock it carries is per modality, since audio is placed by row index and
+        video by its own ``timestamp`` column.
+
+        Args:
+            pid: Participant id.
+            cfg: That modality's config section.
+
+        Returns:
+            The window, or ``None`` when this modality has no mask configured.
+        """
+        spec = self._speech_mask_spec(cfg)
+        if spec is None:
+            return None
+        return SpeechWindow.from_turns(
+            self._participant_turns(pid),
+            pad_seconds=float(spec.get("pad_seconds", 0.0)),
+            sample_rate_hz=float(cfg.get("sample_rate_hz", 0.0) or 0.0),
+            timestamp_column=str(cfg.get("timestamp_column", "") or ""),
+        )
+
     def _corpus_statistics(
-        self, modality: str, cfg: dict[str, Any], options: dict[str, Any]
+        self, modality: str, cfg: dict[str, Any], *, default_header: bool
     ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
         """Per-channel mean/std over the training split, for corpus normalization.
 
@@ -587,7 +1207,8 @@ class DaicWozDataset(Dataset[Sample]):
         Args:
             modality: Modality name, for the cache key.
             cfg: That modality's config section.
-            options: Parsing options, so a stride change invalidates the stats.
+            default_header: Whether this modality's files carry a header unless
+                the config says otherwise.
 
         Returns:
             ``(mean, std)``, each of shape ``(1, D)``.
@@ -598,8 +1219,27 @@ class DaicWozDataset(Dataset[Sample]):
         if modality in self._corpus_stats:
             return self._corpus_stats[modality]
 
+        # The speech mask enters the key as its *settings*, not as one
+        # participant's intervals: the statistics are fitted over the whole train
+        # split, so what identifies them is whether masking was on and how wide
+        # its padding was.
+        sources = self._sources(cfg)
         digest = hashlib.sha256(
-            json.dumps({**options, "modality": modality}, sort_keys=True, default=str).encode()
+            json.dumps(
+                {
+                    "modality": modality,
+                    "sources": [
+                        {
+                            "file_template": source["file_template"],
+                            **self._parse_options(source, default_header=default_header),
+                        }
+                        for source in sources
+                    ],
+                    "speech_mask": self._speech_mask_spec(cfg),
+                },
+                sort_keys=True,
+                default=str,
+            ).encode()
         ).hexdigest()[:12]
         cache_path = (
             self._cache_dir / f"corpus_stats.{modality}.{digest}.npz" if self._cache_dir else None
@@ -625,9 +1265,15 @@ class DaicWozDataset(Dataset[Sample]):
         squares: NDArray[np.float64] | None = None
         for record in train_records:
             try:
-                matrix = _cached_feature_matrix(
-                    self._file(record["pid"], cfg["file_template"]), self._cache_dir, **options
+                # Parsed exactly as the sessions themselves are — same sources,
+                # same speech mask. Fitting on the whole recording while every
+                # session was normalized by the participant's own frames would
+                # centre the features on silence.
+                matrix = self._parse_modality(
+                    record["pid"], cfg, default_header=default_header
                 ).values.astype(np.float64)
+            except FeatureConfigError:
+                raise  # a wrong setting is wrong for every session
             except (FileNotFoundError, ValueError):
                 continue  # a session missing this modality contributes nothing
             sums = matrix.sum(axis=0) if sums is None else sums + matrix.sum(axis=0)
@@ -659,12 +1305,13 @@ class DaicWozDataset(Dataset[Sample]):
         The timestamps and quality columns ride along untouched — only the model
         features are normalized.
         """
-        options = self._parse_options(cfg, default_header=default_header)
-        parsed = _cached_feature_matrix(
-            self._file(pid, cfg["file_template"]), self._cache_dir, **options
-        )
+        parsed = self._parse_modality(pid, cfg, default_header=default_header)
         mode = str(cfg.get("normalization", "session"))
-        stats = self._corpus_statistics(modality, cfg, options) if mode == "corpus" else None
+        stats = (
+            self._corpus_statistics(modality, cfg, default_header=default_header)
+            if mode == "corpus"
+            else None
+        )
         return ParsedFeatures(
             values=apply_normalization(parsed.values, mode, stats),
             source_rows=parsed.source_rows,
@@ -757,9 +1404,16 @@ class DaicWozDataset(Dataset[Sample]):
         tmp_path.replace(cache_path)
 
     def _participant_turns(self, pid: int) -> list[TimedTurn]:
-        """Read one participant's utterances, with timings, in chronological order."""
+        """Read one participant's utterances, with timings, in chronological order.
+
+        Memoized in memory: the speech mask (ADR-0031) asks for the same turns
+        once per modality and once more while fitting corpus statistics.
+        """
+        cached = self._turns_cache.get(pid)
+        if cached is not None:
+            return cached
         cfg = self._text_cfg
-        return _read_participant_turns(
+        turns = _read_participant_turns(
             self._file(pid, cfg["file_template"]),
             delimiter=cfg.get("delimiter", "\t"),
             speaker_column=cfg.get("speaker_column", "speaker"),
@@ -768,6 +1422,8 @@ class DaicWozDataset(Dataset[Sample]):
             start_column=cfg.get("start_column"),
             stop_column=cfg.get("stop_column"),
         )
+        self._turns_cache[pid] = turns
+        return turns
 
     def _load_text(self, pid: int) -> NDArray[np.float32]:
         """Embed one participant's transcript under the configured representation.
@@ -872,11 +1528,21 @@ class DaicWozDataset(Dataset[Sample]):
             try:
                 audio = self._load_audio(pid)
                 video = self._load_video(pid)
+            except FeatureConfigError:
+                # A misconfigured mask or downsample mode fails on every session;
+                # skipping it here would report it as a missing participant.
+                raise
             except (FileNotFoundError, ValueError):
                 continue
             scale = NUM_FUNCTIONALS if self._segments_enabled else 1
+            ctd_width = (
+                CTD_DIM
+                if self._segments_enabled
+                and bool(dict(self._audio_cfg.get("ctd", {})).get("enabled", False))
+                else 0
+            )
             return {
-                "audio": int(audio.values.shape[1]) * scale,
+                "audio": int(audio.values.shape[1]) * scale + ctd_width,
                 "video": int(video.values.shape[1]) * scale,
                 "text": self._vectorizer.dim,
             }
@@ -936,6 +1602,8 @@ class DaicWozDataset(Dataset[Sample]):
 
         audio = self._load_audio(pid)
         video = self._load_video(pid)
+        speech_filter = dict(self._audio_cfg.get("speech_filter", {}))
+        ctd = dict(self._audio_cfg.get("ctd", {}))
         audio_features, audio_quality = build_frame_segments(
             audio.values,
             self._timestamps(audio, self._audio_cfg),
@@ -943,6 +1611,9 @@ class DaicWozDataset(Dataset[Sample]):
             modality="audio",
             use_envelope=False,
             voiced=audio.columns.get(str(self._audio_cfg.get("voiced_column", "") or "")),
+            filter_unvoiced=bool(speech_filter.get("remove_unvoiced_rows", False)),
+            min_turn_seconds=float(speech_filter.get("min_turn_seconds", 0.0)),
+            include_ctd=bool(ctd.get("enabled", False)),
         )
         video_features, video_quality = build_frame_segments(
             video.values,

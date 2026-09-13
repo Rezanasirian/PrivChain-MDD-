@@ -66,6 +66,23 @@ daic_woz:
   # stops at `max_frames`, so stride x max_frames must exceed the raw frame count
   # or the tail of the interview is silently discarded. Interviews run ~15 min.
   # The previous 1000x5 setting covered only the first ~50 s of each session.
+  # A modality may also read SEVERAL files, concatenated channel-wise and aligned
+  # on the source row index (ADR-0031). The corpus ships signals the pipeline
+  # never read — OpenFace `gaze`/`pose` beside the action units, and `FORMANT`
+  # beside COVAREP — and `sources` is how they join a branch instead of becoming
+  # a fourth modality:
+  #
+  #   video:
+  #     sources:
+  #       - {file_template: "{pid}_CLNF_AUs.txt"}
+  #       - {file_template: "{pid}_CLNF_gaze.txt"}
+  #       - {file_template: "{pid}_CLNF_pose.txt"}
+  #
+  # Each source inherits every key of its modality section except the file name,
+  # so a source only states what differs (a column layout, its own `validity`).
+  # Quality columns and timestamps come from the FIRST source. Absent `sources`,
+  # the section itself is the single source — which is why every config written
+  # before this option behaves identically.
   audio:
     file_template: "{pid}_COVAREP.csv"   # 74-dim COVAREP features, ~10ms frames
     has_header: false
@@ -83,6 +100,57 @@ daic_woz:
     # to {} to report a voiced ratio of 0, which the gate then cannot use.
     quality_columns: {voiced: 1}
     voiced_column: voiced
+    # Which entries of a frame are real measurements (ADR-0030). COVAREP reports
+    # a voiced/unvoiced flag, and the AVEC2017 documentation says that when
+    # VUV = 0 the pitch and glottal parameters must not be used — the spectral
+    # channels on the same row are still fine, so this mask is CHANNEL-wise, not
+    # row-wise. Indices are into the 74-column COVAREP layout:
+    #   0 F0, 2 NAQ, 3 QOQ, 4 H1H2, 5 PSP, 6 MDQ, 7 peakSlope, 8 Rd.
+    # Column 1 (VUV itself) is well defined on every frame and stays valid.
+    # `enabled: false` keeps the committed pipeline unchanged while the values
+    # stay versioned config rather than script constants; the ADR-0030 ladder
+    # flips it. The loader REFUSES to run an enabled mask under
+    # `downsample: decimate`, which keeps one row per window and so has nothing
+    # to average an invalid entry away with.
+    validity:
+      enabled: false
+      voiced_column: voiced
+      invalid_when_unvoiced: [0, 2, 3, 4, 5, 6, 7, 8]
+    # Keep only the frames the transcript attributes to the PARTICIPANT
+    # (ADR-0031). Without this the session-level acoustic branch is handed the
+    # whole recording — Ellie's questions and the silence between turns included
+    # — and its functionals describe the interview's structure rather than the
+    # participant's voice. The segment-aligned path already did this per segment;
+    # the session-level path, which every committed result used, did not.
+    # Rows are placed on the clock by `sample_rate_hz` below, and the mask runs
+    # BEFORE striding, so `frame_stride` counts speech frames.
+    # `enabled: false` keeps the committed pipeline reproducible. The 2026-09-12
+    # ladder found no significant gain, so the default remains off.
+    speech_mask:
+      enabled: false
+      source: transcript
+      pad_seconds: 0.10   # absorbs transcript alignment error at turn boundaries
+    # Optional A2 filter, applied only inside participant turns in segment mode.
+    # Kept disabled so historical runs remain reproducible.
+    speech_filter:
+      remove_unvoiced_rows: false
+      min_turn_seconds: 0.0
+    # Optional A1 conversational-temporal block. The compact timing/VUV vector
+    # is appended to every audio segment; no Ellie text enters the model.
+    ctd:
+      enabled: false
+    # How the `frame_stride` source rows collapse into one retained row (ADR-0030):
+    #   decimate           - keep the first, discard 29. No anti-alias filter, so
+    #                        prosodic variation folds into the retained band. This
+    #                        is what every committed result used.
+    #   mean               - average the window. Boxcar prefilter + decimate;
+    #                        attenuates aliasing but is not an ideal low-pass.
+    #   window_functionals - [mean, std, min, max, mean|diff|] per channel, which
+    #                        recovers the full-rate mean/min/max exactly. Widens
+    #                        audio 74 -> 370.
+    # The 2026-09-12 ladder found no significant gain over `decimate`, so the
+    # reproducibility default remains unchanged.
+    downsample: decimate
     # session | corpus | none  (ADR-0019). `session` z-scores each channel WITHIN
     # the session, which forces every participant to per-channel mean 0 / std 1 and
     # so deletes absolute pitch level, formant positions and overall energy — the
@@ -105,6 +173,27 @@ daic_woz:
     # gate reads.
     timestamp_column: timestamp
     quality_columns: [timestamp, confidence, success]
+    # OpenFace reports per-frame tracking success and confidence. On a frame the
+    # tracker did not fit, no action-unit intensity is a measurement, so the mask
+    # is ROW-wise. Threshold declared before measurement (ADR-0030). See the audio
+    # block above for what `enabled` does. The 2026-09-12 inner-CV ladder found
+    # no significant gain, so the reproducibility default remains off.
+    validity:
+      enabled: false
+      require_success: true
+      success_column: success
+      confidence_column: confidence
+      min_confidence: 0.90
+    # Video does NOT default to the participant-speech mask. ADR-0027's reading
+    # is that facial behaviour while *listening* is plausibly informative, which
+    # is why segment mode gives video the whole turn envelope while audio takes
+    # only the participant's own intervals. Kept here so the ladder can test that
+    # reading instead of assuming it; rows are placed by `timestamp_column`.
+    speech_mask:
+      enabled: false
+      source: transcript
+      pad_seconds: 0.10
+    downsample: decimate
     # session | corpus | none  (ADR-0019). `session` z-scores each channel WITHIN
     # the session, which forces every participant to per-channel mean 0 / std 1 and
     # so deletes absolute pitch level, formant positions and overall energy — the

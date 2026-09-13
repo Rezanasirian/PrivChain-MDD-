@@ -12,9 +12,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 
 from privchain.config import load_baseline_config
 from privchain.data.daic_woz import apply_normalization
+from privchain.encoders.sequence_encoder import masked_statistics
 from privchain.training.protocol import build_splits
 
 
@@ -67,6 +69,42 @@ def test_unknown_mode_is_rejected() -> None:
 def test_constant_channel_does_not_divide_by_zero() -> None:
     constant = np.full((10, 3), 4.0, dtype=np.float32)
     assert np.isfinite(apply_normalization(constant, "session")).all()
+
+
+def test_session_mode_makes_two_of_the_five_functionals_constant() -> None:
+    """`session` + the `stats` encoder feeds the model 40% dead input (ADR-0031).
+
+    ``masked_statistics`` computes the mean and standard deviation over exactly
+    the rows ``apply_normalization`` just forced to mean 0 and std 1, so those two
+    blocks are the same numbers for every participant: they carry no information,
+    and under DP-SGD they still consume clipped-gradient noise. Only min, max and
+    the mean absolute first difference survive.
+    """
+    channels = 4
+    normalized = apply_normalization(_matrix(offset=7.0, scale=3.0), "session")
+    features = torch.from_numpy(normalized).unsqueeze(0)
+    lengths = torch.tensor([normalized.shape[0]])
+
+    functionals = masked_statistics(features, lengths)[0].numpy()
+    mean_block, std_block, min_block = np.split(functionals, [channels, 2 * channels])[:3]
+
+    np.testing.assert_allclose(mean_block, 0.0, atol=1e-4)
+    np.testing.assert_allclose(std_block, 1.0, atol=1e-3)
+    # The extremum block is what still separates one session from another.
+    assert min_block.std() > 0.0
+
+
+def test_corpus_mode_leaves_the_mean_functional_informative() -> None:
+    """The repair: fitted on the train split, the mean block varies by subject."""
+    stats = (np.zeros((1, 4), dtype=np.float32), np.ones((1, 4), dtype=np.float32))
+    lengths = torch.tensor([50])
+    means = []
+    for offset in (0.0, 100.0):
+        normalized = apply_normalization(_matrix(offset=offset), "corpus", stats)
+        functionals = masked_statistics(torch.from_numpy(normalized).unsqueeze(0), lengths)
+        means.append(functionals[0, :4].numpy())
+
+    assert not np.allclose(means[0], means[1])
 
 
 def test_overrides_must_name_a_real_section(tmp_path: Path) -> None:

@@ -1,0 +1,12 @@
+OpenFace AU row-quality census (2026-09-12)
+
+Scope: all data/daic_woz/*_P/*_CLNF_AUs.txt exports available on the server.
+Threshold: success < 0.5; confidence < 0.90 (ADR-0030 configuration).
+
+total rows:                 5,377,703
+success == 0 rows:            280,466  (5.2153%)
+confidence < 0.90 rows:       233,195  (4.3363%)
+union of either condition:    379,180  (7.0510%)
+
+This census establishes prevalence only. The paired inner-CV ladder in the same
+directory is the evidence about downstream diagnostic utility.
