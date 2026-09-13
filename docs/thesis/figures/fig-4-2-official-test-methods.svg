@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="Segoe UI, Tahoma, sans-serif">
+  <rect width="720" height="420" fill="#ffffff"/>
+
+  <text x="360" y="30" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Official test split: ROC-AUC by method (47 participants, 3 seeds)</text>
+
+  <!-- axes: x from 0.40 (x=210) to 0.80 (x=650) => 1100 px per 1.0 AUC -->
+  <g stroke="#cccccc" stroke-width="1">
+    <line x1="210" y1="70" x2="210" y2="330"/>
+    <line x1="210" y1="330" x2="660" y2="330"/>
+  </g>
+  <g stroke="#eeeeee" stroke-width="1">
+    <line x1="320" y1="70" x2="320" y2="330"/>
+    <line x1="430" y1="70" x2="430" y2="330"/>
+    <line x1="540" y1="70" x2="540" y2="330"/>
+    <line x1="650" y1="70" x2="650" y2="330"/>
+  </g>
+  <g font-size="12" fill="#555555" text-anchor="middle">
+    <text x="210" y="350">0.40</text>
+    <text x="320" y="350">0.50</text>
+    <text x="430" y="350">0.60</text>
+    <text x="540" y="350">0.70</text>
+    <text x="650" y="350">0.80</text>
+  </g>
+  <text x="435" y="374" font-size="13" fill="#333333" text-anchor="middle">ROC-AUC on the official AVEC2017 test split</text>
+
+  <!-- chance line at 0.50 -->
+  <line x1="320" y1="70" x2="320" y2="330" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="326" y="84" font-size="11" fill="#777777">chance</text>
+
+  <!-- bars: width = (auc-0.40)*1100 -->
+  <!-- centralized 0.705 -> 335.5 -->
+  <rect x="210" y="82" width="335.5" height="30" fill="#2e7d32"/>
+  <text x="200" y="102" font-size="13" fill="#222222" text-anchor="end">Centralized (no FL/DP)</text>
+  <text x="553" y="102" font-size="12" font-weight="600" fill="#2e7d32">0.705</text>
+  <g stroke="#1b5e20" stroke-width="1.5">
+    <line x1="490.5" y1="97" x2="600.5" y2="97"/>
+    <line x1="490.5" y1="91" x2="490.5" y2="103"/>
+    <line x1="600.5" y1="91" x2="600.5" y2="103"/>
+  </g>
+
+  <!-- proposed 0.584 -> 202.4 -->
+  <rect x="210" y="130" width="202.4" height="30" fill="#1565c0"/>
+  <text x="200" y="150" font-size="13" font-weight="600" fill="#222222" text-anchor="end">Proposed framework</text>
+  <text x="420" y="150" font-size="12" font-weight="600" fill="#1565c0">0.584</text>
+  <g stroke="#0d47a1" stroke-width="1.5">
+    <line x1="374.8" y1="145" x2="449.6" y2="145"/>
+    <line x1="374.8" y1="139" x2="374.8" y2="151"/>
+    <line x1="449.6" y1="139" x2="449.6" y2="151"/>
+  </g>
+
+  <!-- proposed - reputation 0.573 -> 190.3 -->
+  <rect x="210" y="178" width="190.3" height="30" fill="#64b5f6"/>
+  <text x="200" y="198" font-size="13" fill="#222222" text-anchor="end">Proposed − reputation</text>
+  <text x="408" y="198" font-size="12" fill="#1565c0">0.573</text>
+  <g stroke="#1565c0" stroke-width="1.5">
+    <line x1="367.3" y1="193" x2="433.3" y2="193"/>
+    <line x1="367.3" y1="187" x2="367.3" y2="199"/>
+    <line x1="433.3" y1="187" x2="433.3" y2="199"/>
+  </g>
+
+  <!-- personalized 0.483 -> 91.3 -->
+  <rect x="210" y="226" width="91.3" height="30" fill="#bdbdbd"/>
+  <text x="200" y="246" font-size="13" fill="#222222" text-anchor="end">Personalized (stand-in)</text>
+  <text x="309" y="246" font-size="12" fill="#666666">0.483</text>
+  <g stroke="#757575" stroke-width="1.5">
+    <line x1="195.7" y1="241" x2="406.9" y2="241"/>
+    <line x1="195.7" y1="235" x2="195.7" y2="247"/>
+    <line x1="406.9" y1="235" x2="406.9" y2="247"/>
+  </g>
+
+  <!-- fedavg 0.452 -> 57.2 -->
+  <rect x="210" y="274" width="57.2" height="30" fill="#e0e0e0"/>
+  <text x="200" y="294" font-size="13" fill="#222222" text-anchor="end">Plain FedAvg</text>
+  <text x="275" y="294" font-size="12" fill="#666666">0.452</text>
+  <g stroke="#757575" stroke-width="1.5">
+    <line x1="141.6" y1="289" x2="392.8" y2="289"/>
+    <line x1="141.6" y1="283" x2="141.6" y2="295"/>
+    <line x1="392.8" y1="283" x2="392.8" y2="295"/>
+  </g>
+
+  <text x="210" y="398" font-size="11" fill="#666666">Whiskers are ±1 sd across seeds. Personalized and uniform-DP arms are simplified stand-ins, not reimplementations.</text>
+  <text x="210" y="412" font-size="11" fill="#666666">Source: experiments/phase7/phase7_final_evaluation_20260913_104945/official_test.json</text>
+</svg>
