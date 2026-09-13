@@ -385,13 +385,15 @@ def _eval_federated(
         model_config=base.model,
         batch_size=base.train.batch_size,
         local_epochs=federation.local_epochs,
-        learning_rate=base.train.learning_rate,
+        learning_rate=federation.local_learning_rate or base.train.learning_rate,
         weight_decay=base.train.weight_decay,
         phq8_max=base.data.phq8_max,
         phq_loss_weight=base.model.phq_loss_weight,
         seed=seed,
         device=str(device),
-        class_weight_mode="per_shard" if base.train.class_weighting else "off",
+        class_weight_mode=federation.class_weight_mode
+        or ("per_shard" if base.train.class_weighting else "off"),
+        optimizer_name=federation.local_optimizer,
         quality_dims=quality_dims,
     )
     global_model = build_depression_model(input_dims, base.model, quality_dims).to(device)

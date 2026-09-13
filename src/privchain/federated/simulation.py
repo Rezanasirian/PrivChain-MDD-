@@ -130,6 +130,7 @@ def build_federated_clients(
     client_dp: ClientDPConfig | None = None,
     class_weight_mode: ClassWeightMode = "off",
     quality_dims: dict[str, int] | None = None,
+    optimizer_name: str = "adam",
 ) -> list[FederatedClient]:
     """Construct one :class:`FederatedClient` per partition.
 
@@ -150,6 +151,9 @@ def build_federated_clients(
             client receives an independently seeded accountant/mechanism.
         quality_dims: Per-modality quality-vector widths, for the segment-gated
             architecture; ``None`` for frame-level data.
+        optimizer_name: Local optimizer, ``"adam"`` or ``"sgd"``. Adam's
+            per-parameter state is discarded every round, so on few local steps
+            plain SGD can be the more stable choice.
         class_weight_mode: How each client weights its BCE term.
             ``"off"`` leaves the loss unweighted. ``"per_shard"`` uses
             ``n_neg / n_pos`` measured on that client's own partition, which is
@@ -232,6 +236,7 @@ def build_federated_clients(
                 phq8_max=phq8_max,
                 phq_loss_weight=phq_loss_weight,
                 objective=build_objective(model_config, phq8_max, pos_weight),
+                optimizer_name=optimizer_name,
                 device=device,
                 dp=(
                     client_dp

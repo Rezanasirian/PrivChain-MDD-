@@ -454,6 +454,17 @@ class FederationConfig(_Strict):
     # previously ran a fixed budget while the centralized baseline stopped at its
     # best epoch, which charged federation for a difference in schedule.
     early_stopping_patience: int | None = Field(default=None, gt=0)
+    # How a client weights its BCE term and which local optimizer it runs. Both
+    # were implicit before: every arm used per-shard weights and Adam, which is
+    # a hyperparameter choice and therefore belongs in the config (ADR-0026 for
+    # the weighting modes).
+    class_weight_mode: Literal["off", "per_shard", "aggregate_counts", "pooled_oracle"] | None = (
+        None
+    )
+    local_optimizer: Literal["adam", "sgd"] = "adam"
+    # Local learning rate. ``None`` keeps ``train.learning_rate``, so a
+    # federated arm does not silently diverge from the centralized reference.
+    local_learning_rate: float | None = Field(default=None, gt=0.0)
 
 
 class ReputationConfig(_Strict):

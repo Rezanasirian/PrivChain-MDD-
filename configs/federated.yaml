@@ -14,6 +14,17 @@ federation:
   local_epochs: 1
   early_stopping_patience: 40   # matches the centralized baseline's patience
 
+  # Local optimization. These were implicit until the train-only inner-CV of
+  # 2026-09-13 (phase4_federated_optimizer_cv) measured them: every arm ran Adam
+  # with per-shard class weights at the centralized learning rate.
+  #   class_weight_mode: null -> follow `train.class_weighting` (per_shard/off);
+  #     `aggregate_counts` weights every client by securely summed counts.
+  #   local_learning_rate: null -> use `train.learning_rate`, so a federated arm
+  #     does not silently diverge from the centralized reference.
+  class_weight_mode: null
+  local_optimizer: adam
+  local_learning_rate: null
+
   # How the training split is divided across clients.
   partition:
     mode: iid                 # {iid, dirichlet}
