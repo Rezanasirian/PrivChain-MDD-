@@ -1,0 +1,25 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/13/2026 08:22:53:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 6184.55it/s]
+device=cuda  pool=107 folds=5 seeds=[42]
+arms: centralized + ['fedavg_per_shard_adam_lr0.0003']
+
+=== centralized ===
+  seed=42 fold=0 roc_auc=0.844 f1=0.727 (4.9s)
+  seed=42 fold=1 roc_auc=0.615 f1=0.222 (2.8s)
+  seed=42 fold=2 roc_auc=0.611 f1=0.333 (3.0s)
+  seed=42 fold=3 roc_auc=0.756 f1=0.462 (2.3s)
+  seed=42 fold=4 roc_auc=0.544 f1=0.500 (2.5s)
+=== fedavg_per_shard_adam_lr0.0003 ===
+  seed=42 fold=0 roc_auc=0.729 f1=0.500 (6.0s)
+  seed=42 fold=1 roc_auc=0.615 f1=0.182 (11.1s)
+  seed=42 fold=2 roc_auc=0.689 f1=0.429 (11.3s)
+  seed=42 fold=3 roc_auc=0.756 f1=0.500 (10.8s)
+  seed=42 fold=4 roc_auc=0.700 f1=0.500 (20.4s)
+Traceback (most recent call last):
+  File "/workspace/PrivChain-MDD-/scripts/run_federated_optimizer_cv.py", line 524, in <module>
+    main()
+  File "/workspace/PrivChain-MDD-/scripts/run_federated_optimizer_cv.py", line 478, in main
+    delta = paired_bootstrap_auc_difference(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: paired_bootstrap_auc_difference() got an unexpected keyword argument 'resamples'

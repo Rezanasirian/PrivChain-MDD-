@@ -1,0 +1,55 @@
+All checks passed!
+RUFF_CHECK=0
+Would reformat: scripts/run_federated_comparison.py
+Would reformat: scripts/run_final_evaluation.py
+Would reformat: src/privchain/data/daic_woz.py
+Would reformat: src/privchain/data/segment_alignment.py
+Would reformat: src/privchain/federated/client.py
+Would reformat: src/privchain/fusion/quality_gated_fusion.py
+Would reformat: src/privchain/privacy/dp_training.py
+Would reformat: src/privchain/training/trainer.py
+Would reformat: tests/unit/test_phase7_real_data_wiring.py
+Would reformat: tests/unit/test_quality_contract.py
+Would reformat: tests/unit/test_segment_alignment.py
+Would reformat: tests/unit/test_segment_model.py
+12 files would be reformatted, 117 files already formatted
+RUFF_FMT=1
+Success: no issues found in 58 source files
+MYPY=0
+........................................................................ [ 17%]
+........................................................................ [ 34%]
+........................................................................ [ 52%]
+........................................................................ [ 69%]
+........................................................................ [ 87%]
+....................................................                     [100%]
+=============================== warnings summary ===============================
+tests/integration/test_dp_sgd.py::test_backends_agree[mean]
+tests/integration/test_dp_sgd.py::test_backends_agree[gru]
+tests/integration/test_dp_sgd.py::test_dp_train_updates_parameters_with_noise
+tests/integration/test_federated_with_ledger.py::test_federated_round_is_recorded_to_ledger
+  /workspace/PrivChain-MDD-/src/privchain/privacy/dp_sgd.py:247: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+    mean_loss.backward()  # type: ignore[no-untyped-call]
+
+tests/unit/test_accountant.py::test_noise_multiplier_round_trip
+tests/unit/test_accountant.py::test_tighter_budget_needs_more_noise
+tests/unit/test_attackers.py::test_dp_release_degrades_reidentification_as_epsilon_shrinks
+tests/unit/test_attackers.py::test_dp_release_bounds_the_released_norm
+tests/unit/test_attackers.py::test_dp_release_uses_record_replacement_sensitivity
+tests/unit/test_budget_allocator.py::test_every_arm_lands_on_the_same_budget
+tests/unit/test_budget_allocator.py::test_matching_on_the_mean_would_not_have_been_equivalent
+tests/unit/test_budget_allocator.py::test_more_budget_means_a_larger_composed_epsilon
+  /workspace/PrivChain-MDD-/.venv/lib/python3.11/site-packages/opacus/accountants/analysis/rdp.py:332: UserWarning: Optimal order is the largest alpha. Please consider expanding the range of alphas to get a tighter privacy bound.
+    warnings.warn(
+
+tests/unit/test_attackers.py::test_dp_release_degrades_reidentification_as_epsilon_shrinks
+tests/unit/test_attackers.py::test_dp_release_bounds_the_released_norm
+  /workspace/PrivChain-MDD-/.venv/lib/python3.11/site-packages/opacus/accountants/analysis/rdp.py:332: UserWarning: Optimal order is the smallest alpha. Please consider expanding the range of alphas to get a tighter privacy bound.
+    warnings.warn(
+
+tests/unit/test_segment_model.py::test_opacus_accepts_the_architecture
+  /workspace/PrivChain-MDD-/tests/unit/test_segment_model.py:142: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+    (outputs["logit"].sum() + outputs["phq_pred"].sum()).backward()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+412 passed, 15 warnings in 231.33s (0:03:51)
+PYTEST=0

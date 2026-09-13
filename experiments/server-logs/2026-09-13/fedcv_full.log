@@ -1,0 +1,170 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/13/2026 08:25:25:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 5687.25it/s]
+device=cuda  pool=107 folds=5 seeds=[42, 7, 2024]
+arms: centralized + ['fedavg_per_shard_adam_lr0.0003', 'fedavg_per_shard_adam_lr0.1', 'fedavg_per_shard_sgd_lr0.0003', 'fedavg_per_shard_sgd_lr0.1', 'fedavg_aggregate_counts_adam_lr0.0003', 'fedavg_aggregate_counts_adam_lr0.1', 'fedavg_aggregate_counts_sgd_lr0.0003', 'fedavg_aggregate_counts_sgd_lr0.1']
+
+=== centralized ===
+  seed=42 fold=0 roc_auc=0.844 f1=0.727 (4.5s)
+  seed=42 fold=1 roc_auc=0.615 f1=0.222 (2.3s)
+  seed=42 fold=2 roc_auc=0.611 f1=0.333 (2.6s)
+  seed=42 fold=3 roc_auc=0.756 f1=0.462 (2.1s)
+  seed=42 fold=4 roc_auc=0.544 f1=0.500 (2.3s)
+  seed=7 fold=0 roc_auc=0.708 f1=0.500 (2.8s)
+  seed=7 fold=1 roc_auc=0.823 f1=0.571 (3.8s)
+  seed=7 fold=2 roc_auc=0.633 f1=0.000 (3.5s)
+  seed=7 fold=3 roc_auc=0.744 f1=0.526 (3.8s)
+  seed=7 fold=4 roc_auc=0.800 f1=0.667 (5.2s)
+  seed=2024 fold=0 roc_auc=0.750 f1=0.429 (2.9s)
+  seed=2024 fold=1 roc_auc=0.740 f1=0.500 (2.6s)
+  seed=2024 fold=2 roc_auc=0.622 f1=0.000 (3.5s)
+  seed=2024 fold=3 roc_auc=0.722 f1=0.526 (4.0s)
+  seed=2024 fold=4 roc_auc=0.867 f1=0.600 (3.9s)
+=== fedavg_per_shard_adam_lr0.0003 ===
+  seed=42 fold=0 roc_auc=0.729 f1=0.500 (5.3s)
+  seed=42 fold=1 roc_auc=0.615 f1=0.182 (8.2s)
+  seed=42 fold=2 roc_auc=0.689 f1=0.429 (8.3s)
+  seed=42 fold=3 roc_auc=0.756 f1=0.500 (7.9s)
+  seed=42 fold=4 roc_auc=0.700 f1=0.500 (15.4s)
+  seed=7 fold=0 roc_auc=0.750 f1=0.400 (15.4s)
+  seed=7 fold=1 roc_auc=0.583 f1=0.444 (6.5s)
+  seed=7 fold=2 roc_auc=0.467 f1=0.364 (5.3s)
+  seed=7 fold=3 roc_auc=0.600 f1=0.200 (6.3s)
+  seed=7 fold=4 roc_auc=0.544 f1=0.333 (5.1s)
+  seed=2024 fold=0 roc_auc=0.646 f1=0.200 (6.5s)
+  seed=2024 fold=1 roc_auc=0.573 f1=0.444 (6.8s)
+  seed=2024 fold=2 roc_auc=0.578 f1=0.462 (6.4s)
+  seed=2024 fold=3 roc_auc=0.256 f1=0.320 (5.2s)
+  seed=2024 fold=4 roc_auc=0.711 f1=0.444 (7.5s)
+=== fedavg_per_shard_adam_lr0.1 ===
+  seed=42 fold=0 roc_auc=0.500 f1=0.429 (5.3s)
+  seed=42 fold=1 roc_auc=0.500 f1=0.429 (5.2s)
+  seed=42 fold=2 roc_auc=0.500 f1=0.444 (5.4s)
+  seed=42 fold=3 roc_auc=0.178 f1=0.143 (5.4s)
+  seed=42 fold=4 roc_auc=0.500 f1=0.444 (5.6s)
+  seed=7 fold=0 roc_auc=0.771 f1=0.600 (5.2s)
+  seed=7 fold=1 roc_auc=0.448 f1=0.167 (5.4s)
+  seed=7 fold=2 roc_auc=0.167 f1=0.154 (9.3s)
+  seed=7 fold=3 roc_auc=0.406 f1=0.182 (10.3s)
+  seed=7 fold=4 roc_auc=0.500 f1=0.444 (5.3s)
+  seed=2024 fold=0 roc_auc=0.500 f1=0.429 (5.4s)
+  seed=2024 fold=1 roc_auc=0.500 f1=0.462 (5.3s)
+  seed=2024 fold=2 roc_auc=0.583 f1=0.444 (9.3s)
+  seed=2024 fold=3 roc_auc=0.200 f1=0.000 (5.3s)
+  seed=2024 fold=4 roc_auc=0.500 f1=0.444 (5.5s)
+=== fedavg_per_shard_sgd_lr0.0003 ===
+  seed=42 fold=0 roc_auc=0.729 f1=0.400 (5.0s)
+  seed=42 fold=1 roc_auc=0.604 f1=0.500 (10.4s)
+  seed=42 fold=2 roc_auc=0.467 f1=0.353 (6.6s)
+  seed=42 fold=3 roc_auc=0.689 f1=0.500 (5.0s)
+  seed=42 fold=4 roc_auc=0.544 f1=0.333 (4.7s)
+  seed=7 fold=0 roc_auc=0.365 f1=0.000 (5.1s)
+  seed=7 fold=1 roc_auc=0.573 f1=0.375 (5.1s)
+  seed=7 fold=2 roc_auc=0.456 f1=0.421 (6.4s)
+  seed=7 fold=3 roc_auc=0.600 f1=0.545 (5.0s)
+  seed=7 fold=4 roc_auc=0.556 f1=0.308 (11.3s)
+  seed=2024 fold=0 roc_auc=0.635 f1=0.200 (4.9s)
+  seed=2024 fold=1 roc_auc=0.479 f1=0.444 (5.6s)
+  seed=2024 fold=2 roc_auc=0.522 f1=0.364 (8.7s)
+  seed=2024 fold=3 roc_auc=0.267 f1=0.320 (7.2s)
+  seed=2024 fold=4 roc_auc=0.367 f1=0.261 (4.6s)
+=== fedavg_per_shard_sgd_lr0.1 ===
+  seed=42 fold=0 roc_auc=0.750 f1=0.615 (5.0s)
+  seed=42 fold=1 roc_auc=0.635 f1=0.200 (5.4s)
+  seed=42 fold=2 roc_auc=0.622 f1=0.545 (10.9s)
+  seed=42 fold=3 roc_auc=0.689 f1=0.500 (5.1s)
+  seed=42 fold=4 roc_auc=0.778 f1=0.545 (8.5s)
+  seed=7 fold=0 roc_auc=0.562 f1=0.222 (8.6s)
+  seed=7 fold=1 roc_auc=0.604 f1=0.400 (5.9s)
+  seed=7 fold=2 roc_auc=0.433 f1=0.308 (5.0s)
+  seed=7 fold=3 roc_auc=0.744 f1=0.526 (5.5s)
+  seed=7 fold=4 roc_auc=0.756 f1=0.625 (5.1s)
+  seed=2024 fold=0 roc_auc=0.635 f1=0.500 (6.1s)
+  seed=2024 fold=1 roc_auc=0.604 f1=0.500 (5.6s)
+  seed=2024 fold=2 roc_auc=0.600 f1=0.222 (5.3s)
+  seed=2024 fold=3 roc_auc=0.300 f1=0.250 (5.1s)
+  seed=2024 fold=4 roc_auc=0.722 f1=0.444 (7.7s)
+=== fedavg_aggregate_counts_adam_lr0.0003 ===
+  seed=42 fold=0 roc_auc=0.729 f1=0.571 (5.6s)
+  seed=42 fold=1 roc_auc=0.573 f1=0.182 (6.0s)
+  seed=42 fold=2 roc_auc=0.656 f1=0.400 (7.8s)
+  seed=42 fold=3 roc_auc=0.678 f1=0.500 (5.3s)
+  seed=42 fold=4 roc_auc=0.711 f1=0.545 (10.8s)
+  seed=7 fold=0 roc_auc=0.510 f1=0.222 (6.1s)
+  seed=7 fold=1 roc_auc=0.656 f1=0.400 (6.4s)
+  seed=7 fold=2 roc_auc=0.456 f1=0.308 (5.6s)
+  seed=7 fold=3 roc_auc=0.589 f1=0.182 (6.3s)
+  seed=7 fold=4 roc_auc=0.611 f1=0.421 (5.3s)
+  seed=2024 fold=0 roc_auc=0.677 f1=0.429 (7.1s)
+  seed=2024 fold=1 roc_auc=0.604 f1=0.444 (7.0s)
+  seed=2024 fold=2 roc_auc=0.589 f1=0.250 (6.8s)
+  seed=2024 fold=3 roc_auc=0.256 f1=0.320 (5.3s)
+  seed=2024 fold=4 roc_auc=0.756 f1=0.455 (9.6s)
+=== fedavg_aggregate_counts_adam_lr0.1 ===
+  seed=42 fold=0 roc_auc=0.500 f1=0.429 (5.3s)
+  seed=42 fold=1 roc_auc=0.500 f1=0.429 (5.4s)
+  seed=42 fold=2 roc_auc=0.500 f1=0.444 (5.3s)
+  seed=42 fold=3 roc_auc=0.211 f1=0.118 (5.3s)
+  seed=42 fold=4 roc_auc=0.500 f1=0.444 (5.5s)
+  seed=7 fold=0 roc_auc=0.500 f1=0.429 (5.3s)
+  seed=7 fold=1 roc_auc=0.500 f1=0.400 (5.3s)
+  seed=7 fold=2 roc_auc=0.189 f1=0.154 (10.4s)
+  seed=7 fold=3 roc_auc=0.189 f1=0.182 (5.3s)
+  seed=7 fold=4 roc_auc=0.500 f1=0.444 (5.4s)
+  seed=2024 fold=0 roc_auc=0.500 f1=0.429 (5.5s)
+  seed=2024 fold=1 roc_auc=0.542 f1=0.267 (5.2s)
+  seed=2024 fold=2 roc_auc=0.567 f1=0.400 (5.3s)
+  seed=2024 fold=3 roc_auc=0.144 f1=0.000 (5.2s)
+  seed=2024 fold=4 roc_auc=0.500 f1=0.444 (5.5s)
+=== fedavg_aggregate_counts_sgd_lr0.0003 ===
+  seed=42 fold=0 roc_auc=0.729 f1=0.429 (9.2s)
+  seed=42 fold=1 roc_auc=0.604 f1=0.500 (10.2s)
+  seed=42 fold=2 roc_auc=0.467 f1=0.353 (6.8s)
+  seed=42 fold=3 roc_auc=0.689 f1=0.500 (4.8s)
+  seed=42 fold=4 roc_auc=0.544 f1=0.333 (5.1s)
+  seed=7 fold=0 roc_auc=0.365 f1=0.000 (14.2s)
+  seed=7 fold=1 roc_auc=0.573 f1=0.375 (5.1s)
+  seed=7 fold=2 roc_auc=0.456 f1=0.421 (6.0s)
+  seed=7 fold=3 roc_auc=0.600 f1=0.545 (6.9s)
+  seed=7 fold=4 roc_auc=0.556 f1=0.286 (8.3s)
+  seed=2024 fold=0 roc_auc=0.646 f1=0.000 (13.9s)
+  seed=2024 fold=1 roc_auc=0.479 f1=0.444 (9.8s)
+  seed=2024 fold=2 roc_auc=0.522 f1=0.364 (9.4s)
+  seed=2024 fold=3 roc_auc=0.267 f1=0.250 (13.3s)
+  seed=2024 fold=4 roc_auc=0.367 f1=0.261 (4.8s)
+=== fedavg_aggregate_counts_sgd_lr0.1 ===
+  seed=42 fold=0 roc_auc=0.760 f1=0.571 (4.9s)
+  seed=42 fold=1 roc_auc=0.573 f1=0.200 (5.7s)
+  seed=42 fold=2 roc_auc=0.600 f1=0.429 (6.4s)
+  seed=42 fold=3 roc_auc=0.689 f1=0.462 (4.9s)
+  seed=42 fold=4 roc_auc=0.744 f1=0.615 (7.6s)
+  seed=7 fold=0 roc_auc=0.542 f1=0.222 (6.0s)
+  seed=7 fold=1 roc_auc=0.667 f1=0.400 (7.9s)
+  seed=7 fold=2 roc_auc=0.522 f1=0.429 (4.8s)
+  seed=7 fold=3 roc_auc=0.744 f1=0.500 (5.1s)
+  seed=7 fold=4 roc_auc=0.611 f1=0.444 (5.4s)
+  seed=2024 fold=0 roc_auc=0.615 f1=0.364 (5.2s)
+  seed=2024 fold=1 roc_auc=0.615 f1=0.533 (5.7s)
+  seed=2024 fold=2 roc_auc=0.600 f1=0.400 (5.3s)
+  seed=2024 fold=3 roc_auc=0.322 f1=0.250 (4.9s)
+  seed=2024 fold=4 roc_auc=0.722 f1=0.455 (8.4s)
+# Federated optimization — train-only inner CV (Phase 4)
+
+Inner folds over the pooled official train split. Dev and test are
+neither constructed nor scored. `pooled` bootstraps the paired
+difference between an arm's out-of-fold predictions and the
+`centralized` arm's.
+
+| arm | ROC-AUC | ±sd | macro-F1 | pooled Δ | 95% CI | p |
+|---|---|:--:|---|---|---|---|
+| `centralized` | 0.719 | 0.092 | 0.597 | - | - | - |
+| `fedavg_per_shard_sgd_lr0.1` | 0.629 | 0.124 | 0.557 | -0.120 | [-0.249, +0.014] | 0.083 |
+| `fedavg_aggregate_counts_sgd_lr0.1` | 0.622 | 0.108 | 0.561 | -0.091 | [-0.223, +0.048] | 0.214 |
+| `fedavg_per_shard_adam_lr0.0003` | 0.613 | 0.125 | 0.510 | -0.095 | [-0.220, +0.032] | 0.157 |
+| `fedavg_aggregate_counts_adam_lr0.0003` | 0.603 | 0.121 | 0.509 | -0.179 | [-0.323, -0.037] | 0.016 |
+| `fedavg_aggregate_counts_sgd_lr0.0003` | 0.524 | 0.123 | 0.472 | -0.239 | [-0.415, -0.050] | 0.008 |
+| `fedavg_per_shard_sgd_lr0.0003` | 0.523 | 0.122 | 0.463 | -0.239 | [-0.422, -0.052] | 0.013 |
+| `fedavg_per_shard_adam_lr0.1` | 0.450 | 0.155 | 0.313 | -0.258 | [-0.421, -0.093] | 0.001 |
+| `fedavg_aggregate_counts_adam_lr0.1` | 0.423 | 0.146 | 0.287 | -0.276 | [-0.437, -0.117] | 0.000 |
+
+wrote experiments/phase4/phase4_federated_optimizer_cv_20260913_082526
