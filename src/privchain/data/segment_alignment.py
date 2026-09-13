@@ -265,9 +265,7 @@ def build_frame_segments(
             durations = np.asarray(
                 [max(0.0, turn.stop - turn.start) for turn in group], dtype=np.float32
             )
-            token_counts = np.asarray(
-                [len(turn.text.split()) for turn in group], dtype=np.float32
-            )
+            token_counts = np.asarray([len(turn.text.split()) for turn in group], dtype=np.float32)
             envelope_start, envelope_stop = plan.envelope(index)
             envelope_duration = max(0.0, envelope_stop - envelope_start)
             speech_duration = float(durations.sum())

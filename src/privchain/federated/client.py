@@ -162,9 +162,7 @@ class FederatedClient:
         }
         parameter_groups = map_parameter_groups(self.model, self.capability)
         self._group_sigmas = {
-            name: sigma
-            for name, sigma in modality_sigmas.items()
-            if parameter_groups.get(name)
+            name: sigma for name, sigma in modality_sigmas.items() if parameter_groups.get(name)
         }
         if parameter_groups.get(SHARED_GROUP):
             self._group_sigmas[SHARED_GROUP] = max(modality_sigmas.values())
@@ -252,9 +250,7 @@ class FederatedClient:
                 self.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
             )
         else:
-            raise ValueError(
-                f"unknown optimizer {self.optimizer_name!r}; expected 'adam' or 'sgd'"
-            )
+            raise ValueError(f"unknown optimizer {self.optimizer_name!r}; expected 'adam' or 'sgd'")
         if self.dp is not None:
             if teacher is not None and distill_weight > 0.0 and anchor is None:
                 raise ValueError("private training and distillation must run as separate steps")

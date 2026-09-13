@@ -58,9 +58,7 @@ def test_audio_ctd_appends_fixed_width_features() -> None:
 
 
 def test_audio_filter_removes_unvoiced_rows_and_short_turns() -> None:
-    plan = plan_segments(
-        [TimedTurn(0.0, 0.5, "short"), TimedTurn(1.0, 2.5, "long enough")], 1
-    )
+    plan = plan_segments([TimedTurn(0.0, 0.5, "short"), TimedTurn(1.0, 2.5, "long enough")], 1)
     values = np.asarray([[100.0], [10.0], [20.0], [30.0]], dtype=np.float32)
     timestamps = np.asarray([0.25, 1.0, 1.5, 2.0], dtype=np.float64)
     voiced = np.asarray([1.0, 1.0, 0.0, 1.0], dtype=np.float32)
@@ -79,6 +77,7 @@ def test_audio_filter_removes_unvoiced_rows_and_short_turns() -> None:
     # Only values 10 and 30 remain: short-turn value 100 and unvoiced 20 go.
     assert features[0, 0] == pytest.approx(20.0)
     assert quality[0, 2] == pytest.approx(np.log1p(2))
+
 
 SPLITS = {"train": [(300, 0, 4), (301, 1, 15)]}
 

@@ -28,9 +28,7 @@ def _sample(*, quality: bool, segments: int = SEGMENTS) -> Sample:
     sample["phq8_score"] = torch.tensor(10, dtype=torch.long)
     sample["label"] = torch.tensor(1, dtype=torch.long)
     if quality:
-        sample["quality"] = {
-            m: torch.ones(segments, QUALITY_DIMS[m]) for m in MODALITIES
-        }
+        sample["quality"] = {m: torch.ones(segments, QUALITY_DIMS[m]) for m in MODALITIES}
     return sample
 
 

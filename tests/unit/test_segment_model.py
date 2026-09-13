@@ -49,9 +49,7 @@ def _batch(size: int = 3, *, quality: bool = True, seed: int = 0) -> Batch:
         modality: torch.randn(size, SEGMENTS, INPUT_DIMS[modality]) for modality in MODALITIES
     }
     batch.update(
-        {
-            f"{m}_lengths": torch.full((size,), SEGMENTS, dtype=torch.long) for m in MODALITIES
-        }  # type: ignore[typeddict-item]
+        {f"{m}_lengths": torch.full((size,), SEGMENTS, dtype=torch.long) for m in MODALITIES}  # type: ignore[typeddict-item]
     )
     batch["presence"] = {m: torch.ones(size, dtype=torch.long) for m in MODALITIES}
     batch["phq8_score"] = torch.randint(0, 24, (size,))
@@ -111,9 +109,7 @@ def test_a_sample_with_no_valid_segment_stays_finite() -> None:
     outputs["logit"].sum().backward()
 
     assert torch.isfinite(outputs["logit"]).all()
-    assert all(
-        torch.isfinite(p.grad).all() for p in model.parameters() if p.grad is not None
-    )
+    assert all(torch.isfinite(p.grad).all() for p in model.parameters() if p.grad is not None)
 
 
 def test_modality_specific_parameters_stay_in_their_own_group() -> None:

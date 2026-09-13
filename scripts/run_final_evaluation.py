@@ -517,9 +517,7 @@ def main() -> None:
     fed = fed.model_copy(update={"federation": federation})
     device = torch.device(resolve_device(base.train.device))
 
-    full, labels_all, input_dims, official_idx, quality_dims = _build_corpus(
-        base, args.daic_config
-    )
+    full, labels_all, input_dims, official_idx, quality_dims = _build_corpus(base, args.daic_config)
     n = len(labels_all)
     # Stratify on the binary depression label: on an imbalanced corpus an
     # unstratified 10-fold split yields single-class folds whose ROC-AUC is

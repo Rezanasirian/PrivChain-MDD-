@@ -93,8 +93,7 @@ class QualityGatedFusion(nn.Module):
         weights = torch.softmax(masked, dim=-1) * any_valid.unsqueeze(-1).to(masked.dtype)
 
         self.last_gates = {
-            modality: weights[..., index].detach()
-            for index, modality in enumerate(self.modalities)
+            modality: weights[..., index].detach() for index, modality in enumerate(self.modalities)
         }
         pooled = (stacked_embeddings * weights.unsqueeze(-1)).sum(dim=-2)  # (B, T, D)
         fused: torch.Tensor = self.project(pooled) * any_valid.unsqueeze(-1).to(pooled.dtype)

@@ -164,9 +164,9 @@ def train_dp_arm(config: DpArmConfig, group_sigmas: dict[str, float], seed: int)
         RuntimeError: If the step budget produced no trained epoch.
     """
     seed_everything(seed)
-    model = build_depression_model(
-        config.input_dims, config.model, config.quality_dims
-    ).to(config.device)
+    model = build_depression_model(config.input_dims, config.model, config.quality_dims).to(
+        config.device
+    )
     dp_model = wrap_for_per_sample_grads(model)
     groups = map_parameter_groups(dp_model)
     optimizer = torch.optim.Adam(

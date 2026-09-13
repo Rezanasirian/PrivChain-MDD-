@@ -152,9 +152,7 @@ def main() -> None:
         if train_cfg.class_weighting
         else None
     )
-    objective = build_objective(base.model, base.data.phq8_max, pos_weight).to(
-        torch_device
-    )
+    objective = build_objective(base.model, base.data.phq8_max, pos_weight).to(torch_device)
 
     train_labels = labels_of(splits.train)
     partitions = build_client_partitions(
