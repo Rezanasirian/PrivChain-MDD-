@@ -97,7 +97,7 @@ from privchain.training.trainer import CentralizedTrainer
 
 MODALITIES = ("audio", "video", "text")
 FoldRunner = Callable[[list[int], list[int], int], dict[str, float]]
-PRE_REGISTRATION = "docs/evaluation/PRE-REGISTRATION-2026-08-23.md"
+PRE_REGISTRATION = "docs/evaluation/PRE-REGISTRATION-2026-09-13.md"
 
 
 def _assert_official_campaign_locked() -> None:
