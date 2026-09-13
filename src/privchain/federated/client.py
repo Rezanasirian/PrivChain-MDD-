@@ -115,6 +115,7 @@ class FederatedClient:
         dp: ClientDPConfig | None = None,
         pos_weight: float | None = None,
         objective: DepressionObjective | None = None,
+        optimizer_name: str = "adam",
     ) -> None:
         self.client_id = client_id
         self.capability = capability
@@ -128,6 +129,7 @@ class FederatedClient:
             objective or DepressionObjective(phq8_max, phq_loss_weight, pos_weight)
         ).to(self.device)
         self.pos_weight = pos_weight
+        self.optimizer_name = optimizer_name
         self.last_work = LocalWork(0, 0, 0)
         self.dp = dp
         self._dp_steps = 0
@@ -158,8 +160,14 @@ class FederatedClient:
             )
             for name in present
         }
-        self._group_sigmas = dict(modality_sigmas)
-        self._group_sigmas[SHARED_GROUP] = max(modality_sigmas.values())
+        parameter_groups = map_parameter_groups(self.model, self.capability)
+        self._group_sigmas = {
+            name: sigma
+            for name, sigma in modality_sigmas.items()
+            if parameter_groups.get(name)
+        }
+        if parameter_groups.get(SHARED_GROUP):
+            self._group_sigmas[SHARED_GROUP] = max(modality_sigmas.values())
 
     def _privacy_at(self, steps: int) -> dict[str, float]:
         """Return per-group and participant-composed epsilon at ``steps``."""
@@ -234,9 +242,19 @@ class FederatedClient:
             ``None`` only when this client has no DP mechanism.
         """
         self.set_parameters(global_state)
-        optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
-        )
+        optimizer: torch.optim.Optimizer
+        if self.optimizer_name == "adam":
+            optimizer = torch.optim.Adam(
+                self.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+            )
+        elif self.optimizer_name == "sgd":
+            optimizer = torch.optim.SGD(
+                self.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+            )
+        else:
+            raise ValueError(
+                f"unknown optimizer {self.optimizer_name!r}; expected 'adam' or 'sgd'"
+            )
         if self.dp is not None:
             if teacher is not None and distill_weight > 0.0 and anchor is None:
                 raise ValueError("private training and distillation must run as separate steps")
@@ -252,7 +270,11 @@ class FederatedClient:
                 if self.dp.backend == "grad_sample"
                 else self.model
             )
-            groups = map_parameter_groups(dp_model, self.capability)
+            groups = {
+                name: params
+                for name, params in map_parameter_groups(dp_model, self.capability).items()
+                if params
+            }
             dp_train_steps(
                 dp_model,
                 self.train_loader.dataset,

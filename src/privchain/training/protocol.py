@@ -288,7 +288,14 @@ def build_splits(
                         f"cannot override unknown daic_woz section {section!r}; "
                         f"available: {sorted(inner)}"
                     )
-                inner[section] = {**inner[section], **values}
+                section_values = dict(inner[section])
+                for key, value in values.items():
+                    existing = section_values.get(key)
+                    if isinstance(existing, Mapping) and isinstance(value, Mapping):
+                        section_values[key] = {**existing, **value}
+                    else:
+                        section_values[key] = value
+                inner[section] = section_values
             daic_cfg = {**daic_cfg, "daic_woz": inner}
         train_dataset = build_daic_woz_dataset(daic_cfg, split="train")
         full_train: Dataset[Sample] = train_dataset

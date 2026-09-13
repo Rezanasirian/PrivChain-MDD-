@@ -16,7 +16,7 @@ from __future__ import annotations
 import copy
 import time
 from collections import OrderedDict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -47,7 +47,7 @@ from privchain.training.objective import (
 
 #: How a client weights its BCE term. ``pooled_oracle`` is a control that
 #: deliberately crosses the federated boundary; see ADR-0026.
-ClassWeightMode = Literal["off", "per_shard", "pooled_oracle"]
+ClassWeightMode = Literal["off", "per_shard", "aggregate_counts", "pooled_oracle"]
 
 
 @dataclass
@@ -156,7 +156,9 @@ def build_federated_clients(
             all a real client can observe, and mirrors ``train.class_weighting``
             in the centralized arm — without it the arms train under different
             losses and the comparison charges federation for the difference
-            (ADR-0026). ``"pooled_oracle"`` gives every client one weight
+            (ADR-0026). ``"aggregate_counts"`` gives every client one weight
+            derived from securely summed positive/negative counts.
+            ``"pooled_oracle"`` gives every client one weight
             measured across all shards; that crosses the federated boundary and
             ADR-0026 rejected it as an architecture, so it exists only as an
             experimental control for how much per-shard weight noise costs. A
@@ -179,6 +181,22 @@ def build_federated_clients(
         if class_weight_mode == "pooled_oracle"
         else None
     )
+    # Express this as a sum of per-shard counters so production can replace the
+    # in-process sum with secure aggregation without changing the objective.
+    aggregate_count_weight: float | None = None
+    if class_weight_mode == "aggregate_counts":
+        positive_total = 0
+        example_total = 0
+        for partition in partitions:
+            if not partition.indices:
+                continue
+            shard = ModalityMaskedDataset(base_dataset, partition.indices, partition.capability)
+            for batch in DataLoader(shard, batch_size=batch_size, collate_fn=collate_fn):
+                positive_total += int(batch["label"].sum().item())
+                example_total += int(batch["label"].numel())
+        negative_total = example_total - positive_total
+        if positive_total > 0 and negative_total > 0:
+            aggregate_count_weight = negative_total / positive_total
     for partition in partitions:
         if not partition.indices:
             continue
@@ -197,6 +215,8 @@ def build_federated_clients(
             pos_weight = positive_class_weight(
                 DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
             )
+        elif class_weight_mode == "aggregate_counts":
+            pos_weight = aggregate_count_weight
         else:
             pos_weight = pooled_weight
         clients.append(
@@ -244,6 +264,9 @@ def run_simulation(
     seed: int,
     device: str = "cpu",
     early_stopping_patience: int | None = None,
+    selection_metric: Literal["roc_auc", "f1", "loss"] = "roc_auc",
+    tail_average_fraction: float | None = None,
+    on_round_end: Callable[[dict[str, Any]], None] | None = None,
 ) -> list[dict[str, Any]]:
     """Run FedAvg for ``num_rounds`` rounds, logging per-round global metrics.
 
@@ -260,6 +283,13 @@ def run_simulation(
         device: Torch device string.
         early_stopping_patience: Rounds without a selection-split improvement
             before stopping; ``None`` runs the full budget.
+        selection_metric: Dev-only metric used to select the checkpoint. Loss
+            is minimized; the other metrics are maximized.
+        tail_average_fraction: When set, replace dev-selected checkpointing with
+            a data-independent average of the final fraction of global iterates.
+            This reduces DP noise without additional privacy expenditure.
+        on_round_end: Optional observer called after each round is durably
+            written to the local JSONL log; used for live experiment tracking.
 
     Returns:
         Per-round history records.
@@ -269,6 +299,8 @@ def run_simulation(
     """
     if not clients:
         raise ValueError("no clients to run federated simulation")
+    if tail_average_fraction is not None and not 0.0 < tail_average_fraction <= 1.0:
+        raise ValueError("tail_average_fraction must be in (0, 1]")
 
     torch_device = torch.device(device)
     global_model = global_model.to(torch_device)
@@ -284,6 +316,13 @@ def run_simulation(
     started = time.perf_counter()
     cumulative_steps = 0
     cumulative_examples = 0
+    average_start = (
+        max(1, int(np.floor(num_rounds * (1.0 - tail_average_fraction))) + 1)
+        if tail_average_fraction is not None
+        else None
+    )
+    average_sum: OrderedDict[str, torch.Tensor] | None = None
+    average_count = 0
 
     for round_num in range(1, num_rounds + 1):
         rng = np.random.default_rng(seed + round_num)
@@ -292,13 +331,26 @@ def run_simulation(
 
         states: list[OrderedDict[str, torch.Tensor]] = []
         weights: list[float] = []
+        privacy_spends: list[PrivacySpend] = []
         for client in selected:
-            updated, num_samples, _spend = client.fit(global_state)
+            updated, num_samples, spend = client.fit(global_state)
             states.append(updated)
             weights.append(float(num_samples))
+            if spend is not None:
+                privacy_spends.append(spend)
 
         global_state = fedavg(states, weights)
         global_model.load_state_dict(global_state)
+        if average_start is not None and round_num >= average_start:
+            if average_sum is None:
+                average_sum = OrderedDict(
+                    (name, value.detach().cpu().float().clone())
+                    for name, value in global_state.items()
+                )
+            else:
+                for name, value in global_state.items():
+                    average_sum[name].add_(value.detach().cpu().float())
+            average_count += 1
 
         work = _round_work(selected)
         cumulative_steps += work["optimizer_steps"]
@@ -310,17 +362,41 @@ def run_simulation(
         record["cumulative_optimizer_steps"] = cumulative_steps
         record["cumulative_examples_seen"] = cumulative_examples
         record["elapsed_seconds"] = round(time.perf_counter() - started, 3)
+        if privacy_spends:
+            composed = [spend.cumulative["composed"] for spend in privacy_spends]
+            record["privacy_epsilon_composed_mean"] = float(np.mean(composed))
+            record["privacy_epsilon_composed_max"] = float(max(composed))
         record.update({f"val_{k}": v for k, v in metrics.items()})
         logger.log(record)
         history.append(record)
+        if on_round_end is not None:
+            on_round_end(record)
 
-        selector = metrics["roc_auc"]
+        selector = metrics[selection_metric]
         if np.isnan(selector):
             selector = metrics["f1"]
-        if tracker.update(selector, round_num):
+        if selection_metric == "loss":
+            selector = -selector
+        if tail_average_fraction is None and tracker.update(selector, round_num):
             torch.save(global_state, run_dir / "best_global_model.pt")
-        elif tracker.should_stop:
+        elif tail_average_fraction is None and tracker.should_stop:
             break
+
+    if tail_average_fraction is not None:
+        if average_sum is None or average_count == 0:
+            raise RuntimeError("tail averaging collected no global states")
+        averaged = OrderedDict(
+            (
+                name,
+                (
+                    (average_sum[name] / average_count).to(global_state[name].dtype)
+                    if torch.is_floating_point(global_state[name])
+                    else global_state[name].detach().cpu().clone()
+                ),
+            )
+            for name in global_state
+        )
+        torch.save(averaged, run_dir / "best_global_model.pt")
 
     return history
 

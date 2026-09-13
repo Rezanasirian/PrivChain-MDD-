@@ -174,6 +174,12 @@ def test_class_weighting_reaches_clients_from_their_own_shard() -> None:
     )
     pooled_weights = {c.pos_weight for c in pooled}
     assert len(pooled_weights) == 1, "the oracle weight must be identical across clients"
+    aggregate_counts = build_federated_clients(  # type: ignore[arg-type]
+        train_subset, partitions, class_weight_mode="aggregate_counts", **common
+    )
+    aggregate_weights = {c.pos_weight for c in aggregate_counts}
+    assert aggregate_weights == pooled_weights
+    assert all(c.objective.pos_weight == c.pos_weight for c in aggregate_counts)
     # The control only means anything if it differs from what shards see locally.
     assert len(set(weights)) > 1, "fixture no longer produces uneven shards"
 

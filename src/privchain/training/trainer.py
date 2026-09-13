@@ -56,12 +56,21 @@ class CentralizedTrainer:
         pos_weight: float | None = None,
         objective: DepressionObjective | None = None,
         modality_dropout: ModalityDropout | None = None,
+        optimizer_name: str = "adam",
     ) -> None:
         self.device = torch.device(device)
         self.model = model.to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
-        )
+        self.optimizer: torch.optim.Optimizer
+        if optimizer_name == "adam":
+            self.optimizer = torch.optim.Adam(
+                self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
+            )
+        elif optimizer_name == "sgd":
+            self.optimizer = torch.optim.SGD(
+                self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
+            )
+        else:
+            raise ValueError(f"unknown optimizer {optimizer_name!r}; expected 'adam' or 'sgd'")
         self.objective = (
             objective or DepressionObjective(phq8_max, phq_loss_weight, pos_weight)
         ).to(self.device)
