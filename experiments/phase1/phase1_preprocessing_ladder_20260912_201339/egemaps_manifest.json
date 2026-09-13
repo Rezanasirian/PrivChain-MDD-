@@ -1,0 +1,11 @@
+{
+  "feature_set": "eGeMAPSv02",
+  "feature_level": "Functionals",
+  "width": 88,
+  "speech_source": "participant transcript turns",
+  "pad_seconds": 0.1,
+  "participants": 188,
+  "written": 187,
+  "skipped_existing": 1,
+  "opensmile_version": "2.6.0"
+}

@@ -1,0 +1,24 @@
+{
+  "committed": {
+    "dims": {
+      "audio": 74,
+      "video": 20,
+      "text": 768
+    },
+    "pool": 107,
+    "dev": 34,
+    "audio_params": 64000,
+    "total_params": 266114
+  },
+  "speech+egemaps": {
+    "dims": {
+      "audio": 88,
+      "video": 20,
+      "text": 768
+    },
+    "pool": 107,
+    "dev": 34,
+    "audio_params": 63926,
+    "total_params": 266040
+  }
+}
