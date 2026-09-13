@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="470" viewBox="0 0 760 470" font-family="Segoe UI, Tahoma, sans-serif">
+  <rect width="760" height="470" fill="#ffffff"/>
+  <text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Encode-then-fuse model and its four DP parameter groups</text>
+
+  <!-- inputs -->
+  <g font-size="11.5">
+    <rect x="40" y="70" width="130" height="56" rx="5" fill="#fff8e1" stroke="#f9a825"/>
+    <text x="105" y="90" text-anchor="middle" font-weight="600" fill="#f57f17">audio</text>
+    <text x="105" y="107" text-anchor="middle" font-size="10.5" fill="#795548">COVAREP, 74 ch</text>
+    <text x="105" y="120" text-anchor="middle" font-size="10.5" fill="#795548">~10 ms frames</text>
+
+    <rect x="40" y="180" width="130" height="56" rx="5" fill="#fff8e1" stroke="#f9a825"/>
+    <text x="105" y="200" text-anchor="middle" font-weight="600" fill="#f57f17">video</text>
+    <text x="105" y="217" text-anchor="middle" font-size="10.5" fill="#795548">OpenFace AUs</text>
+    <text x="105" y="230" text-anchor="middle" font-size="10.5" fill="#795548">+ success flag</text>
+
+    <rect x="40" y="290" width="130" height="56" rx="5" fill="#fff8e1" stroke="#f9a825"/>
+    <text x="105" y="310" text-anchor="middle" font-weight="600" fill="#f57f17">text</text>
+    <text x="105" y="327" text-anchor="middle" font-size="10.5" fill="#795548">transformer embed.</text>
+    <text x="105" y="340" text-anchor="middle" font-size="10.5" fill="#795548">768-dim</text>
+  </g>
+
+  <!-- functionals -->
+  <g font-size="10.5" fill="#555">
+    <rect x="196" y="76" width="92" height="44" rx="4" fill="#ffffff" stroke="#bdbdbd" stroke-dasharray="3 2"/>
+    <text x="242" y="94" text-anchor="middle">functionals</text>
+    <text x="242" y="110" text-anchor="middle">eq. (3-3)</text>
+
+    <rect x="196" y="186" width="92" height="44" rx="4" fill="#ffffff" stroke="#bdbdbd" stroke-dasharray="3 2"/>
+    <text x="242" y="204" text-anchor="middle">functionals</text>
+    <text x="242" y="220" text-anchor="middle">eq. (3-3)</text>
+
+    <rect x="196" y="296" width="92" height="44" rx="4" fill="#ffffff" stroke="#bdbdbd" stroke-dasharray="3 2"/>
+    <text x="242" y="314" text-anchor="middle">masked mean</text>
+    <text x="242" y="330" text-anchor="middle">session-level</text>
+  </g>
+
+  <!-- encoders = parameter groups 1..3 -->
+  <g>
+    <rect x="314" y="70" width="150" height="56" rx="6" fill="#ffebee" stroke="#c62828" stroke-width="2"/>
+    <text x="389" y="90" text-anchor="middle" font-size="12.5" font-weight="600" fill="#b71c1c">encoder θ_audio</text>
+    <text x="389" y="108" text-anchor="middle" font-size="10.5" fill="#c62828">σ_audio = 11.05 · ε = 1.96</text>
+    <text x="389" y="120" text-anchor="middle" font-size="10" fill="#8d6e63">risk r = 1.00 (22.2× chance)</text>
+
+    <rect x="314" y="180" width="150" height="56" rx="6" fill="#ffebee" stroke="#c62828" stroke-width="2"/>
+    <text x="389" y="200" text-anchor="middle" font-size="12.5" font-weight="600" fill="#b71c1c">encoder θ_video</text>
+    <text x="389" y="218" text-anchor="middle" font-size="10.5" fill="#c62828">σ_video = 10.75 · ε = 2.02</text>
+    <text x="389" y="230" text-anchor="middle" font-size="10" fill="#8d6e63">risk r = 0.97 (21.6× chance)</text>
+
+    <rect x="314" y="290" width="150" height="56" rx="6" fill="#fff3e0" stroke="#ef6c00" stroke-width="2"/>
+    <text x="389" y="310" text-anchor="middle" font-size="12.5" font-weight="600" fill="#e65100">encoder θ_text</text>
+    <text x="389" y="328" text-anchor="middle" font-size="10.5" fill="#ef6c00">σ_text = 3.07 · ε = 6.75</text>
+    <text x="389" y="340" text-anchor="middle" font-size="10" fill="#8d6e63">risk r = 0.29 (6.6× chance)</text>
+  </g>
+
+  <!-- embeddings -->
+  <g font-size="10.5" fill="#1565c0">
+    <text x="484" y="102" text-anchor="middle">z ∈ ℝ¹²⁸</text>
+    <text x="484" y="212" text-anchor="middle">z ∈ ℝ¹²⁸</text>
+    <text x="484" y="322" text-anchor="middle">z ∈ ℝ¹²⁸</text>
+  </g>
+
+  <!-- fusion + head = group 4 -->
+  <rect x="530" y="150" width="180" height="116" rx="6" fill="#e8eaf6" stroke="#3949ab" stroke-width="2"/>
+  <text x="620" y="174" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1a237e">fusion + heads</text>
+  <text x="620" y="192" text-anchor="middle" font-size="11.5" font-weight="600" fill="#1a237e">θ_shared</text>
+  <text x="620" y="212" text-anchor="middle" font-size="10.5" fill="#3949ab">concat → MLP → logit</text>
+  <text x="620" y="232" text-anchor="middle" font-size="10.5" fill="#c62828">σ_shared = max_m σ_m</text>
+  <text x="620" y="250" text-anchor="middle" font-size="10" fill="#5c6bc0">eq. (3-8) — conservative</text>
+
+  <!-- output -->
+  <rect x="560" y="300" width="120" height="42" rx="5" fill="#ffffff" stroke="#1a237e"/>
+  <text x="620" y="318" text-anchor="middle" font-size="12" font-weight="600" fill="#1a237e">ŷ  (PHQ-8 ≥ 10)</text>
+  <text x="620" y="334" text-anchor="middle" font-size="10" fill="#5c6bc0">binary depression score</text>
+
+  <!-- arrows -->
+  <g stroke="#9e9e9e" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+    <line x1="170" y1="98" x2="192" y2="98"/><line x1="288" y1="98" x2="310" y2="98"/>
+    <line x1="170" y1="208" x2="192" y2="208"/><line x1="288" y1="208" x2="310" y2="208"/>
+    <line x1="170" y1="318" x2="192" y2="318"/><line x1="288" y1="318" x2="310" y2="318"/>
+    <path d="M464,98 L505,98 L505,182 L526,182"/>
+    <path d="M464,208 L526,208"/>
+    <path d="M464,318 L505,318 L505,234 L526,234"/>
+    <line x1="620" y1="266" x2="620" y2="296"/>
+  </g>
+  <defs>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 z" fill="#9e9e9e"/>
+    </marker>
+  </defs>
+
+  <!-- bottom note -->
+  <rect x="40" y="370" width="670" height="72" rx="6" fill="#fafafa" stroke="#e0e0e0"/>
+  <text x="56" y="392" font-size="12" font-weight="600" fill="#b71c1c">Why the guarantee composes over all four groups</text>
+  <text x="56" y="412" font-size="11.5" fill="#444444">All three encoders are optimized through one fused loss, so changing a participant's audio record can move the</text>
+  <text x="56" y="428" font-size="11.5" fill="#444444">gradient of every group — not only θ_audio. The released model's bound is therefore ε_participant of eq. (3-9), not ε_m.</text>
+
+  <text x="40" y="462" font-size="11" fill="#666666">ε and σ values shown are the adaptive allocation of section 4-2-4, scaled to a common participant budget of 8.0.</text>
+</svg>

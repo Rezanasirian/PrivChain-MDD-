@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520" font-family="Segoe UI, Tahoma, sans-serif">
+  <rect width="760" height="520" fill="#ffffff"/>
+  <text x="380" y="26" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">One federated round: capability-aware aggregation with on-chain audit</text>
+
+  <!-- lifelines -->
+  <g font-size="12" font-weight="600">
+    <rect x="40" y="46" width="130" height="30" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="105" y="66" text-anchor="middle" fill="#1b5e20">Clients i ∈ S</text>
+
+    <rect x="240" y="46" width="150" height="30" rx="4" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="315" y="66" text-anchor="middle" fill="#0d47a1">Coordinator</text>
+
+    <rect x="460" y="46" width="130" height="30" rx="4" fill="#f3e5f5" stroke="#8e24aa"/>
+    <text x="525" y="66" text-anchor="middle" fill="#6a1b9a">Smart contract</text>
+
+    <rect x="630" y="46" width="90" height="30" rx="4" fill="#eceff1" stroke="#546e7a"/>
+    <text x="675" y="66" text-anchor="middle" fill="#37474f">Ledger</text>
+  </g>
+  <g stroke="#cfd8dc" stroke-width="1.5" stroke-dasharray="4 4">
+    <line x1="105" y1="76" x2="105" y2="470"/>
+    <line x1="315" y1="76" x2="315" y2="470"/>
+    <line x1="525" y1="76" x2="525" y2="470"/>
+    <line x1="675" y1="76" x2="675" y2="470"/>
+  </g>
+
+  <defs>
+    <marker id="a1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#455a64"/></marker>
+  </defs>
+
+  <!-- step 0: register (once) -->
+  <g stroke="#8e24aa" stroke-width="1.6" marker-end="url(#a1)">
+    <line x1="105" y1="100" x2="520" y2="100"/>
+  </g>
+  <text x="300" y="94" font-size="11" fill="#6a1b9a" text-anchor="middle">0. RegisterClient(c_i) — declared once, before training</text>
+
+  <!-- step 1: build subgraphs -->
+  <rect x="248" y="116" width="134" height="34" rx="4" fill="#ffffff" stroke="#1565c0"/>
+  <text x="315" y="137" font-size="11" fill="#0d47a1" text-anchor="middle">1. build S_m from c_i</text>
+
+  <!-- step 2: broadcast -->
+  <g stroke="#455a64" stroke-width="1.6" marker-end="url(#a1)">
+    <line x1="310" y1="168" x2="110" y2="168"/>
+  </g>
+  <text x="210" y="162" font-size="11" fill="#37474f" text-anchor="middle">2. broadcast θ^t for the groups each client holds</text>
+
+  <!-- step 3: local train box -->
+  <rect x="40" y="184" width="180" height="86" rx="5" fill="#e8f5e9" stroke="#66bb6a"/>
+  <text x="130" y="202" font-size="11.5" font-weight="600" fill="#1b5e20" text-anchor="middle">3. local training</text>
+  <text x="130" y="220" font-size="10.5" fill="#2e7d32" text-anchor="middle">supervised loss + λ·KD, eq. (3-17)</text>
+  <text x="130" y="236" font-size="10.5" fill="#2e7d32" text-anchor="middle">per-group clipping, eq. (3-6)</text>
+  <text x="130" y="252" font-size="10.5" fill="#c62828" text-anchor="middle">per-group Gaussian noise, eq. (3-7)</text>
+  <text x="130" y="266" font-size="10" fill="#558b2f" text-anchor="middle">raw sessions never leave the client</text>
+
+  <!-- step 4: upload -->
+  <g stroke="#2e7d32" stroke-width="1.8" marker-end="url(#a1)">
+    <line x1="110" y1="288" x2="310" y2="288"/>
+  </g>
+  <text x="210" y="282" font-size="11" fill="#1b5e20" text-anchor="middle">4. upload Δ_{i,g} — only for groups client i actually has</text>
+
+  <!-- step 5: aggregate -->
+  <rect x="240" y="304" width="150" height="72" rx="5" fill="#e3f2fd" stroke="#42a5f5"/>
+  <text x="315" y="322" font-size="11.5" font-weight="600" fill="#0d47a1" text-anchor="middle">5. aggregate</text>
+  <text x="315" y="339" font-size="10.5" fill="#1565c0" text-anchor="middle">ρ_{i,g} update, eq. (3-15)</text>
+  <text x="315" y="355" font-size="10.5" fill="#1565c0" text-anchor="middle">subgraph average, eq. (3-12)</text>
+  <text x="315" y="370" font-size="10.5" fill="#c62828" text-anchor="middle">S_m = ∅ ⇒ θ_m untouched (3-13)</text>
+
+  <!-- step 6: log to chain -->
+  <g stroke="#8e24aa" stroke-width="1.6" marker-end="url(#a1)">
+    <line x1="320" y1="394" x2="520" y2="394"/>
+  </g>
+  <text x="420" y="388" font-size="11" fill="#6a1b9a" text-anchor="middle">6. LogPrivacyBudget · UpdateReputation · PublishSubgraph</text>
+
+  <!-- step 7: commit -->
+  <g stroke="#546e7a" stroke-width="1.6" marker-end="url(#a1)">
+    <line x1="530" y1="420" x2="670" y2="420"/>
+  </g>
+  <text x="600" y="414" font-size="11" fill="#37474f" text-anchor="middle">7. commit (PBFT-class consensus)</text>
+
+  <!-- step 8: next round -->
+  <g stroke="#455a64" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a1)">
+    <path d="M310,446 L120,446" fill="none"/>
+  </g>
+  <text x="215" y="440" font-size="11" fill="#37474f" text-anchor="middle">8. next round, until early stopping on the selection split</text>
+
+  <!-- side note -->
+  <rect x="410" y="150" width="310" height="200" rx="6" fill="#fafafa" stroke="#e0e0e0"/>
+  <text x="426" y="172" font-size="12" font-weight="600" fill="#333333">What each client sends</text>
+  <g font-size="11" fill="#444444">
+    <text x="426" y="194">c = [1,1,1] → audio, video, text, shared</text>
+    <text x="426" y="214">c = [1,0,1] → audio, text, shared</text>
+    <text x="426" y="234">c = [1,0,0] → audio, shared</text>
+    <text x="426" y="254">c = [0,0,1] → text, shared</text>
+  </g>
+  <line x1="426" y1="268" x2="704" y2="268" stroke="#e0e0e0"/>
+  <text x="426" y="288" font-size="11" fill="#c62828">A client reports no σ for a group it does not hold:</text>
+  <text x="426" y="306" font-size="11" fill="#c62828">a text-only client never claims an audio mechanism.</text>
+  <text x="426" y="328" font-size="11" fill="#666666">This is what makes the ledger's budget rows</text>
+  <text x="426" y="344" font-size="11" fill="#666666">auditable rather than merely present.</text>
+
+  <text x="40" y="496" font-size="11" fill="#666666">The ledger guarantees the audit trail is immutable. It does not guarantee that any individual update was well-behaved —</text>
+  <text x="40" y="510" font-size="11" fill="#666666">that is what reputation weighting attenuates, as a light prior rather than a proved Byzantine bound.</text>
+</svg>
