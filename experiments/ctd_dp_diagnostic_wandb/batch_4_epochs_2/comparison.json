@@ -1,0 +1,25 @@
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only",
+    "optimizer": "sgd",
+    "class_weight_mode": "per_shard",
+    "dp_epsilon": 8.0,
+    "dp_batch_size": 4,
+    "dp_local_epochs": 2
+  },
+  "fedavg_dp": {
+    "accuracy": 0.35555555555555557,
+    "precision": 0.14285714285714285,
+    "recall": 0.21428571428571427,
+    "f1": 0.17142857142857143,
+    "macro_f1": 0.3220779220779221,
+    "roc_auc": 0.2926267281105991,
+    "pr_auc": 0.2372192270954826,
+    "threshold": 0.44999999999999996,
+    "loss": 0.7191969752311707
+  }
+}

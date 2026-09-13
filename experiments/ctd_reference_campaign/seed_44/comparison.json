@@ -1,0 +1,42 @@
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only"
+  },
+  "central": {
+    "accuracy": 0.6,
+    "precision": 0.4230769230769231,
+    "recall": 0.7857142857142857,
+    "f1": 0.55,
+    "macro_f1": 0.595,
+    "roc_auc": 0.7304147465437788,
+    "pr_auc": 0.5274803940715042,
+    "threshold": 0.44999999999999996,
+    "loss": 0.6443319850497775
+  },
+  "fedavg": {
+    "accuracy": 0.6,
+    "precision": 0.16666666666666666,
+    "recall": 0.07142857142857142,
+    "f1": 0.1,
+    "macro_f1": 0.4214285714285714,
+    "roc_auc": 0.3663594470046083,
+    "pr_auc": 0.26792700496123834,
+    "threshold": 0.75,
+    "loss": 0.8739484707514446
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6222222222222222,
+    "precision": 0.2,
+    "recall": 0.07142857142857142,
+    "f1": 0.10526315789473682,
+    "macro_f1": 0.4329132690882135,
+    "roc_auc": 0.3387096774193548,
+    "pr_auc": 0.25678272662568075,
+    "threshold": 0.85,
+    "loss": 0.9803293135431078
+  }
+}

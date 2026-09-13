@@ -1,0 +1,27 @@
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "reported_split": "test",
+    "standardization": "train-only",
+    "threshold_selection": "dev-only",
+    "checkpoint_selection": "roc_auc",
+    "optimizer": "sgd",
+    "class_weight_mode": "aggregate_counts",
+    "dp_epsilon": 8.0,
+    "dp_batch_size": 16,
+    "dp_local_epochs": 1
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6,
+    "precision": 0.16666666666666666,
+    "recall": 0.07142857142857142,
+    "f1": 0.1,
+    "macro_f1": 0.4214285714285714,
+    "roc_auc": 0.29723502304147464,
+    "pr_auc": 0.24164458072480272,
+    "threshold": 0.49999999999999994,
+    "loss": 0.7117719438340929
+  }
+}
