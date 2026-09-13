@@ -11,6 +11,7 @@ Go chaincode); point ``configs/blockchain.yaml`` at a Fabric REST gateway
 Usage:
     python scripts/run_federated_with_ledger.py
     python scripts/run_federated_with_ledger.py --rounds 5 --num-clients 8
+    python scripts/run_federated_with_ledger.py --daic-config configs/daic_woz.yaml
 """
 
 from __future__ import annotations
@@ -28,9 +29,8 @@ from privchain.config import (
     load_blockchain_config,
     load_federated_config,
     load_privacy_config,
-    modality_input_dims,
 )
-from privchain.data.mock_daic_woz import MockDaicWozDataset, Sample, collate_fn
+from privchain.data.mock_daic_woz import Sample
 from privchain.federated.client import ClientDPConfig
 from privchain.federated.partition import build_client_partitions
 from privchain.federated.simulation import build_federated_clients, run_capability_aware_simulation
@@ -38,7 +38,7 @@ from privchain.fusion.factory import build_depression_model
 from privchain.privacy.budget_allocator import allocate_target_epsilons
 from privchain.seeding import seed_everything
 from privchain.training.experiment import create_run_dir, save_config
-from privchain.training.loaders import split_dataset
+from privchain.training.protocol import build_splits, make_loader
 
 
 def main() -> None:
@@ -48,6 +48,12 @@ def main() -> None:
     parser.add_argument("--federated-config", type=Path, default=Path("configs/federated.yaml"))
     parser.add_argument("--privacy-config", type=Path, default=Path("configs/privacy.yaml"))
     parser.add_argument("--blockchain-config", type=Path, default=Path("configs/blockchain.yaml"))
+    parser.add_argument(
+        "--daic-config",
+        type=Path,
+        default=None,
+        help="Optional real DAIC-WOZ config; omit it only for an offline mock smoke run.",
+    )
     parser.add_argument("--rounds", type=int, default=None, help="Override num_rounds.")
     parser.add_argument("--num-clients", type=int, default=None, help="Override num_clients.")
     args = parser.parse_args()
@@ -69,14 +75,16 @@ def main() -> None:
             }
         )
 
-    full_dataset = MockDaicWozDataset(base.data, seed=base.seed)
-    train_subset, val_subset = split_dataset(full_dataset, base.train.val_fraction, base.seed)
-    val_loader: DataLoader[Sample] = DataLoader(
-        val_subset, batch_size=base.train.batch_size, shuffle=False, collate_fn=collate_fn
+    splits, input_dims = build_splits(base, args.daic_config)
+    # The report split is never used to select a federated checkpoint. This run
+    # demonstrates the live audit path; selection remains confined to the slice
+    # carved from the official training data by the shared protocol.
+    train_subset = splits.train
+    val_loader: DataLoader[Sample] = make_loader(
+        splits.selection, batch_size=base.train.batch_size, shuffle=False
     )
 
     partitions = build_client_partitions(len(train_subset), federation, base.seed)
-    input_dims = modality_input_dims(base.data)
     clients = build_federated_clients(
         train_subset,
         partitions,
@@ -89,6 +97,7 @@ def main() -> None:
         phq8_max=base.data.phq8_max,
         phq_loss_weight=base.model.phq_loss_weight,
         seed=base.seed,
+        quality_dims=splits.quality_dims,
         client_dp=ClientDPConfig(
             target_epsilons=allocate_target_epsilons(
                 privacy.privacy.allocation, privacy.privacy.per_modality
@@ -100,7 +109,7 @@ def main() -> None:
             seed=base.seed,
         ),
     )
-    global_model = build_depression_model(input_dims, base.model)
+    global_model = build_depression_model(input_dims, base.model, splits.quality_dims)
 
     ledger = build_ledger(blockchain.ledger)
     run_dir = create_run_dir(base.train.output_dir, "phase5", "phase5_federated_with_ledger")
@@ -111,6 +120,8 @@ def main() -> None:
             "federated": fed.model_dump(),
             "privacy": privacy.model_dump(),
             "blockchain": blockchain.model_dump(),
+            "dataset": "daic_woz" if args.daic_config is not None else "mock",
+            "daic_config": str(args.daic_config) if args.daic_config is not None else None,
         },
     )
     print(f"Ledger backend: {blockchain.ledger.backend}")
@@ -141,7 +152,8 @@ def main() -> None:
             spent = entries[-1]["epsilon_spent"] if entries else None
             rep = sample["reputation"].get(modality)
             print(f"  {modality:<6} consumed_eps(final)={spent}  reputation={rep}")
-    print("\n(On mock noise the metrics are meaningless; this demonstrates the audit trail.)")
+    if args.daic_config is None:
+        print("\n(On mock noise the metrics are meaningless; this demonstrates the audit trail.)")
 
 
 def _audit(ledger: object, num_rounds: int) -> dict[str, object]:

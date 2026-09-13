@@ -1,0 +1,114 @@
+purged /workspace/PrivChain-MDD-/.fabric (crypto material, ledger data and logs)
+TEARDOWN_OK
+
+=== generating crypto material ===
+org1.privchain.local
+
+=== building the channel genesis block ===
+[34m2026-09-04 08:28:52.999 UTC 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-09-04 08:28:53.009 UTC 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> orderer type: etcdraft
+[34m2026-09-04 08:28:53.009 UTC 0003 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> Orderer.EtcdRaft.Options unset, setting to tick_interval:"500ms" election_tick:10 heartbeat_tick:1 max_inflight_blocks:5 snapshot_interval_size:16777216 
+[34m2026-09-04 08:28:53.009 UTC 0004 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoad[0m -> Loaded configuration: /workspace/PrivChain-MDD-/scripts/fabric/configtx.yaml
+[34m2026-09-04 08:28:53.012 UTC 0005 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Generating genesis block
+[34m2026-09-04 08:28:53.012 UTC 0006 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Creating application channel genesis block
+[34m2026-09-04 08:28:53.013 UTC 0007 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Writing genesis block
+
+=== starting the orderer ===
+
+=== joining the orderer to privchain-channel ===
+Status: 201
+{
+	"name": "privchain-channel",
+	"url": "/participation/v1/channels/privchain-channel",
+	"consensusRelation": "consenter",
+	"status": "active",
+	"height": 1
+}
+
+
+=== preparing peer config with the external builder ===
+external builder registered: /workspace/PrivChain-MDD-/scripts/fabric/external_builder
+
+=== starting the peer ===
+
+=== joining the peer to privchain-channel ===
+[34m2026-09-04 08:29:00.024 UTC 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-04 08:29:00.495 UTC 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+
+=== channels the peer has joined ===
+[34m2026-09-04 08:29:00.622 UTC 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+Channels peers has joined: 
+privchain-channel
+NETWORK_UP
+
+=== building the chaincode binary ===
+go: downloading github.com/hyperledger/fabric-protos-go v0.3.3
+go: downloading github.com/hyperledger/fabric-chaincode-go v0.0.0-20240124143825-7dec3c7e7d45
+go: downloading github.com/golang/protobuf v1.5.3
+go: downloading google.golang.org/protobuf v1.32.0
+go: downloading google.golang.org/grpc v1.56.3
+go: downloading google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
+go: downloading golang.org/x/sys v0.16.0
+go: downloading golang.org/x/net v0.20.0
+go: downloading golang.org/x/text v0.14.0
+
+=== packaging as chaincode-as-a-service ===
+
+=== installing the package ===
+[34m2026-09-04 08:29:24.670 UTC 0002 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Chaincode code package identifier: privchain-cc_1.0:c5c1e47e2f3e0aafab8254980b0e09220ab71988b21c72f7c86456133972b5bd
+package ID: privchain-cc_1.0:c5c1e47e2f3e0aafab8254980b0e09220ab71988b21c72f7c86456133972b5bd
+
+=== starting the chaincode process ===
+
+=== approving for Org1MSP ===
+[34m2026-09-04 08:29:26.884 UTC 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [b9c06c28f1980fb71480aae9f775e2e1550f3fd3bc1c63953952daafa760f72c] committed with status (VALID) at localhost:7051
+
+=== committing to the channel ===
+[34m2026-09-04 08:29:28.054 UTC 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [ddf98de961f68e127a0e418a5b3852d687e628e81e88955964ed1500a5d84489] committed with status (VALID) at localhost:7051
+
+=== initialising with coordinator MSP Org1MSP ===
+[34m2026-09-04 08:29:29.220 UTC 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [f3dad31aaf72907a270434e7ffcf0b212fbaa48f6bf4a4a0ffb9e3d217cf5eb0] committed with status (VALID) at localhost:7051
+[34m2026-09-04 08:29:29.220 UTC 0002 INFO[0m [chaincodeCmd] [34;1mchaincodeInvokeOrQuery[0m -> Chaincode invoke successful. result: status:200 
+
+=== committed chaincode on the channel ===
+Committed chaincode definition for chaincode 'privchain-cc' on channel 'privchain-channel':
+Version: 1.0, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true]
+CHAINCODE_DEPLOYED
+go: downloading golang.org/x/crypto v0.28.0
+go: downloading google.golang.org/protobuf v1.35.1
+go: downloading golang.org/x/net v0.29.0
+go: downloading golang.org/x/sys v0.26.0
+go: downloading golang.org/x/text v0.19.0
+{"status":"ok"}
+GATEWAY_UP
+
+=== RegisterClient verify-client-9458 ===
+[34m2026-09-04 08:29:43.332 UTC 0002 INFO[0m [chaincodeCmd] [34;1mchaincodeInvokeOrQuery[0m -> Chaincode invoke successful. result: status:200 payload:"{\"clientId\":\"verify-client-9458\",\"capability\":[1,0,1],\"ownerMspId\":\"Org1MSP\",\"ownerFingerprint\":\"613f9c0c5b0e0273050b883ab5b48c55c4405a4edaca2295e7693be05c1598fa\"}" 
+
+=== GetClient verify-client-9458 ===
+{"clientId":"verify-client-9458","capability":[1,0,1],"ownerMspId":"Org1MSP","ownerFingerprint":"613f9c0c5b0e0273050b883ab5b48c55c4405a4edaca2295e7693be05c1598fa"}
+
+=== LogPrivacyBudget round 1 ===
+[34m2026-09-04 08:29:44.657 UTC 0002 INFO[0m [chaincodeCmd] [34;1mchaincodeInvokeOrQuery[0m -> Chaincode invoke successful. result: status:200 payload:"{\"clientId\":\"verify-client-9458\",\"modality\":\"audio\",\"round\":1,\"epsilonIncremental\":0.5,\"epsilonCumulative\":0.5,\"epsilonSpent\":0.5}" 
+
+=== restarting the peer ===
+
+=== GetClient verify-client-9458 after restart ===
+{"clientId":"verify-client-9458","capability":[1,0,1],"ownerMspId":"Org1MSP","ownerFingerprint":"613f9c0c5b0e0273050b883ab5b48c55c4405a4edaca2295e7693be05c1598fa"}
+
+=== LogPrivacyBudget for the same (client, modality, round) must be REJECTED ===
+Error: endorsement failure during invoke. response: status:500 message:"privacy budget already logged for client \"verify-client-9458\" modality \"audio\" round 1; consumed epsilon is append-only and must not be overwritten" 
+correctly rejected (append-only holds on the real ledger)
+
+=== budget history is intact ===
+[{"clientId":"verify-client-9458","modality":"audio","round":1,"epsilonIncremental":0.5,"epsilonCumulative":0.5,"epsilonSpent":0.5}]
+
+=== PublishSubgraph round 1458, then the same round again ===
+[34m2026-09-04 08:29:54.285 UTC 0002 INFO[0m [chaincodeCmd] [34;1mchaincodeInvokeOrQuery[0m -> Chaincode invoke successful. result: status:200 payload:"{\"round\":1458,\"clientIds\":[\"verify-client-9458\"]}" 
+Error: endorsement failure during invoke. response: status:500 message:"subgraph for round 1458 already published; it is immutable" 
+correctly rejected (subgraph immutability holds on the real ledger)
+
+=== channel height ===
+[34m2026-09-04 08:29:54.577 UTC 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+Blockchain info: {"height":7,"currentBlockHash":"AN63Fd26Yoe2P5nqe4FpF/FEaZQwucOeoYreS0FyEVM=","previousBlockHash":"ekllgreBFbTy0QiqPsFFk6WpalC1OzEsW7eqw5MTEK4="}
+LEDGER_VERIFIED

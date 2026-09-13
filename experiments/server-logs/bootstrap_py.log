@@ -1,0 +1,9 @@
+### interpreter: /venv/main/bin/python
+### pip 08:25:59
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+### versions 08:29:00
+numpy 2.5.2
+torch 2.11.0+cu128 cuda True NVIDIA GeForce RTX 5070
+scipy 1.18.1
+opacus 1.6.0 transformers 5.16.1 sklearn 1.9.0
+### done 08:29:25

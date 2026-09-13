@@ -1,0 +1,135 @@
+[run] CTD Central/FedAvg/DP seed=42
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only"
+  },
+  "central": {
+    "accuracy": 0.6666666666666666,
+    "precision": 0.47058823529411764,
+    "recall": 0.5714285714285714,
+    "f1": 0.5161290322580646,
+    "macro_f1": 0.6309458720612358,
+    "roc_auc": 0.6820276497695853,
+    "pr_auc": 0.4983287037632286,
+    "threshold": 0.49999999999999994,
+    "loss": 0.6526766154501173
+  },
+  "fedavg": {
+    "accuracy": 0.7111111111111111,
+    "precision": 0.6,
+    "recall": 0.21428571428571427,
+    "f1": 0.3157894736842105,
+    "macro_f1": 0.5663454410674573,
+    "roc_auc": 0.6497695852534562,
+    "pr_auc": 0.5029429107733957,
+    "threshold": 0.6,
+    "loss": 0.6441910227139791
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6666666666666666,
+    "precision": 0.4444444444444444,
+    "recall": 0.2857142857142857,
+    "f1": 0.34782608695652173,
+    "macro_f1": 0.5619727449707982,
+    "roc_auc": 0.6451612903225806,
+    "pr_auc": 0.494960453670408,
+    "threshold": 0.5499999999999999,
+    "loss": 0.6455572989251879
+  }
+}
+Saved -> experiments/ctd_reference_campaign/seed_42/comparison.json
+[run] CTD Central/FedAvg/DP seed=43
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only"
+  },
+  "central": {
+    "accuracy": 0.6666666666666666,
+    "precision": 0.45454545454545453,
+    "recall": 0.35714285714285715,
+    "f1": 0.4,
+    "macro_f1": 0.5846153846153846,
+    "roc_auc": 0.7396313364055299,
+    "pr_auc": 0.5138352956891031,
+    "threshold": 0.6,
+    "loss": 0.6408033649126689
+  },
+  "fedavg": {
+    "accuracy": 0.5777777777777777,
+    "precision": 0.14285714285714285,
+    "recall": 0.07142857142857142,
+    "f1": 0.09523809523809523,
+    "macro_f1": 0.4099378881987577,
+    "roc_auc": 0.35253456221198154,
+    "pr_auc": 0.25603836676295766,
+    "threshold": 0.5499999999999999,
+    "loss": 0.7449878348244561
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6666666666666666,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "macro_f1": 0.4,
+    "roc_auc": 0.3271889400921659,
+    "pr_auc": 0.2536395545244983,
+    "threshold": 0.65,
+    "loss": 0.7381445911195543
+  }
+}
+Saved -> experiments/ctd_reference_campaign/seed_43/comparison.json
+[run] CTD Central/FedAvg/DP seed=44
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only"
+  },
+  "central": {
+    "accuracy": 0.6,
+    "precision": 0.4230769230769231,
+    "recall": 0.7857142857142857,
+    "f1": 0.55,
+    "macro_f1": 0.595,
+    "roc_auc": 0.7304147465437788,
+    "pr_auc": 0.5274803940715042,
+    "threshold": 0.44999999999999996,
+    "loss": 0.6443319850497775
+  },
+  "fedavg": {
+    "accuracy": 0.6,
+    "precision": 0.16666666666666666,
+    "recall": 0.07142857142857142,
+    "f1": 0.1,
+    "macro_f1": 0.4214285714285714,
+    "roc_auc": 0.3663594470046083,
+    "pr_auc": 0.26792700496123834,
+    "threshold": 0.75,
+    "loss": 0.8739484707514446
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6222222222222222,
+    "precision": 0.2,
+    "recall": 0.07142857142857142,
+    "f1": 0.10526315789473682,
+    "macro_f1": 0.4329132690882135,
+    "roc_auc": 0.3387096774193548,
+    "pr_auc": 0.25678272662568075,
+    "threshold": 0.85,
+    "loss": 0.9803293135431078
+  }
+}
+Saved -> experiments/ctd_reference_campaign/seed_44/comparison.json

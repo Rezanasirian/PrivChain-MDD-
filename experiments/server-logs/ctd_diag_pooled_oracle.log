@@ -1,0 +1,44 @@
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only"
+  },
+  "central": {
+    "accuracy": 0.6666666666666666,
+    "precision": 0.4666666666666667,
+    "recall": 0.5,
+    "f1": 0.4827586206896552,
+    "macro_f1": 0.6184284906726965,
+    "roc_auc": 0.7050691244239631,
+    "pr_auc": 0.5245847935948573,
+    "threshold": 0.5499999999999999,
+    "loss": 0.6417871965302362
+  },
+  "fedavg": {
+    "accuracy": 0.6888888888888889,
+    "precision": 0.5,
+    "recall": 0.35714285714285715,
+    "f1": 0.41666666666666663,
+    "macro_f1": 0.6022727272727273,
+    "roc_auc": 0.7211981566820277,
+    "pr_auc": 0.5053241806574973,
+    "threshold": 0.6,
+    "loss": 0.6406560990545485
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6444444444444445,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "macro_f1": 0.3918918918918919,
+    "roc_auc": 0.28110599078341014,
+    "pr_auc": 0.23058370201227346,
+    "threshold": 0.6,
+    "loss": 0.7323360284169514
+  }
+}
+Saved -> experiments/ctd_convergence_diagnostic/pooled_oracle/comparison.json

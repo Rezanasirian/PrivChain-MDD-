@@ -1,0 +1,23 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 10:23:41:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 4005.52it/s]
+normalization override: (config default)
+downsample override: decimate; validity: off
+splits: train=86 selection=21 report=34  seeds=[42, 7, 2024, 11, 19, 31, 73, 101, 137, 211]
+  audio              f1=0.450±0.025  roc_auc=0.517±0.031  accuracy=0.412±0.082  auc95%CI=[0.255, 0.725]
+  video              f1=0.451±0.089  roc_auc=0.481±0.064  accuracy=0.382±0.084  auc95%CI=[0.262, 0.705]
+  text               f1=0.325±0.065  roc_auc=0.525±0.020  accuracy=0.650±0.036  auc95%CI=[0.292, 0.792]
+  audio+video        f1=0.463±0.027  roc_auc=0.522±0.040  accuracy=0.385±0.043  auc95%CI=[0.292, 0.733]
+  audio+text         f1=0.380±0.122  roc_auc=0.568±0.015  accuracy=0.479±0.118  auc95%CI=[0.356, 0.779]
+  video+text         f1=0.343±0.032  roc_auc=0.541±0.022  accuracy=0.650±0.033  auc95%CI=[0.327, 0.811]
+  audio+video+text   f1=0.473±0.039  roc_auc=0.575±0.046  accuracy=0.456±0.082  auc95%CI=[0.375, 0.793]
+
+paired bootstrap: what each reduced arm gives up against `audio+video+text`
+  audio+video+text_minus_video       d=+0.119  95%CI=[-0.197, +0.435]  p=0.451  -> no measured difference
+  audio+video+text_minus_audio       d=+0.107  95%CI=[-0.065, +0.277]  p=0.232  -> no measured difference
+  audio+video+text_minus_audio+video d=+0.079  95%CI=[-0.083, +0.233]  p=0.321  -> no measured difference
+  audio+video+text_minus_text        d=+0.047  95%CI=[-0.273, +0.363]  p=0.796  -> no measured difference
+  audio+video+text_minus_video+text  d=+0.020  95%CI=[-0.288, +0.332]  p=0.935  -> no measured difference
+  audio+video+text_minus_audio+text  d=+0.016  95%CI=[-0.046, +0.082]  p=0.691  -> no measured difference
+
+Run dir: experiments/phase1/phase1_modality_ablation_20260904_102343

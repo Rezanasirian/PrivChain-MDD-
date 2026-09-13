@@ -1,0 +1,14 @@
+### apt 08:25:59
+W: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+### download 08:26:05
+downloaded_ok=196
+### extract 08:40:38
+OK   491  (9 files)
+OK   492  (9 files)
+=== EXTRACT PASS COMPLETE ===
+### split csvs 08:42:09
+csvs=4
+### text cache: none — the committed .npy cache was purged (see incident note);
+### text embeddings rebuild on GPU during the first run.
+### done 08:42:09
+overlay         256G  121G  136G  48% /

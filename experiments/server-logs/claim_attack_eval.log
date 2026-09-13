@@ -1,0 +1,24 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 10:53:34:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3752.73it/s]
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+/venv/main/lib/python3.12/site-packages/opacus/accountants/analysis/rdp.py:332: UserWarning: Optimal order is the largest alpha. Please consider expanding the range of alphas to get a tighter privacy bound.
+  warnings.warn(
+eps= 0.50  reid: audio=0.009  video=0.009  text=0.009
+eps= 2.00  reid: audio=0.007  video=0.007  text=0.009
+eps= 8.00  reid: audio=0.007  video=0.007  text=0.009
+eps=32.00  reid: audio=0.012  video=0.007  text=0.009
+eps=128.00  reid: audio=0.009  video=0.009  text=0.009
+/venv/main/lib/python3.12/site-packages/opacus/accountants/analysis/rdp.py:332: UserWarning: Optimal order is the smallest alpha. Please consider expanding the range of alphas to get a tighter privacy bound.
+  warnings.warn(
+eps=512.00  reid: audio=0.014  video=0.038  text=0.009
+eps=  inf  reid: audio=0.128  video=0.151  text=0.028  (no DP)
+
+chance re-identification accuracy = 0.007
+Adaptive allocation (per-modality budget from H1; higher risk -> smaller eps):
+  audio  risk=1.00  eps=2.56  reid_success=0.007
+  video  risk=0.97  eps=2.63  reid_success=0.007
+  text   risk=0.29  eps=8.81  reid_success=0.009
+
+Run dir: experiments/phase6/phase6_attack_eval_20260904_105336
+(On mock data the depression labels are noise; subject identity is real.)

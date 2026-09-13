@@ -1,0 +1,17 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 10:36:31:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3772.23it/s]
+Per-modality DP allocation (configured):
+  audio  risk=1.00  target_eps=2.56  sigma=8.718  consumed_eps=2.554
+  video  risk=0.97  target_eps=2.63  sigma=8.486  consumed_eps=2.634
+  text   risk=0.29  target_eps=8.81  sigma=3.069  consumed_eps=8.810
+  composed participant epsilon (all groups): 10.521
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+eps=  inf -> f1=0.427±0.087  roc_auc=0.589±0.006  accuracy=0.539±0.037  auc95%CI=[0.379, 0.793]
+eps= 0.50 -> f1=0.287±0.034  roc_auc=0.480±0.095  accuracy=0.510±0.060  auc95%CI=[0.205, 0.596]
+eps= 1.00 -> f1=0.279±0.030  roc_auc=0.477±0.087  accuracy=0.549±0.091  auc95%CI=[0.237, 0.661]
+eps= 2.00 -> f1=0.356±0.033  roc_auc=0.513±0.081  accuracy=0.569±0.060  auc95%CI=[0.351, 0.784]
+eps= 4.00 -> f1=0.349±0.109  roc_auc=0.510±0.104  accuracy=0.480±0.037  auc95%CI=[0.284, 0.692]
+eps= 8.00 -> f1=0.388±0.073  roc_auc=0.578±0.065  accuracy=0.490±0.014  auc95%CI=[0.370, 0.783]
+eps=16.00 -> f1=0.372±0.091  roc_auc=0.582±0.042  accuracy=0.490±0.028  auc95%CI=[0.369, 0.788]
+Run dir: experiments/phase3/phase3_dp_budget_sweep_20260904_103633

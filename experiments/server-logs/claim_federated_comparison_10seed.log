@@ -1,0 +1,40 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 11:00:53:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3732.72it/s]
+partition mode: iid
+client pattern           n  pos_rate
+     0 audio_text        9      0.11
+     1 audio_text        9      0.33
+     2 full              9      0.44
+     3 audio_only        9      0.11
+     4 full              9      0.22
+     5 full              9      0.33
+     6 audio_text        8      0.50
+     7 text_only         8      0.50
+     8 full              8      0.12
+     9 audio_only        8      0.12
+corpus                  86      0.28
+
+device=cuda  splits: train=86 selection=21 report=34  rounds<=120 patience=40  seeds=[42, 7, 2024, 11, 19, 31, 73, 101, 137, 211]
+
+centralized                          f1=0.473±0.039  roc_auc=0.575±0.046  accuracy=0.456±0.082  auc95%CI=[0.375, 0.793]
+fedavg                               f1=0.401±0.087  roc_auc=0.515±0.085  accuracy=0.468±0.119  auc95%CI=[0.341, 0.798]
+capability                           f1=0.432±0.085  roc_auc=0.521±0.086  accuracy=0.450±0.118  auc95%CI=[0.342, 0.795]
+capability+reputation                f1=0.431±0.083  roc_auc=0.519±0.085  accuracy=0.465±0.113  auc95%CI=[0.340, 0.800]
+capability+reputation+distillation   f1=0.436±0.085  roc_auc=0.526±0.086  accuracy=0.497±0.071  auc95%CI=[0.340, 0.795]
+
+paired bootstrap against `fedavg` (the only comparison with power here):
+  centralized_minus_fedavg                     d=+0.024  95%CI=[-0.104, +0.154]  p=0.719  -> no measured difference
+  capability_minus_fedavg                      d=+0.000  95%CI=[-0.044, +0.046]  p=1.000  -> no measured difference
+  capability+reputation_minus_fedavg           d=+0.000  95%CI=[-0.032, +0.033]  p=1.000  -> no measured difference
+  capability+reputation+distillation_minus_fedavg d=+0.004  95%CI=[-0.102, +0.119]  p=0.976  -> no measured difference
+
+arm                                           full    audio_text    audio_only     text_only
+--------------------------------------------------------------------------------------------
+centralized                                  0.575         0.563         0.543         0.517
+fedavg                                       0.515         0.518         0.507         0.498
+capability                                   0.521         0.524         0.509         0.495
+capability+reputation                        0.519         0.523         0.507         0.500
+capability+reputation+distillation           0.526         0.511         0.504         0.500
+
+Wrote experiments/phase4/phase4_federated_comparison_20260904_110055/federated_comparison.json

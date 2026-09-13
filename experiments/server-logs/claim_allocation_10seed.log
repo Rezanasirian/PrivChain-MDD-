@@ -1,0 +1,25 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 10:45:55:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3682.59it/s]
+Run dir: experiments/phase3/phase3_allocation_comparison_20260904_104557
+device=cuda  n_train=86  q=0.372  steps=180  seeds=[42, 7, 2024, 11, 19, 31, 73, 101, 137, 211]
+matching every arm to participant epsilon = 8.000
+
+arm               audio    video     text  participant
+------------------------------------------------------
+uniform           3.617    3.617    3.617        8.004
+adaptive          1.957    2.018    6.750        8.003
+anti_adaptive     5.125    4.971    1.486        8.001
+
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+uniform        f1=0.329±0.126  roc_auc=0.519±0.069  accuracy=0.503±0.097  auc95%CI=[0.320, 0.733]
+adaptive       f1=0.347±0.108  roc_auc=0.498±0.064  accuracy=0.518±0.096  auc95%CI=[0.320, 0.756]
+anti_adaptive  f1=0.344±0.105  roc_auc=0.492±0.087  accuracy=0.482±0.107  auc95%CI=[0.289, 0.721]
+
+ordering by roc_auc: uniform > adaptive > anti_adaptive
+
+paired bootstrap against `uniform` (the test that actually has power here):
+  adaptive_minus_uniform       d=+0.008  95%CI=[-0.064, +0.091]  p=0.936  -> no measured difference
+  anti_adaptive_minus_uniform  d=-0.024  95%CI=[-0.090, +0.033]  p=0.453  -> no measured difference
+
+Wrote experiments/phase3/phase3_allocation_comparison_20260904_104557/allocation_comparison.json

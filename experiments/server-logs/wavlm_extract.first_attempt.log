@@ -1,0 +1,181 @@
+[extract] loading microsoft/wavlm-large on cuda ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/488 [00:00<?, ?it/s]Loading weights: 100%|██████████| 488/488 [00:00<00:00, 19532.03it/s]
+sessions:   0%|          | 0/178 [00:00<?, ?it/s]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                 [extract] 300: 87 utt -> (87, 25, 1024) (truncated=0)
+sessions:   0%|          | 0/178 [00:02<?, ?it/s]sessions:   1%|          | 1/178 [00:02<07:42,  2.61s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 301: 104 utt -> (104, 25, 1024) (truncated=0)
+sessions:   1%|          | 1/178 [00:07<07:42,  2.61s/it]sessions:   1%|          | 2/178 [00:07<11:28,  3.91s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 302: 97 utt -> (97, 25, 1024) (truncated=0)
+sessions:   1%|          | 2/178 [00:08<11:28,  3.91s/it]sessions:   2%|▏         | 3/178 [00:08<08:05,  2.78s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 303 FAILED: CUDA out of memory. Tried to allocate 1.50 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 6.89 GiB is allocated by PyTorch, and 3.48 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:   2%|▏         | 4/178 [00:10<06:34,  2.27s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 304 FAILED: CUDA out of memory. Tried to allocate 1.82 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 7.27 GiB is allocated by PyTorch, and 3.10 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:   3%|▎         | 5/178 [00:11<05:37,  1.95s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 305 FAILED: CUDA out of memory. Tried to allocate 1.73 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 6.34 GiB is allocated by PyTorch, and 4.04 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:   3%|▎         | 6/178 [00:13<05:47,  2.02s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 306 FAILED: CUDA out of memory. Tried to allocate 1.65 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 6.23 GiB is allocated by PyTorch, and 4.14 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:   4%|▍         | 7/178 [00:14<04:51,  1.71s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 307 FAILED: CUDA out of memory. Tried to allocate 2.20 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 7.67 GiB is allocated by PyTorch, and 2.71 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:   4%|▍         | 8/178 [00:17<05:13,  1.84s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 308: 154 utt -> (154, 25, 1024) (truncated=0)
+sessions:   4%|▍         | 8/178 [00:19<05:13,  1.84s/it]sessions:   5%|▌         | 9/178 [00:19<05:49,  2.07s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 309: 94 utt -> (94, 25, 1024) (truncated=0)
+sessions:   5%|▌         | 9/178 [00:21<05:49,  2.07s/it]sessions:   6%|▌         | 10/178 [00:21<05:51,  2.09s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 310: 148 utt -> (148, 25, 1024) (truncated=0)
+sessions:   6%|▌         | 10/178 [00:24<05:51,  2.09s/it]sessions:   6%|▌         | 11/178 [00:24<06:03,  2.18s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 311: 129 utt -> (129, 25, 1024) (truncated=0)
+sessions:   6%|▌         | 11/178 [00:25<06:03,  2.18s/it]sessions:   7%|▋         | 12/178 [00:25<05:35,  2.02s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 312: 126 utt -> (126, 25, 1024) (truncated=0)
+sessions:   7%|▋         | 12/178 [00:28<05:35,  2.02s/it]sessions:   7%|▋         | 13/178 [00:28<06:24,  2.33s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 313: 114 utt -> (114, 25, 1024) (truncated=0)
+sessions:   7%|▋         | 13/178 [00:31<06:24,  2.33s/it]sessions:   8%|▊         | 14/178 [00:31<06:31,  2.39s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 314: 375 utt -> (375, 25, 1024) (truncated=0)
+sessions:   8%|▊         | 14/178 [00:36<06:31,  2.39s/it]sessions:   8%|▊         | 15/178 [00:36<09:04,  3.34s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 315 FAILED: CUDA out of memory. Tried to allocate 1.48 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 5.82 GiB is allocated by PyTorch, and 4.55 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:   9%|▉         | 16/178 [00:38<07:50,  2.91s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 316: 136 utt -> (136, 25, 1024) (truncated=0)
+sessions:   9%|▉         | 16/178 [00:40<07:50,  2.91s/it]sessions:  10%|▉         | 17/178 [00:40<06:31,  2.43s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 317: 112 utt -> (112, 25, 1024) (truncated=0)
+sessions:  10%|▉         | 17/178 [00:41<06:31,  2.43s/it]sessions:  10%|█         | 18/178 [00:41<05:54,  2.21s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 319: 107 utt -> (107, 25, 1024) (truncated=0)
+sessions:  10%|█         | 18/178 [00:43<05:54,  2.21s/it]sessions:  11%|█         | 19/178 [00:43<05:13,  1.97s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 320: 159 utt -> (159, 25, 1024) (truncated=0)
+sessions:  11%|█         | 19/178 [00:44<05:13,  1.97s/it]sessions:  11%|█         | 20/178 [00:44<04:54,  1.87s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 322: 199 utt -> (199, 25, 1024) (truncated=0)
+sessions:  11%|█         | 20/178 [00:48<04:54,  1.87s/it]sessions:  12%|█▏        | 21/178 [00:48<06:18,  2.41s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 323: 131 utt -> (131, 25, 1024) (truncated=0)
+sessions:  12%|█▏        | 21/178 [00:52<06:18,  2.41s/it]sessions:  12%|█▏        | 22/178 [00:52<07:11,  2.76s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 324: 164 utt -> (164, 25, 1024) (truncated=0)
+sessions:  12%|█▏        | 22/178 [00:54<07:11,  2.76s/it]sessions:  13%|█▎        | 23/178 [00:54<06:26,  2.49s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 325 FAILED: CUDA out of memory. Tried to allocate 1.40 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 5.74 GiB is allocated by PyTorch, and 4.63 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:  13%|█▎        | 24/178 [00:55<05:52,  2.29s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 326: 99 utt -> (99, 25, 1024) (truncated=0)
+sessions:  13%|█▎        | 24/178 [00:57<05:52,  2.29s/it]sessions:  14%|█▍        | 25/178 [00:57<05:22,  2.11s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 327: 75 utt -> (75, 25, 1024) (truncated=0)
+sessions:  14%|█▍        | 25/178 [00:59<05:22,  2.11s/it]sessions:  15%|█▍        | 26/178 [00:59<05:23,  2.13s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 328 FAILED: CUDA out of memory. Tried to allocate 1.30 GiB. GPU 0 has a total capacity of 11.50 GiB of which 929.00 MiB is free. Including non-PyTorch memory, this process has 10.58 GiB memory in use. Of the allocated memory 5.29 GiB is allocated by PyTorch, and 5.09 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:  15%|█▌        | 27/178 [01:02<06:02,  2.40s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+[extract] session 329 FAILED: CUDA out of memory. Tried to allocate 4.40 GiB. GPU 0 has a total capacity of 11.50 GiB of which 1.41 GiB is free. Including non-PyTorch memory, this process has 10.08 GiB memory in use. Of the allocated memory 8.74 GiB is allocated by PyTorch, and 1.14 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+sessions:  16%|█▌        | 28/178 [01:03<05:04,  2.03s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 330: 114 utt -> (114, 25, 1024) (truncated=0)
+sessions:  16%|█▌        | 28/178 [01:05<05:04,  2.03s/it]sessions:  16%|█▋        | 29/178 [01:05<04:44,  1.91s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 331: 121 utt -> (121, 25, 1024) (truncated=0)
+sessions:  16%|█▋        | 29/178 [01:08<04:44,  1.91s/it]sessions:  17%|█▋        | 30/178 [01:08<05:43,  2.32s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 332: 152 utt -> (152, 25, 1024) (truncated=0)
+sessions:  17%|█▋        | 30/178 [01:11<05:43,  2.32s/it]sessions:  17%|█▋        | 31/178 [01:11<05:52,  2.40s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 333: 154 utt -> (154, 25, 1024) (truncated=0)
+sessions:  17%|█▋        | 31/178 [01:14<05:52,  2.40s/it]sessions:  18%|█▊        | 32/178 [01:14<06:26,  2.65s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 334: 134 utt -> (134, 25, 1024) (truncated=0)
+sessions:  18%|█▊        | 32/178 [01:18<06:26,  2.65s/it]sessions:  19%|█▊        | 33/178 [01:18<07:09,  2.96s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 335: 169 utt -> (169, 25, 1024) (truncated=0)
+sessions:  19%|█▊        | 33/178 [01:22<07:09,  2.96s/it]sessions:  19%|█▉        | 34/178 [01:22<08:14,  3.44s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 336: 138 utt -> (138, 25, 1024) (truncated=0)
+sessions:  19%|█▉        | 34/178 [01:26<08:14,  3.44s/it]sessions:  20%|█▉        | 35/178 [01:26<08:04,  3.39s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 337: 334 utt -> (334, 25, 1024) (truncated=0)
+sessions:  20%|█▉        | 35/178 [01:35<08:04,  3.39s/it]sessions:  20%|██        | 36/178 [01:35<11:58,  5.06s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 338: 63 utt -> (63, 25, 1024) (truncated=0)
+sessions:  20%|██        | 36/178 [01:37<11:58,  5.06s/it]sessions:  21%|██        | 37/178 [01:37<09:56,  4.23s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 339: 138 utt -> (138, 25, 1024) (truncated=0)
+sessions:  21%|██        | 37/178 [01:40<09:56,  4.23s/it]sessions:  21%|██▏       | 38/178 [01:40<09:12,  3.95s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 340: 68 utt -> (68, 25, 1024) (truncated=0)
+sessions:  21%|██▏       | 38/178 [01:42<09:12,  3.95s/it]sessions:  22%|██▏       | 39/178 [01:42<07:25,  3.20s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 343: 127 utt -> (127, 25, 1024) (truncated=0)
+sessions:  22%|██▏       | 39/178 [01:44<07:25,  3.20s/it]sessions:  22%|██▏       | 40/178 [01:44<06:31,  2.84s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 344: 169 utt -> (169, 25, 1024) (truncated=0)
+sessions:  22%|██▏       | 40/178 [01:49<06:31,  2.84s/it]sessions:  23%|██▎       | 41/178 [01:49<08:06,  3.55s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 345: 103 utt -> (103, 25, 1024) (truncated=0)
+sessions:  23%|██▎       | 41/178 [01:52<08:06,  3.55s/it]sessions:  24%|██▎       | 42/178 [01:52<08:05,  3.57s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 346: 292 utt -> (292, 25, 1024) (truncated=0)
+sessions:  24%|██▎       | 42/178 [01:58<08:05,  3.57s/it]sessions:  24%|██▍       | 43/178 [01:58<09:12,  4.09s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 347: 58 utt -> (58, 25, 1024) (truncated=0)
+sessions:  24%|██▍       | 43/178 [01:58<09:12,  4.09s/it]sessions:  25%|██▍       | 44/178 [01:58<06:52,  3.08s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 348: 111 utt -> (111, 25, 1024) (truncated=0)
+sessions:  25%|██▍       | 44/178 [02:01<06:52,  3.08s/it]sessions:  25%|██▌       | 45/178 [02:01<06:25,  2.90s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 349: 213 utt -> (213, 25, 1024) (truncated=0)
+sessions:  25%|██▌       | 45/178 [02:04<06:25,  2.90s/it]sessions:  26%|██▌       | 46/178 [02:04<06:30,  2.96s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 350: 125 utt -> (125, 25, 1024) (truncated=0)
+sessions:  26%|██▌       | 46/178 [02:08<06:30,  2.96s/it]sessions:  26%|██▋       | 47/178 [02:08<06:55,  3.17s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 351: 118 utt -> (118, 25, 1024) (truncated=0)
+sessions:  26%|██▋       | 47/178 [02:11<06:55,  3.17s/it]sessions:  27%|██▋       | 48/178 [02:11<07:05,  3.27s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 352: 93 utt -> (93, 25, 1024) (truncated=0)
+sessions:  27%|██▋       | 48/178 [02:14<07:05,  3.27s/it]sessions:  28%|██▊       | 49/178 [02:14<06:48,  3.16s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 353: 116 utt -> (116, 25, 1024) (truncated=0)
+sessions:  28%|██▊       | 49/178 [02:17<06:48,  3.16s/it]sessions:  28%|██▊       | 50/178 [02:17<06:38,  3.11s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 354: 82 utt -> (82, 25, 1024) (truncated=0)
+sessions:  28%|██▊       | 50/178 [02:18<06:38,  3.11s/it]sessions:  29%|██▊       | 51/178 [02:18<05:21,  2.53s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 355: 101 utt -> (101, 25, 1024) (truncated=0)
+sessions:  29%|██▊       | 51/178 [02:21<05:21,  2.53s/it]sessions:  29%|██▉       | 52/178 [02:21<05:14,  2.49s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 356: 165 utt -> (165, 25, 1024) (truncated=0)
+sessions:  29%|██▉       | 52/178 [02:24<05:14,  2.49s/it]sessions:  30%|██▉       | 53/178 [02:24<05:50,  2.80s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 357: 87 utt -> (87, 25, 1024) (truncated=0)
+sessions:  30%|██▉       | 53/178 [02:25<05:50,  2.80s/it]sessions:  30%|███       | 54/178 [02:25<04:38,  2.24s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 358: 101 utt -> (101, 25, 1024) (truncated=0)
+sessions:  30%|███       | 54/178 [02:27<04:38,  2.24s/it]sessions:  31%|███       | 55/178 [02:27<04:34,  2.23s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 359: 164 utt -> (164, 25, 1024) (truncated=0)
+sessions:  31%|███       | 55/178 [02:32<04:34,  2.23s/it]sessions:  31%|███▏      | 56/178 [02:32<05:44,  2.83s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 360: 42 utt -> (42, 25, 1024) (truncated=0)
+sessions:  31%|███▏      | 56/178 [02:33<05:44,  2.83s/it]sessions:  32%|███▏      | 57/178 [02:33<04:46,  2.37s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 361: 75 utt -> (75, 25, 1024) (truncated=0)
+sessions:  32%|███▏      | 57/178 [02:35<04:46,  2.37s/it]sessions:  33%|███▎      | 58/178 [02:35<04:46,  2.39s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 363: 164 utt -> (164, 25, 1024) (truncated=0)
+sessions:  33%|███▎      | 58/178 [02:39<04:46,  2.39s/it]sessions:  33%|███▎      | 59/178 [02:39<05:45,  2.90s/it]

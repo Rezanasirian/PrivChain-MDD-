@@ -1,0 +1,389 @@
+[extract] loading microsoft/wavlm-large on cuda ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/488 [00:00<?, ?it/s]Loading weights: 100%|██████████| 488/488 [00:00<00:00, 19570.69it/s]
+sessions:   0%|          | 0/178 [00:00<?, ?it/s]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                 [extract] 303: 103 utt -> (103, 25, 1024) (truncated=0)
+sessions:   0%|          | 0/178 [00:09<?, ?it/s]sessions:   2%|▏         | 4/178 [00:09<06:50,  2.36s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 304: 104 utt -> (104, 25, 1024) (truncated=0)
+sessions:   2%|▏         | 4/178 [00:16<06:50,  2.36s/it]sessions:   3%|▎         | 5/178 [00:16<10:23,  3.61s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 305: 288 utt -> (288, 25, 1024) (truncated=0)
+sessions:   3%|▎         | 5/178 [00:35<10:23,  3.61s/it]sessions:   3%|▎         | 6/178 [00:35<22:01,  7.68s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 306: 108 utt -> (108, 25, 1024) (truncated=0)
+sessions:   3%|▎         | 6/178 [00:42<22:01,  7.68s/it]sessions:   4%|▍         | 7/178 [00:42<21:17,  7.47s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 307: 186 utt -> (186, 25, 1024) (truncated=0)
+sessions:   4%|▍         | 7/178 [00:53<21:17,  7.47s/it]sessions:   4%|▍         | 8/178 [00:53<24:49,  8.76s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                         [extract] 315: 135 utt -> (135, 25, 1024) (truncated=0)
+sessions:   4%|▍         | 8/178 [01:01<24:49,  8.76s/it]sessions:   9%|▉         | 16/178 [01:01<07:36,  2.82s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 325: 94 utt -> (94, 25, 1024) (truncated=0)
+sessions:   9%|▉         | 16/178 [01:08<07:36,  2.82s/it]sessions:  13%|█▎        | 24/178 [01:08<04:27,  1.74s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 328: 137 utt -> (137, 25, 1024) (truncated=0)
+sessions:  13%|█▎        | 24/178 [01:16<04:27,  1.74s/it]sessions:  15%|█▌        | 27/178 [01:16<04:56,  1.96s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 329: 52 utt -> (52, 25, 1024) (truncated=0)
+sessions:  15%|█▌        | 27/178 [01:20<04:56,  1.96s/it]sessions:  16%|█▌        | 28/178 [01:20<05:21,  2.14s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 364: 386 utt -> (386, 25, 1024) (truncated=0)
+sessions:  16%|█▌        | 28/178 [01:42<05:21,  2.14s/it]sessions:  34%|███▎      | 60/178 [01:42<01:53,  1.04it/s]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 365: 327 utt -> (327, 25, 1024) (truncated=0)
+sessions:  34%|███▎      | 60/178 [02:00<01:53,  1.04it/s]sessions:  34%|███▍      | 61/178 [02:00<03:03,  1.57s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 366: 286 utt -> (286, 25, 1024) (truncated=0)
+sessions:  34%|███▍      | 61/178 [02:16<03:03,  1.57s/it]sessions:  35%|███▍      | 62/178 [02:16<04:20,  2.25s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 367: 307 utt -> (307, 25, 1024) (truncated=0)
+sessions:  35%|███▍      | 62/178 [02:33<04:20,  2.25s/it]sessions:  35%|███▌      | 63/178 [02:33<06:08,  3.21s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 368: 246 utt -> (246, 25, 1024) (truncated=0)
+sessions:  35%|███▌      | 63/178 [02:47<06:08,  3.21s/it]sessions:  36%|███▌      | 64/178 [02:47<07:46,  4.09s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 369: 220 utt -> (220, 25, 1024) (truncated=0)
+sessions:  36%|███▌      | 64/178 [02:59<07:46,  4.09s/it]sessions:  37%|███▋      | 65/178 [02:59<09:18,  4.95s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 370: 157 utt -> (157, 25, 1024) (truncated=0)
+sessions:  37%|███▋      | 65/178 [03:08<09:18,  4.95s/it]sessions:  37%|███▋      | 66/178 [03:08<10:14,  5.49s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 371: 147 utt -> (147, 25, 1024) (truncated=0)
+sessions:  37%|███▋      | 66/178 [03:16<10:14,  5.49s/it]sessions:  38%|███▊      | 67/178 [03:16<10:56,  5.92s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 372: 328 utt -> (328, 25, 1024) (truncated=0)
+sessions:  38%|███▊      | 67/178 [03:34<10:56,  5.92s/it]sessions:  38%|███▊      | 68/178 [03:34<14:57,  8.16s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 374: 268 utt -> (268, 25, 1024) (truncated=0)
+sessions:  38%|███▊      | 68/178 [03:50<14:57,  8.16s/it]sessions:  39%|███▉      | 69/178 [03:50<17:29,  9.63s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 375: 84 utt -> (84, 25, 1024) (truncated=0)
+sessions:  39%|███▉      | 69/178 [03:54<17:29,  9.63s/it]sessions:  39%|███▉      | 70/178 [03:54<15:19,  8.52s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 376: 200 utt -> (200, 25, 1024) (truncated=0)
+sessions:  39%|███▉      | 70/178 [04:07<15:19,  8.52s/it]sessions:  40%|███▉      | 71/178 [04:07<16:53,  9.48s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 377: 232 utt -> (232, 25, 1024) (truncated=0)
+sessions:  40%|███▉      | 71/178 [04:20<16:53,  9.48s/it]sessions:  40%|████      | 72/178 [04:20<18:35, 10.52s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 378: 144 utt -> (144, 25, 1024) (truncated=0)
+sessions:  40%|████      | 72/178 [04:28<18:35, 10.52s/it]sessions:  41%|████      | 73/178 [04:28<17:06,  9.78s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 379: 225 utt -> (225, 25, 1024) (truncated=0)
+sessions:  41%|████      | 73/178 [04:40<17:06,  9.78s/it]sessions:  42%|████▏     | 74/178 [04:40<17:57, 10.36s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 380: 368 utt -> (368, 25, 1024) (truncated=0)
+sessions:  42%|████▏     | 74/178 [05:01<17:57, 10.36s/it]sessions:  42%|████▏     | 75/178 [05:01<22:52, 13.32s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 381: 188 utt -> (188, 25, 1024) (truncated=0)
+sessions:  42%|████▏     | 75/178 [05:10<22:52, 13.32s/it]sessions:  43%|████▎     | 76/178 [05:10<20:57, 12.33s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 382: 157 utt -> (157, 25, 1024) (truncated=0)
+sessions:  43%|████▎     | 76/178 [05:19<20:57, 12.33s/it]sessions:  43%|████▎     | 77/178 [05:19<18:44, 11.14s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 383: 224 utt -> (224, 25, 1024) (truncated=0)
+sessions:  43%|████▎     | 77/178 [05:32<18:44, 11.14s/it]sessions:  44%|████▍     | 78/178 [05:32<19:32, 11.72s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 384: 156 utt -> (156, 25, 1024) (truncated=0)
+sessions:  44%|████▍     | 78/178 [05:40<19:32, 11.72s/it]sessions:  44%|████▍     | 79/178 [05:40<17:40, 10.71s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 385: 55 utt -> (55, 25, 1024) (truncated=0)
+sessions:  44%|████▍     | 79/178 [05:43<17:40, 10.71s/it]sessions:  45%|████▍     | 80/178 [05:43<13:41,  8.38s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 386: 186 utt -> (186, 25, 1024) (truncated=0)
+sessions:  45%|████▍     | 80/178 [05:53<13:41,  8.38s/it]sessions:  46%|████▌     | 81/178 [05:53<14:18,  8.85s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 387: 89 utt -> (89, 25, 1024) (truncated=0)
+sessions:  46%|████▌     | 81/178 [05:58<14:18,  8.85s/it]sessions:  46%|████▌     | 82/178 [05:58<12:15,  7.66s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 388: 92 utt -> (92, 25, 1024) (truncated=0)
+sessions:  46%|████▌     | 82/178 [06:03<12:15,  7.66s/it]sessions:  47%|████▋     | 83/178 [06:03<10:47,  6.81s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 389: 126 utt -> (126, 25, 1024) (truncated=0)
+sessions:  47%|████▋     | 83/178 [06:09<10:47,  6.81s/it]sessions:  47%|████▋     | 84/178 [06:09<10:35,  6.76s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 390: 267 utt -> (267, 25, 1024) (truncated=0)
+sessions:  47%|████▋     | 84/178 [06:23<10:35,  6.76s/it]sessions:  48%|████▊     | 85/178 [06:23<13:54,  8.97s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 391: 119 utt -> (119, 25, 1024) (truncated=0)
+sessions:  48%|████▊     | 85/178 [06:30<13:54,  8.97s/it]sessions:  48%|████▊     | 86/178 [06:30<12:29,  8.14s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 392: 102 utt -> (102, 25, 1024) (truncated=0)
+sessions:  48%|████▊     | 86/178 [06:35<12:29,  8.14s/it]sessions:  49%|████▉     | 87/178 [06:35<11:05,  7.31s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 393: 97 utt -> (97, 25, 1024) (truncated=0)
+sessions:  49%|████▉     | 87/178 [06:40<11:05,  7.31s/it]sessions:  49%|████▉     | 88/178 [06:40<09:58,  6.65s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 395: 133 utt -> (133, 25, 1024) (truncated=0)
+sessions:  49%|████▉     | 88/178 [06:47<09:58,  6.65s/it]sessions:  50%|█████     | 89/178 [06:47<10:04,  6.80s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 396: 135 utt -> (135, 25, 1024) (truncated=0)
+sessions:  50%|█████     | 89/178 [06:54<10:04,  6.80s/it]sessions:  51%|█████     | 90/178 [06:54<10:07,  6.90s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 397: 191 utt -> (191, 25, 1024) (truncated=0)
+sessions:  51%|█████     | 90/178 [07:05<10:07,  6.90s/it]sessions:  51%|█████     | 91/178 [07:05<11:24,  7.87s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 399: 112 utt -> (112, 25, 1024) (truncated=0)
+sessions:  51%|█████     | 91/178 [07:11<11:24,  7.87s/it]sessions:  52%|█████▏    | 92/178 [07:11<10:28,  7.31s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 400: 149 utt -> (149, 25, 1024) (truncated=0)
+sessions:  52%|█████▏    | 92/178 [07:19<10:28,  7.31s/it]sessions:  52%|█████▏    | 93/178 [07:19<10:38,  7.51s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 401: 182 utt -> (182, 25, 1024) (truncated=0)
+sessions:  52%|█████▏    | 93/178 [07:28<10:38,  7.51s/it]sessions:  53%|█████▎    | 94/178 [07:28<11:28,  8.20s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 402: 158 utt -> (158, 25, 1024) (truncated=0)
+sessions:  53%|█████▎    | 94/178 [07:37<11:28,  8.20s/it]sessions:  53%|█████▎    | 95/178 [07:37<11:28,  8.29s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 403: 118 utt -> (118, 25, 1024) (truncated=0)
+sessions:  53%|█████▎    | 95/178 [07:44<11:28,  8.29s/it]sessions:  54%|█████▍    | 96/178 [07:44<10:42,  7.84s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 404: 197 utt -> (197, 25, 1024) (truncated=0)
+sessions:  54%|█████▍    | 96/178 [07:54<10:42,  7.84s/it]sessions:  54%|█████▍    | 97/178 [07:54<11:44,  8.70s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 405: 384 utt -> (384, 25, 1024) (truncated=0)
+sessions:  54%|█████▍    | 97/178 [08:16<11:44,  8.70s/it]sessions:  55%|█████▌    | 98/178 [08:16<16:48, 12.61s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 406: 104 utt -> (104, 25, 1024) (truncated=0)
+sessions:  55%|█████▌    | 98/178 [08:22<16:48, 12.61s/it]sessions:  56%|█████▌    | 99/178 [08:22<13:49, 10.50s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                          [extract] 407: 317 utt -> (317, 25, 1024) (truncated=0)
+sessions:  56%|█████▌    | 99/178 [08:38<13:49, 10.50s/it]sessions:  56%|█████▌    | 100/178 [08:38<16:06, 12.39s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 408: 90 utt -> (90, 25, 1024) (truncated=0)
+sessions:  56%|█████▌    | 100/178 [08:43<16:06, 12.39s/it]sessions:  57%|█████▋    | 101/178 [08:43<13:00, 10.13s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 410: 197 utt -> (197, 25, 1024) (truncated=0)
+sessions:  57%|█████▋    | 101/178 [08:54<13:00, 10.13s/it]sessions:  57%|█████▋    | 102/178 [08:54<12:56, 10.22s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 411: 257 utt -> (257, 25, 1024) (truncated=0)
+sessions:  57%|█████▋    | 102/178 [09:08<12:56, 10.22s/it]sessions:  58%|█████▊    | 103/178 [09:08<14:18, 11.44s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 412: 142 utt -> (142, 25, 1024) (truncated=0)
+sessions:  58%|█████▊    | 103/178 [09:16<14:18, 11.44s/it]sessions:  58%|█████▊    | 104/178 [09:16<12:40, 10.28s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 413: 178 utt -> (178, 25, 1024) (truncated=0)
+sessions:  58%|█████▊    | 104/178 [09:25<12:40, 10.28s/it]sessions:  59%|█████▉    | 105/178 [09:25<12:11, 10.02s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 414: 207 utt -> (207, 25, 1024) (truncated=0)
+sessions:  59%|█████▉    | 105/178 [09:36<12:11, 10.02s/it]sessions:  60%|█████▉    | 106/178 [09:36<12:20, 10.29s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 415: 136 utt -> (136, 25, 1024) (truncated=0)
+sessions:  60%|█████▉    | 106/178 [09:43<12:20, 10.29s/it]sessions:  60%|██████    | 107/178 [09:43<11:02,  9.34s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 416: 164 utt -> (164, 25, 1024) (truncated=0)
+sessions:  60%|██████    | 107/178 [09:52<11:02,  9.34s/it]sessions:  61%|██████    | 108/178 [09:52<10:39,  9.14s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 417: 178 utt -> (178, 25, 1024) (truncated=0)
+sessions:  61%|██████    | 108/178 [10:02<10:39,  9.14s/it]sessions:  61%|██████    | 109/178 [10:02<10:49,  9.41s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 418: 229 utt -> (229, 25, 1024) (truncated=0)
+sessions:  61%|██████    | 109/178 [10:15<10:49,  9.41s/it]sessions:  62%|██████▏   | 110/178 [10:15<11:52, 10.48s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 419: 185 utt -> (185, 25, 1024) (truncated=0)
+sessions:  62%|██████▏   | 110/178 [10:25<11:52, 10.48s/it]sessions:  62%|██████▏   | 111/178 [10:25<11:38, 10.42s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 420: 176 utt -> (176, 25, 1024) (truncated=0)
+sessions:  62%|██████▏   | 111/178 [10:35<11:38, 10.42s/it]sessions:  63%|██████▎   | 112/178 [10:35<11:21, 10.33s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 421: 140 utt -> (140, 25, 1024) (truncated=0)
+sessions:  63%|██████▎   | 112/178 [10:43<11:21, 10.33s/it]sessions:  63%|██████▎   | 113/178 [10:43<10:24,  9.60s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 422: 290 utt -> (290, 25, 1024) (truncated=0)
+sessions:  63%|██████▎   | 113/178 [11:00<10:24,  9.60s/it]sessions:  64%|██████▍   | 114/178 [11:00<12:26, 11.67s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 423: 177 utt -> (177, 25, 1024) (truncated=0)
+sessions:  64%|██████▍   | 114/178 [11:09<12:26, 11.67s/it]sessions:  65%|██████▍   | 115/178 [11:09<11:31, 10.97s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 424: 178 utt -> (178, 25, 1024) (truncated=0)
+sessions:  65%|██████▍   | 115/178 [11:19<11:31, 10.97s/it]sessions:  65%|██████▌   | 116/178 [11:19<10:58, 10.62s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 425: 198 utt -> (198, 25, 1024) (truncated=0)
+sessions:  65%|██████▌   | 116/178 [11:29<10:58, 10.62s/it]sessions:  66%|██████▌   | 117/178 [11:29<10:50, 10.66s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 426: 225 utt -> (225, 25, 1024) (truncated=0)
+sessions:  66%|██████▌   | 117/178 [11:41<10:50, 10.66s/it]sessions:  66%|██████▋   | 118/178 [11:41<10:57, 10.96s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 427: 211 utt -> (211, 25, 1024) (truncated=0)
+sessions:  66%|██████▋   | 118/178 [11:52<10:57, 10.96s/it]sessions:  67%|██████▋   | 119/178 [11:52<10:46, 10.95s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 428: 130 utt -> (130, 25, 1024) (truncated=0)
+sessions:  67%|██████▋   | 119/178 [11:59<10:46, 10.95s/it]sessions:  67%|██████▋   | 120/178 [11:59<09:22,  9.70s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 429: 211 utt -> (211, 25, 1024) (truncated=0)
+sessions:  67%|██████▋   | 120/178 [12:10<09:22,  9.70s/it]sessions:  68%|██████▊   | 121/178 [12:10<09:33, 10.07s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 430: 155 utt -> (155, 25, 1024) (truncated=0)
+sessions:  68%|██████▊   | 121/178 [12:18<09:33, 10.07s/it]sessions:  69%|██████▊   | 122/178 [12:18<08:51,  9.50s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 431: 138 utt -> (138, 25, 1024) (truncated=0)
+sessions:  69%|██████▊   | 122/178 [12:25<08:51,  9.50s/it]sessions:  69%|██████▉   | 123/178 [12:25<08:06,  8.85s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 432: 188 utt -> (188, 25, 1024) (truncated=0)
+sessions:  69%|██████▉   | 123/178 [12:35<08:06,  8.85s/it]sessions:  70%|██████▉   | 124/178 [12:35<08:16,  9.19s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 433: 150 utt -> (150, 25, 1024) (truncated=0)
+sessions:  70%|██████▉   | 124/178 [12:43<08:16,  9.19s/it]sessions:  70%|███████   | 125/178 [12:43<07:46,  8.80s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 434: 228 utt -> (228, 25, 1024) (truncated=0)
+sessions:  70%|███████   | 125/178 [12:56<07:46,  8.80s/it]sessions:  71%|███████   | 126/178 [12:56<08:33,  9.87s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 435: 214 utt -> (214, 25, 1024) (truncated=0)
+sessions:  71%|███████   | 126/178 [13:07<08:33,  9.87s/it]sessions:  71%|███████▏  | 127/178 [13:07<08:44, 10.28s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 436: 112 utt -> (112, 25, 1024) (truncated=0)
+sessions:  71%|███████▏  | 127/178 [13:13<08:44, 10.28s/it]sessions:  72%|███████▏  | 128/178 [13:13<07:29,  8.98s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 437: 141 utt -> (141, 25, 1024) (truncated=0)
+sessions:  72%|███████▏  | 128/178 [13:20<07:29,  8.98s/it]sessions:  72%|███████▏  | 129/178 [13:20<06:58,  8.54s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 438: 245 utt -> (245, 25, 1024) (truncated=0)
+sessions:  72%|███████▏  | 129/178 [13:34<06:58,  8.54s/it]sessions:  73%|███████▎  | 130/178 [13:34<07:59, 10.00s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 439: 216 utt -> (216, 25, 1024) (truncated=0)
+sessions:  73%|███████▎  | 130/178 [13:45<07:59, 10.00s/it]sessions:  74%|███████▎  | 131/178 [13:45<08:15, 10.55s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 441: 174 utt -> (174, 25, 1024) (truncated=0)
+sessions:  74%|███████▎  | 131/178 [13:55<08:15, 10.55s/it]sessions:  74%|███████▍  | 132/178 [13:55<07:44, 10.10s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 442: 238 utt -> (238, 25, 1024) (truncated=0)
+sessions:  74%|███████▍  | 132/178 [14:07<07:44, 10.10s/it]sessions:  75%|███████▍  | 133/178 [14:07<08:05, 10.79s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 443: 121 utt -> (121, 25, 1024) (truncated=0)
+sessions:  75%|███████▍  | 133/178 [14:13<08:05, 10.79s/it]sessions:  75%|███████▌  | 134/178 [14:13<06:56,  9.47s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 445: 108 utt -> (108, 25, 1024) (truncated=0)
+sessions:  75%|███████▌  | 134/178 [14:19<06:56,  9.47s/it]sessions:  76%|███████▌  | 135/178 [14:19<05:59,  8.36s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 446: 212 utt -> (212, 25, 1024) (truncated=0)
+sessions:  76%|███████▌  | 135/178 [14:31<05:59,  8.36s/it]sessions:  76%|███████▋  | 136/178 [14:31<06:34,  9.40s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 447: 127 utt -> (127, 25, 1024) (truncated=0)
+sessions:  76%|███████▋  | 136/178 [14:38<06:34,  9.40s/it]sessions:  77%|███████▋  | 137/178 [14:38<05:53,  8.62s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 448: 246 utt -> (246, 25, 1024) (truncated=0)
+sessions:  77%|███████▋  | 137/178 [14:51<05:53,  8.62s/it]sessions:  78%|███████▊  | 138/178 [14:51<06:37,  9.94s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 449: 163 utt -> (163, 25, 1024) (truncated=0)
+sessions:  78%|███████▊  | 138/178 [15:00<06:37,  9.94s/it]sessions:  78%|███████▊  | 139/178 [15:00<06:14,  9.60s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 450: 280 utt -> (280, 25, 1024) (truncated=0)
+sessions:  78%|███████▊  | 139/178 [15:16<06:14,  9.60s/it]sessions:  79%|███████▊  | 140/178 [15:16<07:20, 11.60s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 452: 160 utt -> (160, 25, 1024) (truncated=0)
+sessions:  79%|███████▊  | 140/178 [15:25<07:20, 11.60s/it]sessions:  79%|███████▉  | 141/178 [15:25<06:39, 10.80s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 453: 199 utt -> (199, 25, 1024) (truncated=0)
+sessions:  79%|███████▉  | 141/178 [15:35<06:39, 10.80s/it]sessions:  80%|███████▉  | 142/178 [15:35<06:25, 10.70s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 454: 125 utt -> (125, 25, 1024) (truncated=0)
+sessions:  80%|███████▉  | 142/178 [15:42<06:25, 10.70s/it]sessions:  80%|████████  | 143/178 [15:42<05:31,  9.46s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 455: 153 utt -> (153, 25, 1024) (truncated=0)
+sessions:  80%|████████  | 143/178 [15:50<05:31,  9.46s/it]sessions:  81%|████████  | 144/178 [15:50<05:09,  9.10s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 456: 132 utt -> (132, 25, 1024) (truncated=0)
+sessions:  81%|████████  | 144/178 [15:58<05:09,  9.10s/it]sessions:  81%|████████▏ | 145/178 [15:58<04:45,  8.66s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 457: 203 utt -> (203, 25, 1024) (truncated=0)
+sessions:  81%|████████▏ | 145/178 [16:09<04:45,  8.66s/it]sessions:  82%|████████▏ | 146/178 [16:09<05:02,  9.45s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 459: 179 utt -> (179, 25, 1024) (truncated=0)
+sessions:  82%|████████▏ | 146/178 [16:19<05:02,  9.45s/it]sessions:  83%|████████▎ | 147/178 [16:19<04:57,  9.61s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 461: 150 utt -> (150, 25, 1024) (truncated=0)
+sessions:  83%|████████▎ | 147/178 [16:28<04:57,  9.61s/it]sessions:  83%|████████▎ | 148/178 [16:28<04:40,  9.35s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 462: 204 utt -> (204, 25, 1024) (truncated=0)
+sessions:  83%|████████▎ | 148/178 [16:39<04:40,  9.35s/it]sessions:  84%|████████▎ | 149/178 [16:39<04:49,  9.97s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 463: 119 utt -> (119, 25, 1024) (truncated=0)
+sessions:  84%|████████▎ | 149/178 [16:46<04:49,  9.97s/it]sessions:  84%|████████▍ | 150/178 [16:46<04:12,  9.03s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 464: 367 utt -> (367, 25, 1024) (truncated=0)
+sessions:  84%|████████▍ | 150/178 [17:05<04:12,  9.03s/it]sessions:  85%|████████▍ | 151/178 [17:05<05:27, 12.13s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 465: 295 utt -> (295, 25, 1024) (truncated=0)
+sessions:  85%|████████▍ | 151/178 [17:22<05:27, 12.13s/it]sessions:  85%|████████▌ | 152/178 [17:22<05:51, 13.52s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 466: 335 utt -> (335, 25, 1024) (truncated=0)
+sessions:  85%|████████▌ | 152/178 [17:41<05:51, 13.52s/it]sessions:  86%|████████▌ | 153/178 [17:41<06:17, 15.08s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 467: 245 utt -> (245, 25, 1024) (truncated=0)
+sessions:  86%|████████▌ | 153/178 [17:54<06:17, 15.08s/it]sessions:  87%|████████▋ | 154/178 [17:54<05:47, 14.47s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 468: 187 utt -> (187, 25, 1024) (truncated=0)
+sessions:  87%|████████▋ | 154/178 [18:04<05:47, 14.47s/it]sessions:  87%|████████▋ | 155/178 [18:04<05:02, 13.14s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 469: 184 utt -> (184, 25, 1024) (truncated=0)
+sessions:  87%|████████▋ | 155/178 [18:14<05:02, 13.14s/it]sessions:  88%|████████▊ | 156/178 [18:14<04:28, 12.20s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 470: 168 utt -> (168, 25, 1024) (truncated=0)
+sessions:  88%|████████▊ | 156/178 [18:23<04:28, 12.20s/it]sessions:  88%|████████▊ | 157/178 [18:23<03:57, 11.30s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 471: 151 utt -> (151, 25, 1024) (truncated=0)
+sessions:  88%|████████▊ | 157/178 [18:31<03:57, 11.30s/it]sessions:  89%|████████▉ | 158/178 [18:31<03:28, 10.42s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 472: 165 utt -> (165, 25, 1024) (truncated=0)
+sessions:  89%|████████▉ | 158/178 [18:40<03:28, 10.42s/it]sessions:  89%|████████▉ | 159/178 [18:40<03:09, 10.00s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 473: 68 utt -> (68, 25, 1024) (truncated=0)
+sessions:  89%|████████▉ | 159/178 [18:44<03:09, 10.00s/it]sessions:  90%|████████▉ | 160/178 [18:44<02:24,  8.05s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 474: 202 utt -> (202, 25, 1024) (truncated=0)
+sessions:  90%|████████▉ | 160/178 [18:55<02:24,  8.05s/it]sessions:  90%|█████████ | 161/178 [18:55<02:29,  8.82s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 475: 88 utt -> (88, 25, 1024) (truncated=0)
+sessions:  90%|█████████ | 161/178 [18:59<02:29,  8.82s/it]sessions:  91%|█████████ | 162/178 [18:59<02:01,  7.58s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 476: 98 utt -> (98, 25, 1024) (truncated=0)
+sessions:  91%|█████████ | 162/178 [19:04<02:01,  7.58s/it]sessions:  92%|█████████▏| 163/178 [19:04<01:42,  6.84s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 477: 269 utt -> (269, 25, 1024) (truncated=0)
+sessions:  92%|█████████▏| 163/178 [19:19<01:42,  6.84s/it]sessions:  92%|█████████▏| 164/178 [19:19<02:10,  9.33s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 478: 152 utt -> (152, 25, 1024) (truncated=0)
+sessions:  92%|█████████▏| 164/178 [19:28<02:10,  9.33s/it]sessions:  93%|█████████▎| 165/178 [19:28<01:57,  9.06s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 479: 151 utt -> (151, 25, 1024) (truncated=0)
+sessions:  93%|█████████▎| 165/178 [19:36<01:57,  9.06s/it]sessions:  93%|█████████▎| 166/178 [19:36<01:45,  8.78s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 481: 261 utt -> (261, 25, 1024) (truncated=0)
+sessions:  93%|█████████▎| 166/178 [19:50<01:45,  8.78s/it]sessions:  94%|█████████▍| 167/178 [19:50<01:53, 10.32s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 482: 277 utt -> (277, 25, 1024) (truncated=0)
+sessions:  94%|█████████▍| 167/178 [20:04<01:53, 10.32s/it]sessions:  94%|█████████▍| 168/178 [20:04<01:55, 11.55s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 483: 379 utt -> (379, 25, 1024) (truncated=0)
+sessions:  94%|█████████▍| 168/178 [20:25<01:55, 11.55s/it]sessions:  95%|█████████▍| 169/178 [20:25<02:09, 14.40s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 484: 188 utt -> (188, 25, 1024) (truncated=0)
+sessions:  95%|█████████▍| 169/178 [20:35<02:09, 14.40s/it]sessions:  96%|█████████▌| 170/178 [20:35<01:44, 13.09s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 485: 91 utt -> (91, 25, 1024) (truncated=0)
+sessions:  96%|█████████▌| 170/178 [20:40<01:44, 13.09s/it]sessions:  96%|█████████▌| 171/178 [20:40<01:14, 10.63s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 486: 124 utt -> (124, 25, 1024) (truncated=0)
+sessions:  96%|█████████▌| 171/178 [20:47<01:14, 10.63s/it]sessions:  97%|█████████▋| 172/178 [20:47<00:56,  9.38s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 487: 225 utt -> (225, 25, 1024) (truncated=0)
+sessions:  97%|█████████▋| 172/178 [20:59<00:56,  9.38s/it]sessions:  97%|█████████▋| 173/178 [20:59<00:50, 10.13s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 488: 138 utt -> (138, 25, 1024) (truncated=0)
+sessions:  97%|█████████▋| 173/178 [21:06<00:50, 10.13s/it]sessions:  98%|█████████▊| 174/178 [21:06<00:37,  9.31s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 489: 117 utt -> (117, 25, 1024) (truncated=0)
+sessions:  98%|█████████▊| 174/178 [21:12<00:37,  9.31s/it]sessions:  98%|█████████▊| 175/178 [21:12<00:25,  8.40s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 490: 97 utt -> (97, 25, 1024) (truncated=0)
+sessions:  98%|█████████▊| 175/178 [21:18<00:25,  8.40s/it]sessions:  99%|█████████▉| 176/178 [21:18<00:14,  7.45s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 491: 146 utt -> (146, 25, 1024) (truncated=0)
+sessions:  99%|█████████▉| 176/178 [21:25<00:14,  7.45s/it]sessions:  99%|█████████▉| 177/178 [21:25<00:07,  7.55s/it]/venv/main/lib/python3.12/site-packages/torch/nn/functional.py:6409: UserWarning: Support for mismatched key_padding_mask and attn_mask is deprecated. Use same type for both instead.
+  key_padding_mask = _canonical_mask(
+                                                           [extract] 492: 220 utt -> (220, 25, 1024) (truncated=0)
+sessions:  99%|█████████▉| 177/178 [21:37<00:07,  7.55s/it]sessions: 100%|██████████| 178/178 [21:37<00:00,  8.80s/it]sessions: 100%|██████████| 178/178 [21:37<00:00,  7.29s/it]
+[extract] done. stats -> cache/extract_stats.csv

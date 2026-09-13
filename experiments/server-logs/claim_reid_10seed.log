@@ -1,0 +1,25 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 10:34:18:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3400.64it/s]
+Run dir: experiments/phase6/phase6_reid_risk_20260904_103419
+device=cuda  segments=6 (enrol 3)  seeds=[42, 7, 2024, 11, 19, 31, 73, 101, 137, 211]
+
+chance accuracy = 0.0071  (1 / candidate pool)
+
+modality representation   width          top-1  x chance
+--------------------------------------------------------
+audio    raw                370   0.169±0.010      23.8x
+audio    raw_pca             64   0.152±0.014      21.4x
+audio    encoded            128   0.127±0.021      18.0x
+video    raw                100   0.176±0.012      24.8x
+video    raw_pca             64   0.166±0.013      23.4x
+video    encoded            128   0.180±0.013      25.4x
+text     raw                768   0.062±0.008       8.8x
+text     raw_pca             64   0.050±0.007       7.1x
+text     encoded            128   0.027±0.014       3.8x
+measured ordering (raw_pca): video > audio > text
+measured ordering (encoded): video > audio > text
+configured ordering (configs/privacy.yaml): audio(1.00) > video(0.97) > text(0.29)
+negative control (shuffled labels): audio=0.0024  video=0.0071  text=0.0024
+
+Wrote experiments/phase6/phase6_reid_risk_20260904_103419/reidentification_risk.json

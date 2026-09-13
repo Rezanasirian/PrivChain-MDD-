@@ -1,0 +1,277 @@
+[run] batch_2_epochs_1
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: rezanasirian18 (rezanasirian18-son) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.29.0
+wandb: Run data is saved locally in /workspace/PrivChain-MDD-/wandb/run-20260904_190551-ntfb9xle
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run ctd_dp_batch_2_epochs_1_seed43
+wandb: ⭐️ View project at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: 🚀 View run at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/ntfb9xle
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb:   cumulative_examples_seen ▁▁▁▁▂▂▂▂▂▂▂▃▃▃▃▄▄▄▄▄▄▄▅▅▅▆▆▆▆▆▇▇▇▇▇█████
+wandb: cumulative_optimizer_steps ▁▁▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▆▆▆▇▇▇█████
+wandb:            elapsed_seconds ▁▁▁▁▂▂▂▂▂▃▃▃▃▃▃▄▄▄▅▅▅▅▅▅▆▆▆▆▆▆▇▇▇▇▇█████
+wandb:              examples_seen ▃▂▅▅▂▁▁▂▄▁▂▄▃▃▄▂▂▃▅▄▄▅▂▃▃▁▂▂▅▄▁▄▃▃█▄▂▁▃▄
+wandb:                num_clients ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          num_local_batches ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:            optimizer_steps ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                      round ▁▁▂▂▂▂▃▃▃▃▃▃▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▆▆▆▆▆▇▇▇▇▇███
+wandb:               val_accuracy ▃▁▃▃▃▃▃▃▃▅▅▅███▆▆▆▆▆▆▆▅▅▅▅▆█▆▆▆▆▆▆▆▆▆▆▆█
+wandb:                     val_f1 ▆▁▆▆▆▆▆▆▆▆▆▆▇▇█▇▇▇▇▇▂▁▁▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+wandb:                         +7 ...
+wandb: 
+wandb: Run summary:
+wandb:   cumulative_examples_seen 12605
+wandb: cumulative_optimizer_steps 6240
+wandb:            elapsed_seconds 514.462
+wandb:              examples_seen 117
+wandb:                num_clients 10
+wandb:          num_local_batches 52
+wandb:            optimizer_steps 52
+wandb:                result_file experiments/ctd_dp_d...
+wandb:                      round 120
+wandb:    test/fedavg_dp/accuracy 0.62222
+wandb:                        +17 ...
+wandb: 
+wandb: 🚀 View run ctd_dp_batch_2_epochs_1_seed43 at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/ntfb9xle
+wandb: ⭐️ View project at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260904_190551-ntfb9xle/logs
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only",
+    "optimizer": "sgd",
+    "class_weight_mode": "per_shard",
+    "dp_epsilon": 8.0,
+    "dp_batch_size": 2,
+    "dp_local_epochs": 1
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6222222222222222,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "macro_f1": 0.3835616438356164,
+    "roc_auc": 0.32027649769585254,
+    "pr_auc": 0.25161382074422567,
+    "threshold": 0.6,
+    "loss": 0.7338984979523553
+  }
+}
+Saved -> experiments/ctd_dp_diagnostic_wandb/batch_2_epochs_1/comparison.json
+[run] batch_2_epochs_2
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: rezanasirian18 (rezanasirian18-son) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.29.0
+wandb: Run data is saved locally in /workspace/PrivChain-MDD-/wandb/run-20260904_191446-hq9m1km5
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run ctd_dp_batch_2_epochs_2_seed43
+wandb: ⭐️ View project at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: 🚀 View run at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/hq9m1km5
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb:   cumulative_examples_seen ▁▁▁▁▁▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇▇▇██
+wandb: cumulative_optimizer_steps ▁▁▁▁▁▂▂▂▂▃▃▃▃▃▃▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▆▆▇▇▇▇▇███
+wandb:            elapsed_seconds ▁▁▁▁▁▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▅▅▆▆▆▆▆▇▇▇██
+wandb:              examples_seen ▆▅▃▁▅▆▆▅▃▅▂▃▆▆▂▅▆▄▁▃▅▆▅▂▄▃▂▆▆▆▄▄▅▅▂▅▂█▂▂
+wandb:                num_clients ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          num_local_batches ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:            optimizer_steps ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                      round ▁▁▁▁▁▂▂▂▂▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▆▆▆▆▆▇▇▇██
+wandb:               val_accuracy ▁▂▂▂▂▂▂▂▂▅▃▃▃▃▃▅▅▃▅▅▅▅▅▅▅▇▇▇▇▇█▇█▇▇▇▇██▇
+wandb:                     val_f1 ▃▃▄▄▄▄▄▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▅▅▅▅▁▁▅▅▅█▅██████▅
+wandb:                         +7 ...
+wandb: 
+wandb: Run summary:
+wandb:   cumulative_examples_seen 24804
+wandb: cumulative_optimizer_steps 12480
+wandb:            elapsed_seconds 336.84
+wandb:              examples_seen 192
+wandb:                num_clients 10
+wandb:          num_local_batches 104
+wandb:            optimizer_steps 104
+wandb:                result_file experiments/ctd_dp_d...
+wandb:                      round 120
+wandb:    test/fedavg_dp/accuracy 0.53333
+wandb:                        +17 ...
+wandb: 
+wandb: 🚀 View run ctd_dp_batch_2_epochs_2_seed43 at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/hq9m1km5
+wandb: ⭐️ View project at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260904_191446-hq9m1km5/logs
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only",
+    "optimizer": "sgd",
+    "class_weight_mode": "per_shard",
+    "dp_epsilon": 8.0,
+    "dp_batch_size": 2,
+    "dp_local_epochs": 2
+  },
+  "fedavg_dp": {
+    "accuracy": 0.5333333333333333,
+    "precision": 0.1111111111111111,
+    "recall": 0.07142857142857142,
+    "f1": 0.08695652173913043,
+    "macro_f1": 0.3867618429591174,
+    "roc_auc": 0.31336405529953915,
+    "pr_auc": 0.24838773007212395,
+    "threshold": 0.49999999999999994,
+    "loss": 0.7216526759995354
+  }
+}
+Saved -> experiments/ctd_dp_diagnostic_wandb/batch_2_epochs_2/comparison.json
+[run] batch_4_epochs_1
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: rezanasirian18 (rezanasirian18-son) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.29.0
+wandb: Run data is saved locally in /workspace/PrivChain-MDD-/wandb/run-20260904_192040-85zrtgky
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run ctd_dp_batch_4_epochs_1_seed43
+wandb: ⭐️ View project at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: 🚀 View run at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/85zrtgky
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb:   cumulative_examples_seen ▁▁▂▂▂▂▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▆▆▆▆▆▆▆▆▆▇▇▇▇▇▇▇███
+wandb: cumulative_optimizer_steps ▁▁▁▂▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▇▇▇▇▇▇███
+wandb:            elapsed_seconds ▁▁▁▁▁▂▂▂▂▂▂▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇███
+wandb:              examples_seen ▇▄▅▆▆▆█▃█▅▇▄▆▅▆▆▅▅▄▅▂▄▃▆▂▂▅▅▆▃▄▃▅▆▁▆▃▃▅▆
+wandb:                num_clients ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          num_local_batches ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:            optimizer_steps ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                      round ▁▁▁▂▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇████
+wandb:               val_accuracy ▃▁▁▁▁▁▁▁▁▁▁▁▁▃▃▃▃▅▃▅▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆█
+wandb:                     val_f1 ███▁▁▁▁▁▁▁▁▁▁▁▂▂▁▁▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+wandb:                         +7 ...
+wandb: 
+wandb: Run summary:
+wandb:   cumulative_examples_seen 14504
+wandb: cumulative_optimizer_steps 3600
+wandb:            elapsed_seconds 2515.869
+wandb:              examples_seen 116
+wandb:                num_clients 10
+wandb:          num_local_batches 30
+wandb:            optimizer_steps 30
+wandb:                result_file experiments/ctd_dp_d...
+wandb:                      round 120
+wandb:    test/fedavg_dp/accuracy 0.64444
+wandb:                        +17 ...
+wandb: 
+wandb: 🚀 View run ctd_dp_batch_4_epochs_1_seed43 at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/85zrtgky
+wandb: ⭐️ View project at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260904_192040-85zrtgky/logs
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only",
+    "optimizer": "sgd",
+    "class_weight_mode": "per_shard",
+    "dp_epsilon": 8.0,
+    "dp_batch_size": 4,
+    "dp_local_epochs": 1
+  },
+  "fedavg_dp": {
+    "accuracy": 0.6444444444444445,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "macro_f1": 0.3918918918918919,
+    "roc_auc": 0.3317972350230415,
+    "pr_auc": 0.2554890137533222,
+    "threshold": 0.6,
+    "loss": 0.7306900633705987
+  }
+}
+Saved -> experiments/ctd_dp_diagnostic_wandb/batch_4_epochs_1/comparison.json
+[run] batch_4_epochs_2
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: rezanasirian18 (rezanasirian18-son) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run fdy0bc15
+wandb: Tracking run with wandb version 0.29.0
+wandb: Run data is saved locally in /workspace/PrivChain-MDD-/wandb/run-20260904_200325-fdy0bc15
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run ctd_dp_batch_4_epochs_2_seed43
+wandb: ⭐️ View project at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: 🚀 View run at https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/fdy0bc15
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb:   cumulative_examples_seen ▁▁▁▁▂▂▂▂▂▃▃▃▃▄▄▄▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇████
+wandb: cumulative_optimizer_steps ▁▁▁▁▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇██
+wandb:            elapsed_seconds ▁▁▁▁▂▂▂▂▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▇▇▇██
+wandb:              examples_seen █▁▆▆▅▅█▇▆▅▅▇▄▄▄▅▅▆▇▇▅▆▄▆▆▆▅▇▇▂▄▅▃▇▄▅▅▆▅█
+wandb:                num_clients ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          num_local_batches ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:            optimizer_steps ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                      round ▁▁▁▂▂▂▂▂▂▂▃▃▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▆▇▇███
+wandb:               val_accuracy ▂▁▁▁▁▂▂▃▅▅▆▆▆▆▅▆▆▆▆▆▆▆▆▆▆▇▇▇▇▇▇▇▇▇▇▇▇███
+wandb:                     val_f1 ▆▆▁▁▁▁▇▇▇▇▇███▇▇▇███▂▂▂▂▂▂▂▂▂▃▃▃▃▃▃▃▃▃▃▃
+wandb:                         +7 ...
+wandb: 
+wandb: Run summary:
+wandb:   cumulative_examples_seen 29048
+wandb: cumulative_optimizer_steps 7200
+wandb:            elapsed_seconds 1686.825
+wandb:              examples_seen 240
+wandb:                num_clients 10
+wandb:          num_local_batches 60
+wandb:            optimizer_steps 60
+wandb:                result_file experiments/ctd_dp_d...
+wandb:                      round 120
+wandb:    test/fedavg_dp/accuracy 0.35556
+wandb:                        +17 ...
+wandb: 
+wandb: 🚀 View run ctd_dp_batch_4_epochs_2_seed43 at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp/runs/fdy0bc15
+wandb: ⭐️ View project at: https://wandb.ai/rezanasirian18-son/privchain-mdd-ctd-dp
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260904_200325-fdy0bc15/logs
+{
+  "protocol": {
+    "train": 102,
+    "selection_dev": 32,
+    "report_test": 45,
+    "standardization": "train-only",
+    "threshold_selection": "dev-only",
+    "optimizer": "sgd",
+    "class_weight_mode": "per_shard",
+    "dp_epsilon": 8.0,
+    "dp_batch_size": 4,
+    "dp_local_epochs": 2
+  },
+  "fedavg_dp": {
+    "accuracy": 0.35555555555555557,
+    "precision": 0.14285714285714285,
+    "recall": 0.21428571428571427,
+    "f1": 0.17142857142857143,
+    "macro_f1": 0.3220779220779221,
+    "roc_auc": 0.2926267281105991,
+    "pr_auc": 0.2372192270954826,
+    "threshold": 0.44999999999999996,
+    "loss": 0.7191969752311707
+  }
+}
+Saved -> experiments/ctd_dp_diagnostic_wandb/batch_4_epochs_2/comparison.json

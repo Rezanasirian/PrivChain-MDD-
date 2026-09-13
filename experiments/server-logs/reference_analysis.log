@@ -1,0 +1,108 @@
+{
+  "selection_contract": "weights and threshold selected on dev; test read once",
+  "fusion_seed_artifact": 44,
+  "rule": "wconvex[roberta+ctd]",
+  "weights": {
+    "roberta": 0.1,
+    "ctd": 0.9
+  },
+  "thresholds": {
+    "roberta": 0.6766998767852783,
+    "ctd": 0.5,
+    "fusion": 0.49999999999999994
+  },
+  "splits": {
+    "dev": {
+      "n": 32,
+      "depressed": 11,
+      "macro_f1": {
+        "roberta": 0.639549436795995,
+        "ctd": 0.7333333333333334,
+        "fusion": 0.7624602332979851
+      },
+      "paired_delta_fusion_minus_baseline": {
+        "roberta": {
+          "point": 0.1229107965019901,
+          "ci_low": -0.06324365676399323,
+          "ci_high": 0.3247132668185299,
+          "changed": 8,
+          "corrected": 5,
+          "worsened": 3,
+          "neutral": 0
+        },
+        "ctd": {
+          "point": 0.029126899964651676,
+          "ci_low": 0.0,
+          "ci_high": 0.09532163742690059,
+          "changed": 1,
+          "corrected": 1,
+          "worsened": 0,
+          "neutral": 0
+        }
+      }
+    },
+    "test": {
+      "n": 45,
+      "depressed": 14,
+      "macro_f1": {
+        "roberta": 0.5035691109669046,
+        "ctd": 0.6309458720612356,
+        "fusion": 0.6309458720612356
+      },
+      "paired_delta_fusion_minus_baseline": {
+        "roberta": {
+          "point": 0.12737676109433105,
+          "ci_low": -0.1032806797104159,
+          "ci_high": 0.34298439680127807,
+          "changed": 18,
+          "corrected": 10,
+          "worsened": 8,
+          "neutral": 0
+        },
+        "ctd": {
+          "point": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "changed": 0,
+          "corrected": 0,
+          "worsened": 0,
+          "neutral": 0
+        }
+      }
+    }
+  }
+}
+Saved -> /workspace/depression-detection-ctd/src/ctd/outputs/reference_paired_analysis.json
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: rezanasirian18 (rezanasirian18-son) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run kywv1zej
+wandb: Tracking run with wandb version 0.29.0
+wandb: Run data is saved locally in /workspace/depression-detection-ctd/wandb/run-20260904_174035-kywv1zej
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run reference-baselines-final
+wandb: ⭐️ View project at https://wandb.ai/rezanasirian18-son/privchain-mdd-reference-baselines
+wandb: 🚀 View run at https://wandb.ai/rezanasirian18-son/privchain-mdd-reference-baselines/runs/kywv1zej
+wandb: updating run metadata; uploading summary
+wandb: uploading wandb-metadata.json; uploading requirements.txt; uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb: fusion/dev_selected_macro_f1 ▅█▁▁▅▄
+wandb:         fusion/test_macro_f1 ▄▁▆█▄█
+wandb:     single/ctd_test_macro_f1 ▁▁▁▁▁▁
+wandb: single/roberta_test_macro_f1 ▁▁▁▁▁▁
+wandb:   single/wavlm_test_macro_f1 ▆█▇▁▆▅
+wandb:                   wavlm_seed ▁▁▁███
+wandb: 
+wandb: Run summary:
+wandb:                   conclusion Fusion does not sign...
+wandb: fusion/dev_selected_macro_f1 0.79221
+wandb:         fusion/test_macro_f1 0.6371
+wandb:     single/ctd_test_macro_f1 0.63095
+wandb: single/roberta_test_macro_f1 0.50357
+wandb:   single/wavlm_test_macro_f1 0.51509
+wandb:                   wavlm_seed 73
+wandb: 
+wandb: 🚀 View run reference-baselines-final at: https://wandb.ai/rezanasirian18-son/privchain-mdd-reference-baselines/runs/kywv1zej
+wandb: ⭐️ View project at: https://wandb.ai/rezanasirian18-son/privchain-mdd-reference-baselines
+wandb: Synced 4 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260904_174035-kywv1zej/logs

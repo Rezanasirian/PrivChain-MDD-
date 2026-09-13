@@ -1,0 +1,31 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 12:06:59:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 4004.20it/s]
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+seed=42    eps=  0.50  mia: auc=0.478 advantage=-0.043
+seed=42    eps=   inf  mia: auc=0.900 advantage=+0.799  (no DP)
+seed=7     eps=  0.50  mia: auc=0.443 advantage=-0.113
+seed=7     eps=   inf  mia: auc=0.791 advantage=+0.582  (no DP)
+seed=2024  eps=  0.50  mia: auc=0.513 advantage=+0.025
+seed=2024  eps=   inf  mia: auc=0.892 advantage=+0.784  (no DP)
+seed=11    eps=  0.50  mia: auc=0.438 advantage=-0.123
+seed=11    eps=   inf  mia: auc=0.824 advantage=+0.649  (no DP)
+seed=19    eps=  0.50  mia: auc=0.472 advantage=-0.056
+seed=19    eps=   inf  mia: auc=0.819 advantage=+0.638  (no DP)
+seed=31    eps=  0.50  mia: auc=0.556 advantage=+0.112
+seed=31    eps=   inf  mia: auc=0.913 advantage=+0.827  (no DP)
+seed=73    eps=  0.50  mia: auc=0.531 advantage=+0.063
+seed=73    eps=   inf  mia: auc=0.818 advantage=+0.636  (no DP)
+seed=101   eps=  0.50  mia: auc=0.582 advantage=+0.164
+seed=101   eps=   inf  mia: auc=0.754 advantage=+0.508  (no DP)
+seed=137   eps=  0.50  mia: auc=0.513 advantage=+0.027
+seed=137   eps=   inf  mia: auc=0.833 advantage=+0.665  (no DP)
+seed=211   eps=  0.50  mia: auc=0.468 advantage=-0.064
+seed=211   eps=   inf  mia: auc=0.842 advantage=+0.684  (no DP)
+
+Membership inference over 10 seed(s), balanced split (71 members vs 70 non-members):
+ epsilon               AUC            AUC 95% CI         advantage
+    0.50       0.500±0.048        [0.470, 0.529]      -0.001±0.095
+     inf       0.839±0.050        [0.807, 0.870]      +0.677±0.100
+
+Run dir: experiments/phase6/phase6_attack_eval_20260904_120700

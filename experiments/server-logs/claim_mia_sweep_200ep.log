@@ -1,0 +1,88 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 13:14:04:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3790.11it/s]
+sys:1: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+seed=42    eps=  0.50  mia: auc=0.475 advantage=-0.050
+seed=42    eps=  2.00  mia: auc=0.534 advantage=+0.068
+seed=42    eps=  8.00  mia: auc=0.464 advantage=-0.073
+seed=42    eps= 32.00  mia: auc=0.463 advantage=-0.074
+seed=42    eps=128.00  mia: auc=0.464 advantage=-0.073
+/venv/main/lib/python3.12/site-packages/opacus/accountants/analysis/rdp.py:332: UserWarning: Optimal order is the smallest alpha. Please consider expanding the range of alphas to get a tighter privacy bound.
+  warnings.warn(
+seed=42    eps=512.00  mia: auc=0.464 advantage=-0.073
+seed=42    eps=   inf  mia: auc=0.900 advantage=+0.799  (no DP)
+seed=7     eps=  0.50  mia: auc=0.433 advantage=-0.135
+seed=7     eps=  2.00  mia: auc=0.438 advantage=-0.125
+seed=7     eps=  8.00  mia: auc=0.440 advantage=-0.120
+seed=7     eps= 32.00  mia: auc=0.438 advantage=-0.123
+seed=7     eps=128.00  mia: auc=0.441 advantage=-0.118
+seed=7     eps=512.00  mia: auc=0.441 advantage=-0.118
+seed=7     eps=   inf  mia: auc=0.791 advantage=+0.582  (no DP)
+seed=2024  eps=  0.50  mia: auc=0.506 advantage=+0.012
+seed=2024  eps=  2.00  mia: auc=0.503 advantage=+0.006
+seed=2024  eps=  8.00  mia: auc=0.500 advantage=-0.001
+seed=2024  eps= 32.00  mia: auc=0.502 advantage=+0.004
+seed=2024  eps=128.00  mia: auc=0.502 advantage=+0.004
+seed=2024  eps=512.00  mia: auc=0.502 advantage=+0.004
+seed=2024  eps=   inf  mia: auc=0.892 advantage=+0.784  (no DP)
+seed=11    eps=  0.50  mia: auc=0.425 advantage=-0.149
+seed=11    eps=  2.00  mia: auc=0.421 advantage=-0.158
+seed=11    eps=  8.00  mia: auc=0.420 advantage=-0.159
+seed=11    eps= 32.00  mia: auc=0.419 advantage=-0.162
+seed=11    eps=128.00  mia: auc=0.418 advantage=-0.164
+seed=11    eps=512.00  mia: auc=0.418 advantage=-0.164
+seed=11    eps=   inf  mia: auc=0.824 advantage=+0.649  (no DP)
+seed=19    eps=  0.50  mia: auc=0.472 advantage=-0.056
+seed=19    eps=  2.00  mia: auc=0.468 advantage=-0.064
+seed=19    eps=  8.00  mia: auc=0.471 advantage=-0.058
+seed=19    eps= 32.00  mia: auc=0.472 advantage=-0.056
+seed=19    eps=128.00  mia: auc=0.471 advantage=-0.058
+seed=19    eps=512.00  mia: auc=0.472 advantage=-0.056
+seed=19    eps=   inf  mia: auc=0.819 advantage=+0.638  (no DP)
+seed=31    eps=  0.50  mia: auc=0.563 advantage=+0.127
+seed=31    eps=  2.00  mia: auc=0.553 advantage=+0.107
+seed=31    eps=  8.00  mia: auc=0.447 advantage=-0.107
+seed=31    eps= 32.00  mia: auc=0.448 advantage=-0.104
+seed=31    eps=128.00  mia: auc=0.448 advantage=-0.104
+seed=31    eps=512.00  mia: auc=0.448 advantage=-0.104
+seed=31    eps=   inf  mia: auc=0.913 advantage=+0.827  (no DP)
+seed=73    eps=  0.50  mia: auc=0.520 advantage=+0.040
+seed=73    eps=  2.00  mia: auc=0.527 advantage=+0.053
+seed=73    eps=  8.00  mia: auc=0.531 advantage=+0.063
+seed=73    eps= 32.00  mia: auc=0.532 advantage=+0.064
+seed=73    eps=128.00  mia: auc=0.531 advantage=+0.063
+seed=73    eps=512.00  mia: auc=0.531 advantage=+0.063
+seed=73    eps=   inf  mia: auc=0.818 advantage=+0.636  (no DP)
+seed=101   eps=  0.50  mia: auc=0.580 advantage=+0.161
+seed=101   eps=  2.00  mia: auc=0.576 advantage=+0.151
+seed=101   eps=  8.00  mia: auc=0.576 advantage=+0.153
+seed=101   eps= 32.00  mia: auc=0.576 advantage=+0.153
+seed=101   eps=128.00  mia: auc=0.576 advantage=+0.151
+seed=101   eps=512.00  mia: auc=0.576 advantage=+0.151
+seed=101   eps=   inf  mia: auc=0.754 advantage=+0.508  (no DP)
+seed=137   eps=  0.50  mia: auc=0.513 advantage=+0.025
+seed=137   eps=  2.00  mia: auc=0.509 advantage=+0.019
+seed=137   eps=  8.00  mia: auc=0.509 advantage=+0.019
+seed=137   eps= 32.00  mia: auc=0.491 advantage=-0.019
+seed=137   eps=128.00  mia: auc=0.491 advantage=-0.019
+seed=137   eps=512.00  mia: auc=0.491 advantage=-0.019
+seed=137   eps=   inf  mia: auc=0.833 advantage=+0.665  (no DP)
+seed=211   eps=  0.50  mia: auc=0.480 advantage=-0.040
+seed=211   eps=  2.00  mia: auc=0.474 advantage=-0.051
+seed=211   eps=  8.00  mia: auc=0.473 advantage=-0.053
+seed=211   eps= 32.00  mia: auc=0.474 advantage=-0.051
+seed=211   eps=128.00  mia: auc=0.474 advantage=-0.051
+seed=211   eps=512.00  mia: auc=0.474 advantage=-0.051
+seed=211   eps=   inf  mia: auc=0.842 advantage=+0.684  (no DP)
+
+Membership inference over 10 seed(s), balanced split (71 members vs 70 non-members):
+ epsilon               AUC            AUC 95% CI         advantage
+    0.50       0.497±0.050        [0.465, 0.528]      -0.007±0.101
+    2.00       0.500±0.050        [0.469, 0.531]      +0.000±0.100
+    8.00       0.483±0.047        [0.454, 0.512]      -0.034±0.094
+   32.00       0.482±0.047        [0.453, 0.510]      -0.037±0.093
+  128.00       0.482±0.046        [0.453, 0.510]      -0.037±0.092
+  512.00       0.482±0.046        [0.453, 0.510]      -0.037±0.092
+     inf       0.839±0.050        [0.807, 0.870]      +0.677±0.100
+
+Run dir: experiments/phase6/phase6_attack_eval_20260904_131405

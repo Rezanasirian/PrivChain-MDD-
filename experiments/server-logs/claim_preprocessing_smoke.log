@@ -1,0 +1,59 @@
+
+=== decimate: /venv/main/bin/python scripts/run_modality_ablation.py --config configs/baseline.yaml --daic-config configs/daic_woz.yaml --downsample decimate --validity off --arms full --seeds 42 ===
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 09:32:53:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 4294.35it/s]
+normalization override: (config default)
+downsample override: decimate; validity: off
+splits: train=86 selection=21 report=34  seeds=[42]
+  audio+video+text   f1=0.512±0.000  roc_auc=0.605±0.000  accuracy=0.382±0.000  auc95%CI=[0.375, 0.811]
+
+paired bootstrap: what each reduced arm gives up against `audio+video+text`
+
+Run dir: experiments/phase1/phase1_modality_ablation_20260904_093423
+
+=== mean: /venv/main/bin/python scripts/run_modality_ablation.py --config configs/baseline.yaml --daic-config configs/daic_woz.yaml --downsample mean --validity off --arms full --seeds 42 ===
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 09:35:36:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3718.04it/s]
+normalization override: (config default)
+downsample override: mean; validity: off
+splits: train=86 selection=21 report=34  seeds=[42]
+  audio+video+text   f1=0.400±0.000  roc_auc=0.601±0.000  accuracy=0.647±0.000  auc95%CI=[0.386, 0.798]
+
+paired bootstrap: what each reduced arm gives up against `audio+video+text`
+
+Run dir: experiments/phase1/phase1_modality_ablation_20260904_094135
+
+=== mean_valid: /venv/main/bin/python scripts/run_modality_ablation.py --config configs/baseline.yaml --daic-config configs/daic_woz.yaml --downsample mean --validity on --arms full --seeds 42 ===
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 09:45:32:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3734.89it/s]
+normalization override: (config default)
+downsample override: mean; validity: on
+splits: train=86 selection=21 report=34  seeds=[42]
+  audio+video+text   f1=0.381±0.000  roc_auc=0.601±0.000  accuracy=0.618±0.000  auc95%CI=[0.379, 0.793]
+
+paired bootstrap: what each reduced arm gives up against `audio+video+text`
+
+Run dir: experiments/phase1/phase1_modality_ablation_20260904_095113
+
+=== functionals_valid: /venv/main/bin/python scripts/run_modality_ablation.py --config configs/baseline.yaml --daic-config configs/daic_woz.yaml --downsample window_functionals --validity on --arms full --seeds 42 ===
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+09/04/2026 09:55:05:WARNING:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3851.73it/s]
+normalization override: (config default)
+downsample override: window_functionals; validity: on
+splits: train=86 selection=21 report=34  seeds=[42]
+  audio+video+text   f1=0.488±0.000  roc_auc=0.597±0.000  accuracy=0.382±0.000  auc95%CI=[0.364, 0.821]
+
+paired bootstrap: what each reduced arm gives up against `audio+video+text`
+
+Run dir: experiments/phase1/phase1_modality_ablation_20260904_100054
+
+=== preprocessing ranking (development data only) ===
+decimate             ROC-AUC=0.605±0.000 F1=0.512
+mean                 ROC-AUC=0.601±0.000 F1=0.400
+mean_valid           ROC-AUC=0.601±0.000 F1=0.381
+functionals_valid    ROC-AUC=0.597±0.000 F1=0.488
+Wrote experiments/phase1/preprocessing_ladder.json

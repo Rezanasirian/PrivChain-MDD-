@@ -204,7 +204,7 @@ runs clean from nothing:
   and a republished subgraph;
 - `scripts/run_federated_with_ledger.py` with `backend: fabric_rest` completes
   three rounds and reads its audit trail **back from the ledger**. The consumed
-  per-modality ε converges on exactly the configured caps — audio 1.10 → 1.60 →
+  per-parameter-group mechanism ε converges on the configured caps — audio 1.10 → 1.60 →
   2.00, video 2.16 → 3.18 → 4.00, text 4.22 → 6.30 → 8.00 against ε = 2 / 4 / 8 —
   which is the H1 accounting and the H2 subgraph, made auditable by H3;
 - final channel height 68, with real block hashes.
