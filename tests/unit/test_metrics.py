@@ -57,6 +57,7 @@ def test_metrics_keys_present() -> None:
         "precision",
         "recall",
         "f1",
+        "macro_f1",
         "roc_auc",
         "pr_auc",
         "threshold",

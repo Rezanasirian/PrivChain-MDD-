@@ -165,7 +165,7 @@ def binary_classification_metrics(
     labels: NDArray[np.int_],
     threshold: float | None = 0.5,
 ) -> dict[str, float]:
-    """Compute accuracy, precision, recall, F1, and ROC-AUC.
+    """Compute accuracy, positive-class F1, macro-F1, and ranking metrics.
 
     Args:
         scores: Predicted probabilities (e.g., ``sigmoid(logit)``), shape ``(N,)``.
@@ -177,7 +177,7 @@ def binary_classification_metrics(
 
     Returns:
         Mapping with keys ``accuracy``, ``precision``, ``recall``, ``f1``,
-        ``roc_auc``, ``pr_auc``, ``threshold``.
+        ``macro_f1``, ``roc_auc``, ``pr_auc``, ``threshold``.
 
     Raises:
         ValueError: If ``scores`` and ``labels`` differ in length or are empty.
@@ -201,6 +201,13 @@ def binary_classification_metrics(
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    negative_precision = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+    negative_recall = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+    negative_f1 = (
+        2 * negative_precision * negative_recall / (negative_precision + negative_recall)
+        if (negative_precision + negative_recall) > 0
+        else 0.0
+    )
     accuracy = (tp + tn) / len(labels)
 
     return {
@@ -208,6 +215,7 @@ def binary_classification_metrics(
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "macro_f1": (f1 + negative_f1) / 2.0,
         "roc_auc": roc_auc_score(labels, scores),
         # Average precision, not trapezoidal PR-AUC — see `average_precision`.
         "pr_auc": average_precision(labels, scores),
