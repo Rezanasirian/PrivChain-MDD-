@@ -1,6 +1,6 @@
 # ADR-0009 — The privacy unit, and what composes with what
 
-- **Status:** Accepted
+- **Status:** Accepted; claim scope corrected 2026-09-12
 - **Date:** 2026-08-06
 - **Phase:** 3 (per-modality DP) with consequences for 5–7
 - **Related objectives:** H1 (per-modality DP), H5 (empirical privacy evaluation)
@@ -81,6 +81,37 @@ would be the single easiest result in this thesis to attack.
   number and is presented as such rather than buried.
 - Chapter 3's formalization carries the composition formula above, not just the
   per-modality allocation rule.
+
+## Amendment (2026-09-12): a parameter-group ε is not modality-record DP for the full model
+
+The original wording correctly limited `ε_m` to the modality-`m` **parameter
+group**, but later project summaries read it as though it protected the
+modality-`m` record in the released model. That stronger reading is false for the
+encode-then-fuse architecture.
+
+All encoders are optimized through one fused loss. Consequently, changing one
+participant's audio can change that sample's gradients for the video encoder,
+text encoder, and shared head as well as for the audio encoder. Per-group
+clipping still gives each released parameter group its own valid Gaussian
+mechanism guarantee, but the complete model under a modality-record adjacency
+must compose every group whose gradient can change. In the current architecture
+that is all four groups—the same composed `participant_epsilon` already reported
+by the accountant.
+
+Therefore:
+
+- `epsilon_per_modality[m]` means the privacy cost of releasing parameter group
+  `m`; it is also an auditable noise-allocation coefficient.
+- It must not be described as the privacy guarantee of modality record `m` in
+  the complete released model.
+- At matched `participant_epsilon`, adaptive and uniform arms have the same
+  proved end-to-end bound. Different group ε values describe where noise was
+  placed, not a tighter end-to-end audio-record guarantee.
+
+A future architecture may recover a sparse modality-record guarantee by training
+each branch with an objective that depends only on that modality and training the
+shared head from detached branch embeddings. That would require a new adjacency
+proof and fresh accounting; `detach()` alone is not sufficient.
 
 ## Related
 

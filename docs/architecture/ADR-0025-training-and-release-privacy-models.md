@@ -1,6 +1,6 @@
 # ADR-0025 — Separate privacy models for training and embedding release
 
-- **Status:** Accepted
+- **Status:** Accepted; training claim scope corrected 2026-09-12
 - **Date:** 2026-08-21
 - **Phases:** 3, 5, 6
 - **Related objectives:** H1 (per-modality DP), H4 (auditable accounting)
@@ -13,8 +13,10 @@ model produces privacy claims that neither implementation supports.
 
 ## Decision 1 — federated training
 
-The protected unit is one single-modality record of one participant under
-add/remove adjacency, matching the Poisson-subsampled RDP accountant.
+The protected unit is one fused training record under add/remove adjacency,
+matching the Poisson-subsampled RDP accountant. A record affects every active
+encoder parameter group and the shared fusion/head group; its end-to-end cost is
+therefore the RDP composition of those mechanisms.
 
 - Every client owns its accountant state.
 - Noise is calibrated before training against the maximum permitted steps:
@@ -23,9 +25,11 @@ add/remove adjacency, matching the Poisson-subsampled RDP accountant.
   participate in every round.
 - A client has mechanisms only for modalities in its capability plus the shared
   parameter group. An absent modality consumes neither noise nor budget.
-- The target epsilon remains per modality. A participant represented in more
-  modalities therefore has a larger composed epsilon than one represented in a
-  single modality.
+- The configured ``epsilon_m`` values are calibration targets for modality
+  encoder parameter groups, not standalone guarantees for modality-specific
+  records released through the fused model. A record touching more active
+  groups has the composition of those groups; the matched experiments report
+  the conservative all-groups participant epsilon.
 - Every ledger round records both incremental and cumulative epsilon obtained
   from the same client accountant state.
 - A zero noise multiplier is a numerical test facility only. It represents

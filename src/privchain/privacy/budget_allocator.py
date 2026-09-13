@@ -1,9 +1,11 @@
-"""Per-modality differential-privacy budget allocation (Phase 3, objective H1).
+"""Risk-guided DP noise allocation across modality encoder parameter groups.
 
-This is the first core novelty of the thesis: instead of one uniform privacy
-budget over the whole gradient vector, each modality ``m`` gets its own budget
-``ε_m`` calibrated by its re-identification risk ``r_m`` (audio > video > text),
-and a correspondingly calibrated noise multiplier ``σ_m``.
+Instead of one uniform noise multiplier over the whole gradient vector, each
+modality encoder parameter group ``m`` gets a calibration target ``ε_m`` based
+on its re-identification risk ``r_m`` and a corresponding noise multiplier
+``σ_m``. ``ε_m`` is not a standalone guarantee for a modality-specific record:
+a fused training record affects every active encoder and the shared head, so its
+end-to-end guarantee is the composition of all affected mechanisms.
 
 Formalization (the math destined for Chapter 3):
 
@@ -16,7 +18,7 @@ Formalization (the math destined for Chapter 3):
 * Decision variable: ``σ_{m} = min{ σ : ε_RDP(σ, q, T, δ) ≤ ε_m }`` via the RDP
   accountant (:func:`~privchain.privacy.accountant.get_noise_multiplier`).
 * Auditable consumption after ``t`` steps: ``ε_m(t) = ε_RDP(σ_m, q, t, δ)`` — the
-  per-modality budget each client reports (and later logs to the ledger).
+  per-group mechanism cost each client reports (and later logs to the ledger).
 """
 
 from __future__ import annotations
@@ -133,7 +135,7 @@ def scale_to_participant_epsilon(
         )
         return allocator.participant_epsilon(steps, include_shared=include_shared)
 
-    # Every per-modality budget is at most `scale` and composing several
+    # Every per-group calibration target is at most `scale` and composing several
     # mechanisms costs more than any one of them, so `scale = target` is an upper
     # bracket up to the accountant's own slack. Expand either end until the
     # target is genuinely straddled rather than assuming it.
@@ -176,7 +178,7 @@ def scale_to_participant_epsilon(
 
 @dataclass(frozen=True)
 class ModalityAllocation:
-    """Resolved per-modality budget and calibrated noise multiplier."""
+    """Resolved parameter-group target and calibrated noise multiplier."""
 
     modality: str
     target_epsilon: float
@@ -185,10 +187,10 @@ class ModalityAllocation:
 
 
 class PerModalityBudgetAllocator:
-    """Calibrate and audit per-modality DP budgets.
+    """Calibrate and audit modality parameter-group DP mechanisms.
 
     Args:
-        target_epsilons: Per-modality target ``ε_m``.
+        target_epsilons: Per-parameter-group calibration target ``ε_m``.
         risks: Per-modality re-identification risk ``r_m`` (metadata for audit).
         delta: Target ``δ``.
         sample_rate: Poisson sampling rate ``q``.
@@ -248,7 +250,7 @@ class PerModalityBudgetAllocator:
         return {m: a.noise_multiplier for m, a in self.allocations.items()}
 
     def consumed_epsilon(self, steps_done: int) -> dict[str, float]:
-        """Per-modality ``ε`` actually consumed after ``steps_done`` steps.
+        """Per-group mechanism ``ε`` after ``steps_done`` steps.
 
         This is the auditable quantity each client reports (CLAUDE.md §7) — it
         must never be silently overwritten.
@@ -267,9 +269,9 @@ class PerModalityBudgetAllocator:
     def participant_epsilon(self, steps_done: int, *, include_shared: bool = True) -> float:
         """Composed ``ε`` for a subject whose data touches every group (ADR-0009).
 
-        The per-modality budgets of :meth:`consumed_epsilon` are *per mechanism*.
-        A participant contributing all three modalities is exposed to all three
-        mechanisms plus the shared fusion/head group, so their true budget is the
+        The values from :meth:`consumed_epsilon` are *per parameter-group
+        mechanism*. A fused record affects all three encoders plus the shared
+        fusion/head group, so its end-to-end budget is the
         RDP composition of those mechanisms — always larger than any single
         ``ε_m``, and reported alongside them so the audit trail is honest.
 

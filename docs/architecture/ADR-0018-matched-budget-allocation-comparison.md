@@ -1,6 +1,6 @@
 # ADR-0018 — Comparing DP allocations at a matched participant budget
 
-- **Status:** Accepted
+- **Status:** Accepted; privacy-claim scope corrected 2026-09-12
 - **Date:** 2026-08-13
 - **Phase:** 3 (H1's central claim)
 - **Related objectives:** H1 (per-modality adaptive DP), H5 (empirical evaluation)
@@ -70,9 +70,9 @@ land together, the honest finding is that per-modality allocation buys nothing
 *at this corpus size* — which is reportable, and much better learned here than
 in Chapter 4.
 
-Each arm also reports its per-modality ε, giving the privacy half of the claim
-for free: at equal participant cost, does the adaptive arm actually hand the
-high-risk modalities a tighter budget?
+Each arm also reports its per-group calibration ε. This shows where the
+mechanism applies more noise at equal participant cost; it does not establish a
+separate modality-record privacy guarantee for the released fused model.
 
 ## One DP arm, not four
 
@@ -102,13 +102,14 @@ Matched budgets — 8.004 / 8.003 / 8.001, agreeing to 0.04%:
 | adaptive | **1.957** | **2.018** | 6.750 | 0.515 ± 0.090 | 0.351 ± 0.035 |
 | anti_adaptive | 5.125 | 4.971 | 1.486 | 0.536 ± 0.076 | 0.390 ± 0.081 |
 
-### The privacy half of the claim holds
+### The parameter-group allocation operates as configured
 
-At *identical* participant cost, the adaptive allocation gives the two
-high-risk modalities materially tighter budgets than uniform does — audio
-1.96 vs 3.62 and video 2.02 vs 3.62, both about **1.8× tighter** (σ 11.05 and
-10.75 against 6.43). That is exactly what H1 promises, and it is now a
-demonstrated property of the mechanism rather than an assertion.
+At *identical* participant cost, the adaptive allocation assigns the audio and
+video encoder groups lower calibration targets than uniform does — audio 1.96
+vs 3.62 and video 2.02 vs 3.62 (σ 11.05 and 10.75 against 6.43). This is a
+demonstrated property of the noise-allocation mechanism. It must not be phrased
+as "1.8× stronger modality privacy": the released fused model has the same
+composed participant ε in every arm.
 
 ### The utility half does not
 
@@ -154,10 +155,10 @@ them.
 The thesis claims per-modality allocation improves the privacy–utility trade-off.
 On this corpus, the defensible version is narrower and should be stated as:
 
-> At a fixed participant privacy budget, per-modality allocation concentrates
-> protection on the modalities that measurably leak the most identity (≈1.8×
-> tighter ε for audio and video) **at no measurable utility cost**. It does not
-> improve accuracy, and no accuracy improvement should be claimed for it.
+> At a fixed participant privacy budget, risk-guided allocation applies more
+> noise to the audio and video encoder parameter groups **at no measurable
+> utility cost**. It does not improve accuracy, and it does not provide a
+> separate modality-record ε guarantee for the released fused model.
 
 That is still a real contribution — protection where it is needed, for free — and
 it is defensible because both halves were measured. The stronger accuracy claim
@@ -215,8 +216,21 @@ deliberately-wrong allocations are equally indistinguishable from the baseline,
 the allocation axis is doing nothing to utility here — exactly as argued above,
 and now with an interval tight enough to mean it.
 
-The privacy half of the result is untouched: at matched participant ε the
-adaptive arm still gives audio and video ~1.8× tighter budgets, which is an exact
-property of the mechanism and needs no statistics. See ADR-0017's amendment,
-though, for why video's *risk rank* — and hence part of the motivation for that
-allocation — is less settled than it looked.
+The mechanism result is untouched: at matched participant ε the adaptive arm
+still assigns lower calibration targets and more noise to the audio and video
+encoder groups. This is an exact property of the mechanism, but not a claim of
+~1.8× stronger modality-record privacy. See ADR-0017's amendment for why video's
+*risk rank* — and hence part of the motivation for that allocation — is less
+settled than it looked.
+
+---
+
+## Amendment, 2026-09-12 — parameter-group targets are not release guarantees
+
+Earlier wording in this ADR called the reported ``ε_m`` values the "privacy
+half" of H1 and interpreted their ratio as tighter privacy for a modality. That
+interpretation is withdrawn. In the implemented fused model, one training
+record can influence all active encoders and the shared head. ``ε_m`` therefore
+labels a parameter-group noise calibration, while the valid guarantee for the
+released model is the composition over all affected groups. The utility
+comparison and matched participant-ε arithmetic remain valid.

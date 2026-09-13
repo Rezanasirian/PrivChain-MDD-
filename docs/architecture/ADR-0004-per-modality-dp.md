@@ -1,15 +1,16 @@
 # ADR-0004 — Adaptive per-modality differential privacy (H1)
 
-- **Status:** Accepted; substantially revised 2026-08-06 (see "Revision" below)
+- **Status:** Accepted; revised 2026-08-06, claim scope corrected 2026-09-12
 - **Date:** 2026-07-01
 - **Phase:** 3 (Adaptive Per-Modality DP Mechanism with Opacus)
 - **Related objective:** H1 (first core novelty)
 
 ## Context
 
-The thesis's first novelty is a **per-modality adaptive DP budget allocation** —
-rather than one uniform budget over the whole gradient vector, each modality gets
-a budget calibrated by its re-identification risk (audio > video > text). The
+The thesis's first novelty is a risk-guided **parameter-group DP noise
+allocation** — rather than one uniform noise multiplier over the whole gradient
+vector, each modality encoder group gets a calibration target based on its
+re-identification risk (audio > video > text). The
 named tool is **Opacus**, but `opacus` is an optional dependency and the
 environment is offline, so it could not be run/tested here.
 
@@ -26,7 +27,7 @@ environment is offline, so it could not be run/tested here.
 - **Decision variable (noise):** `σ_m = min{ σ : ε_RDP(σ, q, T, δ) ≤ ε_m }`,
   obtained from the RDP accountant by binary search.
 - **Auditable consumption:** after `t` steps,
-  `ε_m(t) = ε_RDP(σ_m, q, t, δ)` — the per-modality budget each client reports
+  `ε_m(t) = ε_RDP(σ_m, q, t, δ)` — the per-group mechanism cost each client reports
   and (Phase 5) logs to the ledger; never silently overwritten (CLAUDE.md §7).
 
 Implemented in `privacy/budget_allocator.py`; modes in `configs/privacy.yaml`.
@@ -130,3 +131,10 @@ trusted blindly.
 What `ε_m` bounds, and what a participant contributing all modalities actually
 spends, are specified in [ADR-0009](ADR-0009-privacy-unit-and-composition.md) and
 reported by `compose_epsilon` / `participant_epsilon`.
+
+### R5. Claim-scope correction (2026-09-12)
+
+Because the fused loss lets one record affect every active encoder and the
+shared head, ``ε_m`` is a parameter-group calibration target, not an end-to-end
+guarantee for changing only modality ``m`` in the complete released model. The
+valid release guarantee composes every affected group. See ADR-0009's amendment.

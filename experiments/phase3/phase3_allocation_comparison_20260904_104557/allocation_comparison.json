@@ -1,0 +1,180 @@
+{
+  "matching": {
+    "quantity": "composed participant epsilon (RDP over 3 encoders + shared head)",
+    "target": 8.0,
+    "achieved": {
+      "uniform": 8.003965072421087,
+      "adaptive": 8.002804682882838,
+      "anti_adaptive": 8.001060865150574
+    },
+    "tolerance": 0.01,
+    "why": "matching on the sum or mean of per-modality epsilon would give the most uneven allocation more real privacy; see ADR-0018"
+  },
+  "paired_auc_differences": {
+    "adaptive_minus_uniform": {
+      "difference": 0.007905138339920903,
+      "low": -0.06439393939393934,
+      "high": 0.09090909090909083,
+      "p_two_sided": 0.936,
+      "significant": 0.0
+    },
+    "anti_adaptive_minus_uniform": {
+      "difference": -0.02371541501976282,
+      "low": -0.08994708994708994,
+      "high": 0.033333333333333326,
+      "p_two_sided": 0.453,
+      "significant": 0.0
+    }
+  },
+  "risks": {
+    "audio": 1.0,
+    "video": 0.97,
+    "text": 0.29
+  },
+  "risk_sharpness": 1.0,
+  "seeds": [
+    42,
+    7,
+    2024,
+    11,
+    19,
+    31,
+    73,
+    101,
+    137,
+    211
+  ],
+  "n_train": 86,
+  "n_report": 34,
+  "arms": {
+    "uniform": {
+      "epsilon_per_modality": {
+        "audio": 3.6171875,
+        "video": 3.6171875,
+        "text": 3.6171875
+      },
+      "sigma_per_modality": {
+        "audio": 6.431884765625,
+        "video": 6.431884765625,
+        "text": 6.431884765625
+      },
+      "participant_epsilon": 8.003965072421087,
+      "metrics": {
+        "num_folds": 10.0,
+        "accuracy_num_valid_folds": 10.0,
+        "accuracy_mean": 0.5029411764705883,
+        "accuracy_std": 0.09705882352941177,
+        "f1_num_valid_folds": 10.0,
+        "f1_mean": 0.32923841783115726,
+        "f1_std": 0.12642660221528712,
+        "loss_num_valid_folds": 10.0,
+        "loss_mean": 1.0786502554136164,
+        "loss_std": 0.01098156850756041,
+        "pr_auc_num_valid_folds": 10.0,
+        "pr_auc_mean": 0.3756763294675075,
+        "pr_auc_std": 0.053005300742203304,
+        "precision_num_valid_folds": 10.0,
+        "precision_mean": 0.2986858974358974,
+        "precision_std": 0.06950160351089905,
+        "recall_num_valid_folds": 10.0,
+        "recall_mean": 0.44545454545454544,
+        "recall_std": 0.30545995666202624,
+        "roc_auc_num_valid_folds": 10.0,
+        "roc_auc_mean": 0.5185770750988142,
+        "roc_auc_std": 0.06900148879178496,
+        "threshold_num_valid_folds": 10.0,
+        "threshold_mean": 0.4701278358697891,
+        "threshold_std": 0.023397891206252845,
+        "roc_auc_ci_low": 0.3198754578754581,
+        "roc_auc_ci_high": 0.7326190476190475,
+        "roc_auc_ci_width": 0.4127435897435894
+      }
+    },
+    "adaptive": {
+      "epsilon_per_modality": {
+        "audio": 1.9574999999999998,
+        "video": 2.018041237113402,
+        "text": 6.75
+      },
+      "sigma_per_modality": {
+        "audio": 11.0498046875,
+        "video": 10.751953125,
+        "text": 3.8018798828125
+      },
+      "participant_epsilon": 8.002804682882838,
+      "metrics": {
+        "num_folds": 10.0,
+        "accuracy_num_valid_folds": 10.0,
+        "accuracy_mean": 0.5176470588235293,
+        "accuracy_std": 0.0959382731194123,
+        "f1_num_valid_folds": 10.0,
+        "f1_mean": 0.34656732961520925,
+        "f1_std": 0.10829961418708622,
+        "loss_num_valid_folds": 10.0,
+        "loss_mean": 1.0760239934220033,
+        "loss_std": 0.010614842156482604,
+        "pr_auc_num_valid_folds": 10.0,
+        "pr_auc_mean": 0.36022418225070274,
+        "pr_auc_std": 0.04863901742741073,
+        "precision_num_valid_folds": 10.0,
+        "precision_mean": 0.3168460012210012,
+        "precision_std": 0.07305100131082537,
+        "recall_num_valid_folds": 10.0,
+        "recall_mean": 0.44545454545454544,
+        "recall_std": 0.27408751693966066,
+        "roc_auc_num_valid_folds": 10.0,
+        "roc_auc_mean": 0.4980237154150197,
+        "roc_auc_std": 0.06353685785742329,
+        "threshold_num_valid_folds": 10.0,
+        "threshold_mean": 0.4739987179636955,
+        "threshold_std": 0.01905374220453163,
+        "roc_auc_ci_low": 0.32,
+        "roc_auc_ci_high": 0.7556249999999995,
+        "roc_auc_ci_width": 0.43562499999999954
+      }
+    },
+    "anti_adaptive": {
+      "epsilon_per_modality": {
+        "audio": 5.125,
+        "video": 4.9712499999999995,
+        "text": 1.4862499999999998
+      },
+      "sigma_per_modality": {
+        "audio": 4.77783203125,
+        "video": 4.9017333984375,
+        "text": 14.16015625
+      },
+      "participant_epsilon": 8.001060865150574,
+      "metrics": {
+        "num_folds": 10.0,
+        "accuracy_num_valid_folds": 10.0,
+        "accuracy_mean": 0.48235294117647054,
+        "accuracy_std": 0.10702003175682501,
+        "f1_num_valid_folds": 10.0,
+        "f1_mean": 0.3444381709956432,
+        "f1_std": 0.10457311087984156,
+        "loss_num_valid_folds": 10.0,
+        "loss_mean": 1.0761361809337842,
+        "loss_std": 0.009757500259728193,
+        "pr_auc_num_valid_folds": 10.0,
+        "pr_auc_mean": 0.3619113545765737,
+        "pr_auc_std": 0.06122447001043227,
+        "precision_num_valid_folds": 10.0,
+        "precision_mean": 0.30368469174503654,
+        "precision_std": 0.06316554481421609,
+        "recall_num_valid_folds": 10.0,
+        "recall_mean": 0.4727272727272728,
+        "recall_std": 0.28400907912387835,
+        "roc_auc_num_valid_folds": 10.0,
+        "roc_auc_mean": 0.4924901185770751,
+        "roc_auc_std": 0.087193353376288,
+        "threshold_num_valid_folds": 10.0,
+        "threshold_mean": 0.475126251578331,
+        "threshold_std": 0.01916756459568269,
+        "roc_auc_ci_low": 0.2885375494071146,
+        "roc_auc_ci_high": 0.7211538461538461,
+        "roc_auc_ci_width": 0.4326162967467315
+      }
+    }
+  }
+}

@@ -1,15 +1,15 @@
-"""CLI: does per-modality DP allocation beat a uniform budget? (Phase 3, H1)
+"""CLI: compare parameter-group DP noise allocations at equal total cost.
 
-H1's central claim is that splitting the privacy budget **per modality**, guided
-by re-identification risk, buys more utility than one uniform budget. Testing it
-requires the arms to cost the same privacy — and the obvious way to arrange that
-is wrong.
+The experiment assigns different calibration targets to the audio, video, and
+text encoder parameter groups, guided by re-identification risk. Testing whether
+that allocation changes utility requires the arms to have the same end-to-end
+privacy cost.
 
 A participant contributing every modality is exposed to every mechanism, so what
 they actually spend is the RDP *composition* of the three encoders plus the
 shared head (ADR-0009), which is dominated by the loosest mechanism and is not
 linear in the individual budgets. Matching arms on the sum or mean of their
-per-modality ε therefore hands more real privacy to whichever allocation is most
+per-group ε therefore hands more total privacy cost to whichever allocation is most
 uneven — the adaptive one, i.e. the hypothesis under test. Here every arm is
 scaled to the same **composed participant ε** instead
 (:func:`~privchain.privacy.budget_allocator.scale_to_participant_epsilon`), and
@@ -22,9 +22,9 @@ Three arms, all at that same participant budget:
 * ``anti_adaptive`` — ε ∝ risk, the deliberately wrong allocation. Without this
   control a two-arm gap inside the seed spread reads as a result when it is not.
 
-Each arm also reports its per-modality ε, which is the privacy half of the
-claim: at equal participant cost, does the adaptive arm really give the
-high-risk modalities a tighter budget?
+Each arm also reports its per-group calibration ε. These values describe the
+noise applied to encoder parameter groups; they are not standalone privacy
+guarantees for modality-specific records released through the fused model.
 
 Writes ``allocation_comparison.json`` + ``allocation_comparison.png`` under
 ``experiments/phase3/<run-id>/``. See ADR-0018.
@@ -213,6 +213,7 @@ def main() -> None:
         "n_report": len(splits.report),  # type: ignore[arg-type]
         "arms": {
             name: {
+                "epsilon_semantics": "parameter-group calibration target",
                 "epsilon_per_modality": {
                     m: alloc.allocations[m].target_epsilon for m in MODALITIES
                 },

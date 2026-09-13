@@ -1,0 +1,41 @@
+{
+  "accountant": "opacus-rdp",
+  "sampling": "poisson",
+  "dataset": "daic_woz",
+  "n_train": 86,
+  "n_selection": 21,
+  "n_report": 34,
+  "seeds": [
+    42,
+    7,
+    2024
+  ],
+  "device": "cuda",
+  "pos_weight": 2.5833333333333335,
+  "allocation_mode": "inverse_risk",
+  "delta": 1e-05,
+  "sample_rate": 0.37209302325581395,
+  "expected_batch_size": 32.0,
+  "planned_steps": 180,
+  "per_modality": {
+    "audio": {
+      "target_epsilon": 2.555115811328099,
+      "reidentification_risk": 1.0,
+      "noise_multiplier": 8.71826171875,
+      "consumed_epsilon": 2.554391961485389
+    },
+    "video": {
+      "target_epsilon": 2.6341400116784532,
+      "reidentification_risk": 0.97,
+      "noise_multiplier": 8.486328125,
+      "consumed_epsilon": 2.633575960759598
+    },
+    "text": {
+      "target_epsilon": 8.810744176993447,
+      "reidentification_risk": 0.29,
+      "noise_multiplier": 3.0694580078125,
+      "consumed_epsilon": 8.80984579393871
+    }
+  },
+  "participant_epsilon": 10.520973049414046
+}

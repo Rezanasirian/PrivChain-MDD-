@@ -1,5 +1,4 @@
-# Per-modality differential-privacy configuration (Phase 3, objective H1).
-# Placeholders for now; consumed once the Opacus per-modality DP wrapper lands.
+# Risk-guided DP configuration for modality encoder parameter groups (Phase 3).
 #
 # Core thesis claim (Chapter 1): re-identification risk is audio > video > text,
 # so the higher-risk modality gets a SMALLER epsilon (stronger privacy / more
@@ -22,7 +21,9 @@ privacy:
   # noise of a 21-session split, so 0.1 is a mid-range pick, not a fitted optimum.
   max_grad_norm: 0.1
 
-  # How per-modality target budgets epsilon_m are derived.
+  # How per-parameter-group calibration targets epsilon_m are derived. These
+  # are not standalone guarantees for modality-specific records; the released
+  # fused model has the composed participant guarantee below (ADR-0009).
   allocation:
     # inverse_risk: epsilon_m = total * r_m^-gamma / sum_k r_k^-gamma
     # (alternative: explicit, which uses per_modality.epsilon directly)
@@ -45,7 +46,7 @@ privacy:
     # the hypothesis under test (ADR-0018).
     total_participant_epsilon: 8.0
 
-  # Base privacy budget and per-modality re-identification risk.
+  # Base parameter-group targets and per-modality re-identification risk.
   #
   # The risks are MEASURED, not assumed (ADR-0017): 141 participants, six
   # disjoint within-session stretches each, nearest-centroid attacker at matched
@@ -71,7 +72,7 @@ privacy:
       reidentification_risk: 0.29   # measured 6.6x chance
 
   # Accuracy-vs-epsilon sweep (Phase 3 DoD): each value sets a uniform
-  # per-modality target epsilon, trains DP-SGD, and records accuracy.
+  # parameter-group target epsilon, trains DP-SGD, and records accuracy.
   sweep:
     target_epsilons: [0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
     # Epochs is a *privacy* parameter, not just a compute one: more steps means
