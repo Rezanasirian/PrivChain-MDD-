@@ -24,13 +24,61 @@ from tests.fixtures.fake_corpus import (
 
 from privchain.data.daic_woz import DaicWozDataset, _load_feature_matrix
 from privchain.data.segment_alignment import (
+    CTD_DIM,
     QUALITY_DIMS,
     TimedTurn,
+    build_frame_segments,
     plan_segments,
     rows_within,
     segment_functionals,
 )
 from privchain.data.text_vectorizers import HashingTextVectorizer
+
+
+def test_audio_ctd_appends_fixed_width_features() -> None:
+    plan = plan_segments([TimedTurn(0.0, 2.0, "one two")], 1)
+    values = np.arange(12, dtype=np.float32).reshape(4, 3)
+    timestamps = np.asarray([0.0, 0.5, 1.0, 1.5], dtype=np.float64)
+    voiced = np.asarray([1.0, 0.0, 1.0, 0.0], dtype=np.float32)
+
+    features, quality = build_frame_segments(
+        values,
+        timestamps,
+        plan,
+        modality="audio",
+        use_envelope=False,
+        voiced=voiced,
+        include_ctd=True,
+    )
+
+    assert features.shape == (1, 5 * 3 + CTD_DIM)
+    assert quality.shape == (1, QUALITY_DIMS["audio"])
+    assert features[0, -5] == pytest.approx(0.5)  # voiced ratio
+    assert features[0, -3] == pytest.approx(2.0)  # mean tokens per turn
+
+
+def test_audio_filter_removes_unvoiced_rows_and_short_turns() -> None:
+    plan = plan_segments(
+        [TimedTurn(0.0, 0.5, "short"), TimedTurn(1.0, 2.5, "long enough")], 1
+    )
+    values = np.asarray([[100.0], [10.0], [20.0], [30.0]], dtype=np.float32)
+    timestamps = np.asarray([0.25, 1.0, 1.5, 2.0], dtype=np.float64)
+    voiced = np.asarray([1.0, 1.0, 0.0, 1.0], dtype=np.float32)
+
+    features, quality = build_frame_segments(
+        values,
+        timestamps,
+        plan,
+        modality="audio",
+        use_envelope=False,
+        voiced=voiced,
+        filter_unvoiced=True,
+        min_turn_seconds=1.0,
+    )
+
+    # Only values 10 and 30 remain: short-turn value 100 and unvoiced 20 go.
+    assert features[0, 0] == pytest.approx(20.0)
+    assert quality[0, 2] == pytest.approx(np.log1p(2))
 
 SPLITS = {"train": [(300, 0, 4), (301, 1, 15)]}
 
@@ -150,6 +198,126 @@ def test_malformed_row_does_not_shift_later_timestamps(tmp_path: Path) -> None:
     assert parsed.source_rows.tolist()[5] == 6
     assert parsed.values.shape[0] == parsed.source_rows.shape[0]
     assert parsed.columns["voiced"].shape[0] == parsed.values.shape[0]
+
+
+def test_window_mean_honours_channel_validity(tmp_path: Path) -> None:
+    """Unvoiced pitch is excluded while the other channels still contribute."""
+    path = tmp_path / "audio.csv"
+    write_file(path, "10,0,2\n20,1,4\n30,0,6\n40,0,8\n")
+
+    parsed = _load_feature_matrix(
+        path,
+        delimiter=",",
+        has_header=False,
+        drop_columns=[],
+        max_frames=2,
+        frame_stride=2,
+        quality_columns={"voiced": 1},
+        validity={
+            "enabled": True,
+            "voiced_column": "voiced",
+            "invalid_when_unvoiced": [0],
+        },
+        downsample="mean",
+    )
+
+    # Window 1 keeps pitch=20 because pitch=10 is unvoiced. Window 2 has no
+    # valid pitch, so it is neutral-imputed from the session's valid windows. It
+    # must never fall back to the invalid raw values 30 and 40.
+    np.testing.assert_allclose(parsed.values[:, 0], [20.0, 20.0])
+    np.testing.assert_allclose(parsed.values[:, 2], [3.0, 7.0])
+    np.testing.assert_allclose(parsed.columns["voiced"], [0.5, 0.0])
+    assert parsed.source_rows.tolist() == [0, 2]
+
+
+def test_window_mean_excludes_failed_openface_rows(tmp_path: Path) -> None:
+    """Failed tracker rows never re-enter video through an empty-window fallback."""
+    path = tmp_path / "video.csv"
+    write_file(
+        path,
+        "frame,timestamp,confidence,success,AU01\n"
+        "0,0.0,0.99,1,2\n"
+        "1,0.1,0.10,0,100\n"
+        "2,0.2,0.20,0,200\n"
+        "3,0.3,0.20,0,300\n",
+    )
+
+    parsed = _load_feature_matrix(
+        path,
+        delimiter=",",
+        has_header=True,
+        drop_columns=["frame", "timestamp", "confidence", "success"],
+        max_frames=2,
+        frame_stride=2,
+        quality_columns=["timestamp", "confidence", "success"],
+        validity={
+            "enabled": True,
+            "require_success": True,
+            "success_column": "success",
+        },
+        downsample="mean",
+    )
+
+    # The failed value 100 is excluded from window 1. Window 2 is wholly failed,
+    # so it receives the neutral session estimate rather than 250.
+    np.testing.assert_allclose(parsed.values[:, 0], [2.0, 2.0])
+    np.testing.assert_allclose(parsed.columns["success"], [0.5, 0.0])
+
+
+def test_window_functionals_expand_each_channel_fivefold(tmp_path: Path) -> None:
+    path = tmp_path / "features.csv"
+    write_file(path, "1,2\n3,6\n")
+    parsed = _load_feature_matrix(
+        path,
+        delimiter=",",
+        has_header=False,
+        drop_columns=[],
+        max_frames=1,
+        frame_stride=2,
+        downsample="window_functionals",
+    )
+    assert parsed.values.shape == (1, 10)
+    # Concatenation order is mean, std, min, max, mean absolute difference.
+    np.testing.assert_allclose(parsed.values[0], [2, 4, 1, 2, 1, 2, 3, 6, 2, 4])
+
+
+def test_validity_is_rejected_for_plain_decimation(tmp_path: Path) -> None:
+    path = tmp_path / "audio.csv"
+    write_file(path, "10,0\n20,1\n")
+    with pytest.raises(ValueError, match="cannot be honoured under `decimate`"):
+        _load_feature_matrix(
+            path,
+            delimiter=",",
+            has_header=False,
+            drop_columns=[],
+            max_frames=2,
+            frame_stride=1,
+            quality_columns={"voiced": 1},
+            validity={
+                "enabled": True,
+                "voiced_column": "voiced",
+                "invalid_when_unvoiced": [0],
+            },
+            downsample="decimate",
+        )
+
+
+def test_window_aggregation_treats_nonfinite_entries_as_missing(tmp_path: Path) -> None:
+    path = tmp_path / "features.csv"
+    write_file(path, "1,inf\n3,5\nnan,7\ninf,9\n")
+    parsed = _load_feature_matrix(
+        path,
+        delimiter=",",
+        has_header=False,
+        drop_columns=[],
+        max_frames=2,
+        frame_stride=2,
+        downsample="mean",
+    )
+    # The all-nonfinite first channel in window 2 is neutral-imputed from the
+    # valid first window rather than treated as a real zero measurement.
+    np.testing.assert_allclose(parsed.values, [[2.0, 5.0], [2.0, 8.0]])
+    assert np.isfinite(parsed.values).all()
 
 
 def test_rows_within_unions_intervals() -> None:

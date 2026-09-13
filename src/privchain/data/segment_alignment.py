@@ -47,6 +47,11 @@ QUALITY_DIMS: dict[str, int] = {"audio": 3, "video": 4, "text": 3}
 #: Number of functionals :func:`segment_functionals` emits per feature channel.
 NUM_FUNCTIONALS = 5
 
+#: Compact conversational-temporal feature width appended to each audio
+#: segment when ``ctd.enabled`` is selected.  The features deliberately use
+#: timing and VUV only; Ellie's words never enter the depression model.
+CTD_DIM = 12
+
 
 @dataclass(frozen=True)
 class TimedTurn:
@@ -189,6 +194,9 @@ def build_frame_segments(
     voiced: NDArray[np.float32] | None = None,
     confidence: NDArray[np.float32] | None = None,
     success: NDArray[np.float32] | None = None,
+    filter_unvoiced: bool = False,
+    min_turn_seconds: float = 0.0,
+    include_ctd: bool = False,
 ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     """Build one frame modality's per-segment features and quality.
 
@@ -203,6 +211,12 @@ def build_frame_segments(
         voiced: Optional per-row voiced/unvoiced flags, for audio quality.
         confidence: Optional per-row tracker confidence, for video quality.
         success: Optional per-row tracking-success flags, for video quality.
+        filter_unvoiced: Remove audio rows whose VUV flag is not voiced before
+            computing acoustic functionals.
+        min_turn_seconds: Ignore participant turns shorter than this duration
+            in the acoustic functionals. CTD still describes the original turns.
+        include_ctd: Append the fixed-width conversational temporal block to
+            each audio segment.
 
     Returns:
         ``(features, quality)`` of shape ``(K, 5 * D)`` and ``(K, Q_m)``.
@@ -213,20 +227,74 @@ def build_frame_segments(
     if modality not in QUALITY_DIMS:
         raise ValueError(f"no quality layout for modality {modality!r}")
 
-    width = NUM_FUNCTIONALS * values.shape[1]
+    if min_turn_seconds < 0:
+        raise ValueError("min_turn_seconds must be non-negative")
+    if filter_unvoiced and modality != "audio":
+        raise ValueError("filter_unvoiced is only defined for audio")
+    if filter_unvoiced and voiced is None:
+        raise ValueError("filter_unvoiced requires per-row voiced values")
+    if include_ctd and modality != "audio":
+        raise ValueError("CTD features are only defined for audio")
+
+    width = NUM_FUNCTIONALS * values.shape[1] + (CTD_DIM if include_ctd else 0)
     features = np.zeros((plan.count, width), dtype=np.float32)
     quality = np.zeros((plan.count, QUALITY_DIMS[modality]), dtype=np.float32)
 
     for index in range(plan.effective):
-        windows = [plan.envelope(index)] if use_envelope else list(plan.intervals(index))
+        group = plan.groups[index]
+        retained_turns = tuple(
+            turn for turn in group if (turn.stop - turn.start) >= min_turn_seconds
+        )
+        if use_envelope:
+            windows = [plan.envelope(index)]
+        else:
+            windows = [(turn.start, turn.stop) for turn in retained_turns]
         mask = rows_within(timestamps, windows)
+        speech_mask = mask.copy()
+        if filter_unvoiced:
+            assert voiced is not None
+            mask &= np.isfinite(voiced) & (voiced > 0.5)
         count = int(mask.sum())
         if count == 0:
             # Text may exist here while the frames do not — a dropped tracker, a
             # window that fell between two retained audio frames. Say so rather
             # than feeding the gate a confident zero vector.
             continue
-        features[index] = segment_functionals(values[mask])
+        acoustic = segment_functionals(values[mask])
+        if include_ctd:
+            durations = np.asarray(
+                [max(0.0, turn.stop - turn.start) for turn in group], dtype=np.float32
+            )
+            token_counts = np.asarray(
+                [len(turn.text.split()) for turn in group], dtype=np.float32
+            )
+            envelope_start, envelope_stop = plan.envelope(index)
+            envelope_duration = max(0.0, envelope_stop - envelope_start)
+            speech_duration = float(durations.sum())
+            inter_response_gap = (
+                max(0.0, group[0].start - plan.groups[index - 1][-1].stop) if index else 0.0
+            )
+            voiced_ratio = _quality_scalar(voiced, speech_mask)
+            ctd = np.asarray(
+                [
+                    np.log1p(len(group)),
+                    float(durations.mean()),
+                    float(durations.std()),
+                    float(durations.max()),
+                    np.log1p(speech_duration),
+                    np.log1p(envelope_duration),
+                    max(0.0, envelope_duration - speech_duration) / max(envelope_duration, 1e-6),
+                    voiced_ratio,
+                    1.0 - voiced_ratio,
+                    float(token_counts.mean()),
+                    float((token_counts <= 1).mean()),
+                    np.log1p(inter_response_gap),
+                ],
+                dtype=np.float32,
+            )
+            features[index] = np.concatenate([acoustic, ctd])
+        else:
+            features[index] = acoustic
         if modality == "audio":
             quality[index] = (1.0, _quality_scalar(voiced, mask), float(np.log1p(count)))
         else:
