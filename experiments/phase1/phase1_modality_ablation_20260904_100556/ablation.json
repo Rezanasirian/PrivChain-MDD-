@@ -1,0 +1,41 @@
+{
+  "arms": [
+    {
+      "modalities": [
+        "audio",
+        "text",
+        "video"
+      ],
+      "name": "audio+video+text",
+      "num_folds": 5.0,
+      "accuracy_num_valid_folds": 5.0,
+      "accuracy_mean": 0.6176470588235294,
+      "accuracy_std": 0.018601633295108118,
+      "f1_num_valid_folds": 5.0,
+      "f1_mean": 0.3919047619047619,
+      "f1_std": 0.01441213900040145,
+      "loss_num_valid_folds": 5.0,
+      "loss_mean": 1.3380449777140337,
+      "loss_std": 0.06558688848775128,
+      "pr_auc_num_valid_folds": 5.0,
+      "pr_auc_mean": 0.4670175524591006,
+      "pr_auc_std": 0.029791771118408698,
+      "precision_num_valid_folds": 5.0,
+      "precision_mean": 0.40581196581196577,
+      "precision_std": 0.02021435281927449,
+      "recall_num_valid_folds": 5.0,
+      "recall_mean": 0.38181818181818183,
+      "recall_std": 0.036363636363636355,
+      "roc_auc_num_valid_folds": 5.0,
+      "roc_auc_mean": 0.5849802371541502,
+      "roc_auc_std": 0.018198995151338066,
+      "threshold_num_valid_folds": 5.0,
+      "threshold_mean": 0.4812322795391083,
+      "threshold_std": 0.021563922353862574,
+      "roc_auc_ci_low": 0.35576828063241106,
+      "roc_auc_ci_high": 0.7747109683794465,
+      "roc_auc_ci_width": 0.41894268774703547
+    }
+  ],
+  "paired_auc_differences": {}
+}

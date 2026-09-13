@@ -65,6 +65,28 @@ def main() -> None:
         help="Optional real DAIC-WOZ config; when set, ablates on real data.",
     )
     parser.add_argument(
+        "--downsample",
+        choices=("decimate", "mean", "window_functionals"),
+        default=None,
+        help="Override audio/video frame downsampling for a preprocessing comparison.",
+    )
+    parser.add_argument(
+        "--validity",
+        choices=("config", "on", "off"),
+        default="config",
+        help="Apply or disable the configured audio/video measurement-validity rules.",
+    )
+    parser.add_argument("--seeds", type=int, nargs="+", default=None)
+    parser.add_argument(
+        "--arms",
+        nargs="+",
+        default=None,
+        help=(
+            "Optional modality arms such as full audio video text audio+text. "
+            "Defaults to every non-empty subset."
+        ),
+    )
+    parser.add_argument(
         "--normalization",
         choices=("session", "corpus", "none"),
         default=None,
@@ -79,12 +101,17 @@ def main() -> None:
     config = load_baseline_config(args.config)
     seed_everything(config.seed)
     train_cfg = config.train
+    seeds = args.seeds if args.seeds else train_cfg.seeds
 
-    overrides = (
-        {m: {"normalization": args.normalization} for m in ("audio", "video")}
-        if args.normalization
-        else None
-    )
+    overrides: dict[str, dict[str, Any]] = {m: {} for m in ("audio", "video")}
+    for modality in overrides:
+        if args.normalization:
+            overrides[modality]["normalization"] = args.normalization
+        if args.downsample:
+            overrides[modality]["downsample"] = args.downsample
+        if args.validity != "config":
+            overrides[modality]["validity"] = {"enabled": args.validity == "on"}
+    overrides = {name: values for name, values in overrides.items() if values}
     splits, input_dims = build_splits(config, args.daic_config, daic_overrides=overrides)
     device = torch.device(resolve_device(train_cfg.device))
     selection_loader = make_loader(splits.selection, batch_size=train_cfg.batch_size, shuffle=False)
@@ -99,8 +126,11 @@ def main() -> None:
     objective = build_objective(config.model, config.data.phq8_max, pos_weight).to(device)
 
     run_dir = create_run_dir(train_cfg.output_dir, "phase1", "phase1_modality_ablation")
-    save_config(run_dir, {"baseline": config.model_dump(), "daic_overrides": overrides})
+    save_config(run_dir, {"baseline": config.model_dump(), "daic_overrides": overrides or None})
     print(f"normalization override: {args.normalization or '(config default)'}")
+    print(
+        f"downsample override: {args.downsample or '(config default)'}; validity: {args.validity}"
+    )
 
     def train_arm(present: frozenset[str], seed: int) -> RunResult:
         """Train one ablation arm at one seed."""
@@ -146,22 +176,33 @@ def main() -> None:
 
     # Every non-empty subset: singles show standalone value, pairs and the full
     # set show what each modality *adds* on top of the others.
-    subsets = [
+    all_subsets = [
         frozenset(combo)
         for size in (1, 2, 3)
         for combo in combinations(CAPABILITY_MODALITIES, size)
     ]
+    arm_names = {
+        "+".join(m for m in CAPABILITY_MODALITIES if m in subset): subset for subset in all_subsets
+    }
+    arm_names["full"] = frozenset(CAPABILITY_MODALITIES)
+    if args.arms:
+        unknown = sorted(set(args.arms) - set(arm_names))
+        if unknown:
+            raise ValueError(f"unknown arm(s) {unknown}; choose from {sorted(arm_names)}")
+        subsets = list(dict.fromkeys(arm_names[name] for name in args.arms))
+    else:
+        subsets = all_subsets
 
     rows: list[dict[str, Any]] = []
     runs: dict[str, list[RunResult]] = {}
     print(
         f"splits: train={len(splits.train)} selection={len(splits.selection)} "  # type: ignore[arg-type]
-        f"report={len(splits.report)}  seeds={list(train_cfg.seeds)}"
+        f"report={len(splits.report)}  seeds={list(seeds)}"
     )  # type: ignore[arg-type]
     for present in subsets:
         aggregate, arm_runs = repeat_over_seeds(
             lambda seed, subset=present: train_arm(subset, seed),  # type: ignore[misc]
-            train_cfg.seeds,
+            seeds,
         )
         aggregate.update(uncertainty_report(arm_runs))
         name = "+".join(m for m in CAPABILITY_MODALITIES if m in present)
@@ -177,14 +218,19 @@ def main() -> None:
     # scored on the same 34 sessions. Comparing their individual intervals would
     # throw away the pairing and answer a much weaker question (ADR-0020).
     full = "+".join(CAPABILITY_MODALITIES)
-    labels = pooled_scores(runs[full])[1]
-    paired = {
-        f"{full}_minus_{name}": paired_bootstrap_auc_difference(
-            labels, pooled_scores(runs[full])[0], pooled_scores(runs[name])[0], seed=config.seed
-        )
-        for name in runs
-        if name != full
-    }
+    paired: dict[str, dict[str, float]] = {}
+    if full in runs:
+        labels = pooled_scores(runs[full])[1]
+        paired = {
+            f"{full}_minus_{name}": paired_bootstrap_auc_difference(
+                labels,
+                pooled_scores(runs[full])[0],
+                pooled_scores(runs[name])[0],
+                seed=config.seed,
+            )
+            for name in runs
+            if name != full
+        }
     print(f"\npaired bootstrap: what each reduced arm gives up against `{full}`")
     for comparison, stats in sorted(paired.items(), key=lambda kv: -kv[1]["difference"]):
         verdict = "SEPARATES" if stats["significant"] else "no measured difference"
@@ -194,8 +240,23 @@ def main() -> None:
             f"p={stats['p_two_sided']:.3f}  -> {verdict}"
         )
 
+    predictions = {
+        name: {
+            "scores": pooled_scores(arm_runs)[0].tolist(),
+            "labels": pooled_scores(arm_runs)[1].tolist(),
+        }
+        for name, arm_runs in runs.items()
+    }
     (run_dir / "ablation.json").write_text(
-        json.dumps({"arms": rows, "paired_auc_differences": paired}, indent=2), encoding="utf-8"
+        json.dumps(
+            {
+                "arms": rows,
+                "paired_auc_differences": paired,
+                "pooled_predictions": predictions,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
     )
     print(f"\nRun dir: {run_dir}")
 

@@ -1,0 +1,41 @@
+{
+  "arms": [
+    {
+      "modalities": [
+        "audio",
+        "text",
+        "video"
+      ],
+      "name": "audio+video+text",
+      "num_folds": 1.0,
+      "accuracy_num_valid_folds": 1.0,
+      "accuracy_mean": 0.6176470588235294,
+      "accuracy_std": 0.0,
+      "f1_num_valid_folds": 1.0,
+      "f1_mean": 0.380952380952381,
+      "f1_std": 0.0,
+      "loss_num_valid_folds": 1.0,
+      "loss_mean": 1.2631388315383125,
+      "loss_std": 0.0,
+      "pr_auc_num_valid_folds": 1.0,
+      "pr_auc_mean": 0.5029003404003404,
+      "pr_auc_std": 0.0,
+      "precision_num_valid_folds": 1.0,
+      "precision_mean": 0.4,
+      "precision_std": 0.0,
+      "recall_num_valid_folds": 1.0,
+      "recall_mean": 0.36363636363636365,
+      "recall_std": 0.0,
+      "roc_auc_num_valid_folds": 1.0,
+      "roc_auc_mean": 0.6007905138339921,
+      "roc_auc_std": 0.0,
+      "threshold_num_valid_folds": 1.0,
+      "threshold_mean": 0.4511431008577347,
+      "threshold_std": 0.0,
+      "roc_auc_ci_low": 0.37942227986385596,
+      "roc_auc_ci_high": 0.7931375221480167,
+      "roc_auc_ci_width": 0.41371524228416073
+    }
+  ],
+  "paired_auc_differences": {}
+}
