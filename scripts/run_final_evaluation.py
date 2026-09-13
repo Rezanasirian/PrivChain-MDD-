@@ -122,6 +122,8 @@ class _ScoreCollector:
         if not self.enabled:
             return None
         return self.per_method.setdefault(method, [])
+
+
 PRE_REGISTRATION = "docs/evaluation/PRE-REGISTRATION-2026-09-13.md"
 
 
