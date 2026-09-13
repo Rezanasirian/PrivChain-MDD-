@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" font-family="Segoe UI, Tahoma, sans-serif">
+  <rect width="760" height="420" fill="#ffffff"/>
+  <text x="380" y="26" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Confusion matrices on the official test split (47 participants, 14 positive)</text>
+  <text x="380" y="45" text-anchor="middle" font-size="11.5" fill="#666666">cell values are means over 3 seeds, so they are not integers</text>
+
+  <!-- ==== CENTRALIZED ==== -->
+  <text x="150" y="78" text-anchor="middle" font-size="13" font-weight="600" fill="#1b5e20">Centralized</text>
+  <text x="150" y="95" text-anchor="middle" font-size="11" fill="#666">accuracy 0.681 · F1 0.499</text>
+  <g font-size="11" fill="#555" text-anchor="middle">
+    <text x="120" y="118">predicted 0</text>
+    <text x="196" y="118">predicted 1</text>
+  </g>
+  <text x="76" y="148" font-size="11" fill="#555" text-anchor="end">actual 0</text>
+  <text x="76" y="196" font-size="11" fill="#555" text-anchor="end">actual 1</text>
+  <rect x="84" y="126" width="72" height="40" fill="#a5d6a7" stroke="#ffffff" stroke-width="2"/>
+  <text x="120" y="151" text-anchor="middle" font-size="14" font-weight="600" fill="#1b5e20">24.7</text>
+  <rect x="160" y="126" width="72" height="40" fill="#ffe0b2" stroke="#ffffff" stroke-width="2"/>
+  <text x="196" y="151" text-anchor="middle" font-size="14" fill="#e65100">8.3</text>
+  <rect x="84" y="174" width="72" height="40" fill="#ffcdd2" stroke="#ffffff" stroke-width="2"/>
+  <text x="120" y="199" text-anchor="middle" font-size="14" fill="#b71c1c">6.3</text>
+  <rect x="160" y="174" width="72" height="40" fill="#66bb6a" stroke="#ffffff" stroke-width="2"/>
+  <text x="196" y="199" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">7.7</text>
+  <text x="158" y="238" text-anchor="middle" font-size="11" fill="#555">recall 0.548 · precision 0.480</text>
+
+  <!-- ==== PROPOSED ==== -->
+  <text x="380" y="78" text-anchor="middle" font-size="13" font-weight="600" fill="#0d47a1">Proposed framework</text>
+  <text x="380" y="95" text-anchor="middle" font-size="11" fill="#666">accuracy 0.624 · F1 0.406</text>
+  <g font-size="11" fill="#555" text-anchor="middle">
+    <text x="350" y="118">predicted 0</text>
+    <text x="426" y="118">predicted 1</text>
+  </g>
+  <text x="306" y="148" font-size="11" fill="#555" text-anchor="end">actual 0</text>
+  <text x="306" y="196" font-size="11" fill="#555" text-anchor="end">actual 1</text>
+  <rect x="314" y="126" width="72" height="40" fill="#90caf9" stroke="#ffffff" stroke-width="2"/>
+  <text x="350" y="151" text-anchor="middle" font-size="14" font-weight="600" fill="#0d47a1">21.1</text>
+  <rect x="390" y="126" width="72" height="40" fill="#ffe0b2" stroke="#ffffff" stroke-width="2"/>
+  <text x="426" y="151" text-anchor="middle" font-size="14" fill="#e65100">11.9</text>
+  <rect x="314" y="174" width="72" height="40" fill="#ffcdd2" stroke="#ffffff" stroke-width="2"/>
+  <text x="350" y="199" text-anchor="middle" font-size="14" fill="#b71c1c">7.0</text>
+  <rect x="390" y="174" width="72" height="40" fill="#1976d2" stroke="#ffffff" stroke-width="2"/>
+  <text x="426" y="199" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">7.0</text>
+  <text x="388" y="238" text-anchor="middle" font-size="11" fill="#555">recall 0.500 · precision 0.370</text>
+
+  <!-- ==== FEDAVG ==== -->
+  <text x="610" y="78" text-anchor="middle" font-size="13" font-weight="600" fill="#616161">Plain FedAvg</text>
+  <text x="610" y="95" text-anchor="middle" font-size="11" fill="#666">accuracy 0.426 · F1 0.405</text>
+  <g font-size="11" fill="#555" text-anchor="middle">
+    <text x="580" y="118">predicted 0</text>
+    <text x="656" y="118">predicted 1</text>
+  </g>
+  <text x="536" y="148" font-size="11" fill="#555" text-anchor="end">actual 0</text>
+  <text x="536" y="196" font-size="11" fill="#555" text-anchor="end">actual 1</text>
+  <rect x="544" y="126" width="72" height="40" fill="#eeeeee" stroke="#ffffff" stroke-width="2"/>
+  <text x="580" y="151" text-anchor="middle" font-size="14" fill="#616161">11.8</text>
+  <rect x="620" y="126" width="72" height="40" fill="#ef9a9a" stroke="#ffffff" stroke-width="2"/>
+  <text x="656" y="151" text-anchor="middle" font-size="14" font-weight="600" fill="#b71c1c">21.2</text>
+  <rect x="544" y="174" width="72" height="40" fill="#ffcdd2" stroke="#ffffff" stroke-width="2"/>
+  <text x="580" y="199" text-anchor="middle" font-size="14" fill="#b71c1c">5.0</text>
+  <rect x="620" y="174" width="72" height="40" fill="#bdbdbd" stroke="#ffffff" stroke-width="2"/>
+  <text x="656" y="199" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">9.0</text>
+  <text x="618" y="238" text-anchor="middle" font-size="11" fill="#555">recall 0.643 · precision 0.298</text>
+
+  <!-- interpretation box -->
+  <rect x="60" y="266" width="640" height="112" rx="6" fill="#fafafa" stroke="#e0e0e0"/>
+  <text x="76" y="288" font-size="12.5" font-weight="600" fill="#333">Why FedAvg's higher recall is not a better model</text>
+  <text x="76" y="310" font-size="11.5" fill="#444">FedAvg catches more positives (9.0 of 14) than the proposed framework (7.0), but it does so by labelling</text>
+  <text x="76" y="327" font-size="11.5" fill="#444">21.2 of 33 healthy participants as depressed — a false-positive rate of 64%. In a screening setting that</text>
+  <text x="76" y="344" font-size="11.5" fill="#444">floods the clinician with referrals and destroys the tool's usefulness, which is why ROC-AUC and macro-F1,</text>
+  <text x="76" y="361" font-size="11.5" fill="#444">not recall alone, are the criteria of Chapter 4. The threshold of each arm was set on the selection split.</text>
+
+  <text x="60" y="404" font-size="10.5" fill="#666666">Derived from precision and recall in experiments/phase7/phase7_final_evaluation_20260913_104945/official_test.json</text>
+</svg>

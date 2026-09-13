@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="450" viewBox="0 0 760 450" font-family="Segoe UI, Tahoma, sans-serif">
+  <rect width="760" height="450" fill="#ffffff"/>
+  <text x="380" y="26" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Measured re-identification risk per modality (141 participants, 3 seeds)</text>
+  <text x="380" y="45" text-anchor="middle" font-size="11.5" fill="#666666">nearest-centroid attacker at matched feature width, six disjoint within-session stretches each</text>
+
+  <!-- log-ish axis: rate 0.001 .. 0.20 ; use linear on 0..0.20 -> x 200..690 (2450 px per 1.0) -->
+  <g stroke="#cccccc" stroke-width="1">
+    <line x1="200" y1="80" x2="200" y2="330"/>
+    <line x1="200" y1="330" x2="700" y2="330"/>
+  </g>
+  <g stroke="#eeeeee" stroke-width="1">
+    <line x1="322.5" y1="80" x2="322.5" y2="330"/>
+    <line x1="445" y1="80" x2="445" y2="330"/>
+    <line x1="567.5" y1="80" x2="567.5" y2="330"/>
+    <line x1="690" y1="80" x2="690" y2="330"/>
+  </g>
+  <g font-size="12" fill="#555555" text-anchor="middle">
+    <text x="200" y="350">0.00</text>
+    <text x="322.5" y="350">0.05</text>
+    <text x="445" y="350">0.10</text>
+    <text x="567.5" y="350">0.15</text>
+    <text x="690" y="350">0.20</text>
+  </g>
+  <text x="445" y="374" font-size="13" fill="#333" text-anchor="middle">correct re-identification rate</text>
+
+  <!-- chance line at 0.0071 -> x = 200 + 17.4 = 217.4 -->
+  <line x1="217.4" y1="80" x2="217.4" y2="330" stroke="#c62828" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="224" y="94" font-size="11" font-weight="600" fill="#c62828">chance = 1/141 = 0.0071</text>
+
+  <!-- AUDIO 0.158 -> width 387.1 ; sd .004 -> 9.8 -->
+  <text x="190" y="128" font-size="13" font-weight="600" fill="#222" text-anchor="end">audio</text>
+  <rect x="200" y="110" width="387.1" height="28" fill="#c62828"/>
+  <g stroke="#7f0000" stroke-width="1.6">
+    <line x1="577.3" y1="124" x2="596.9" y2="124"/><line x1="577.3" y1="118" x2="577.3" y2="130"/><line x1="596.9" y1="118" x2="596.9" y2="130"/>
+  </g>
+  <text x="606" y="128" font-size="12" font-weight="600" fill="#c62828">0.158 — 22.2× chance</text>
+  <text x="190" y="146" font-size="10.5" fill="#888" text-anchor="end">r = 1.00</text>
+
+  <!-- VIDEO 0.153 -> 374.9 ; sd .010 -> 24.5 -->
+  <text x="190" y="180" font-size="13" font-weight="600" fill="#222" text-anchor="end">video</text>
+  <rect x="200" y="162" width="374.9" height="28" fill="#ef5350"/>
+  <g stroke="#7f0000" stroke-width="1.6">
+    <line x1="550.4" y1="176" x2="599.4" y2="176"/><line x1="550.4" y1="170" x2="550.4" y2="182"/><line x1="599.4" y1="170" x2="599.4" y2="182"/>
+  </g>
+  <text x="608" y="180" font-size="12" font-weight="600" fill="#c62828">0.153 — 21.6× chance</text>
+  <text x="190" y="198" font-size="10.5" fill="#888" text-anchor="end">r = 0.97</text>
+
+  <!-- TEXT 0.046 -> 112.7 ; sd .004 -> 9.8 -->
+  <text x="190" y="232" font-size="13" font-weight="600" fill="#222" text-anchor="end">text</text>
+  <rect x="200" y="214" width="112.7" height="28" fill="#ef6c00"/>
+  <g stroke="#e65100" stroke-width="1.6">
+    <line x1="302.9" y1="228" x2="322.5" y2="228"/><line x1="302.9" y1="222" x2="302.9" y2="234"/><line x1="322.5" y1="222" x2="322.5" y2="234"/>
+  </g>
+  <text x="332" y="232" font-size="12" font-weight="600" fill="#ef6c00">0.046 — 6.6× chance</text>
+  <text x="190" y="250" font-size="10.5" fill="#888" text-anchor="end">r = 0.29</text>
+
+  <!-- NEGATIVE CONTROL -->
+  <text x="190" y="290" font-size="12.5" font-weight="600" fill="#555" text-anchor="end">shuffled labels</text>
+  <rect x="200" y="272" width="17.4" height="28" fill="#9e9e9e"/>
+  <text x="228" y="290" font-size="12" fill="#666">0.0024 – 0.0071 — exactly at chance</text>
+  <text x="190" y="308" font-size="10.5" fill="#888" text-anchor="end">negative control</text>
+
+  <!-- bracket showing audio ≈ video -->
+  <g stroke="#1565c0" stroke-width="1.6">
+    <line x1="612" y1="112" x2="628" y2="112"/>
+    <line x1="628" y1="112" x2="628" y2="188"/>
+    <line x1="612" y1="188" x2="628" y2="188"/>
+  </g>
+  <text x="700" y="154" font-size="11" font-weight="600" fill="#1565c0" text-anchor="middle" transform="rotate(-90 700 154)">not separable</text>
+
+  <!-- interpretation -->
+  <rect x="60" y="388" width="640" height="52" rx="6" fill="#fafafa" stroke="#e0e0e0"/>
+  <text x="76" y="408" font-size="11.5" fill="#444"><tspan font-weight="600">Correction to Chapter 1.</tspan> The assumed values 0.9 / 0.6 / 0.3 asserted a 1.5× separation between audio and video that</text>
+  <text x="76" y="425" font-size="11.5" fill="#444">the data does not support; only text is clearly lower-risk. The allocation of eq. (3-5) now derives from these measured values.</text>
+</svg>

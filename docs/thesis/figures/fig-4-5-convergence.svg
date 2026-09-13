@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480" font-family="Segoe UI, Tahoma, sans-serif">
+  <rect width="760" height="480" fill="#ffffff"/>
+  <text x="380" y="26" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Selection-split ROC-AUC during training (seed 42)</text>
+  <text x="380" y="45" text-anchor="middle" font-size="11.5" fill="#666666">this is the curve early stopping reads — not the reported dev or test number</text>
+
+  <!-- axes: x 0..80 steps -> 80..700 (7.75 px/step) ; y 0.30..0.70 -> 400..80 (800 px per 1.0) -->
+  <g stroke="#cccccc" stroke-width="1">
+    <line x1="80" y1="80" x2="80" y2="400"/>
+    <line x1="80" y1="400" x2="700" y2="400"/>
+  </g>
+  <g stroke="#eeeeee" stroke-width="1">
+    <line x1="80" y1="320" x2="700" y2="320"/>
+    <line x1="80" y1="240" x2="700" y2="240"/>
+    <line x1="80" y1="160" x2="700" y2="160"/>
+    <line x1="80" y1="80"  x2="700" y2="80"/>
+  </g>
+  <g font-size="12" fill="#555555" text-anchor="end">
+    <text x="72" y="404">0.30</text>
+    <text x="72" y="324">0.40</text>
+    <text x="72" y="244">0.50</text>
+    <text x="72" y="164">0.60</text>
+    <text x="72" y="84">0.70</text>
+  </g>
+  <text x="28" y="240" font-size="13" fill="#333" text-anchor="middle" transform="rotate(-90 28 240)">ROC-AUC on selection split</text>
+
+  <g font-size="12" fill="#555555" text-anchor="middle">
+    <text x="80" y="420">0</text>
+    <text x="235" y="420">20</text>
+    <text x="390" y="420">40</text>
+    <text x="545" y="420">60</text>
+    <text x="700" y="420">80</text>
+  </g>
+  <text x="390" y="442" font-size="13" fill="#333" text-anchor="middle">federated round (or centralized epoch)</text>
+
+  <!-- chance line -->
+  <line x1="80" y1="240" x2="700" y2="240" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="696" y="235" font-size="11" fill="#777777" text-anchor="end">chance = 0.50</text>
+
+  <!-- centralized (76 epochs) -->
+  <polyline fill="none" stroke="#2e7d32" stroke-width="2.4"
+    points="87.8,373.6 95.5,368.8 103.3,368.8 111,351.2 118.8,351.2 126.5,342.4 134.3,333.6 142,333.6 149.8,333.6 157.5,333.6 165.3,342.4 173,324.8 180.8,314.4 188.5,314.4 196.3,333.6 204,342.4 211.8,351.2 219.5,351.2 227.3,351.2 235,360 242.8,351.2 250.5,351.2 258.3,351.2 266,314.4 273.8,288.8 281.5,271.2 289.3,271.2 297,235.2 304.8,235.2 312.5,217.6 320.3,217.6 328,200 335.8,182.4 343.5,182.4 351.3,182.4 359,182.4 366.8,173.6 374.5,173.6 382.3,182.4 390,182.4 397.8,182.4 405.5,182.4 413.3,182.4 421,191.2 428.8,191.2 436.5,182.4 444.3,182.4 452,182.4 459.8,182.4 467.5,173.6 475.3,173.6 483,173.6 490.8,173.6 498.5,173.6 506.3,173.6 514,173.6 521.8,173.6 529.5,173.6 537.3,173.6 545,173.6 552.8,165.2 560.5,165.2 568.3,165.2 576,165.2 583.8,165.2 591.5,165.2 599.3,165.2 607,165.2 614.8,165.2 622.5,165.2 630.3,165.2 638,165.2 645.8,165.2 653.5,165.2 661.3,165.2 669,165.2"/>
+
+  <!-- fedavg -->
+  <polyline fill="none" stroke="#9e9e9e" stroke-width="2"
+    points="87.8,240 95.5,257.6 103.3,293.6 111,302.4 118.8,320 126.5,302.4 134.3,320 142,328.8 149.8,337.6 157.5,337.6 165.3,328.8 173,355.2 180.8,355.2 188.5,355.2 196.3,328.8 204,346.4 211.8,373.6 219.5,373.6 227.3,364.8 235,364.8 242.8,355.2 250.5,346.4 258.3,337.6 266,337.6 273.8,328.8 281.5,328.8 289.3,328.8 297,328.8 304.8,328.8 312.5,328.8 320.3,328.8 328,328.8 335.8,337.6 343.5,328.8 351.3,328.8 359,320 366.8,328.8 374.5,328.8 382.3,328.8 390,328.8 397.8,328.8"/>
+
+  <!-- capability -->
+  <polyline fill="none" stroke="#90caf9" stroke-width="2"
+    points="87.8,231.2 95.5,248.8 103.3,311.2 111,302.4 118.8,328.8 126.5,320 134.3,320 142,337.6 149.8,311.2 157.5,311.2 165.3,328.8 173,364.8 180.8,311.2 188.5,320 196.3,337.6 204,346.4 211.8,337.6 219.5,337.6 227.3,328.8 235,328.8 242.8,346.4 250.5,337.6 258.3,320 266,328.8 273.8,328.8 281.5,328.8 289.3,320 297,320 304.8,328.8 312.5,328.8 320.3,328.8 328,320 335.8,320 343.5,328.8 351.3,311.2 359,311.2 366.8,311.2 374.5,302.4 382.3,311.2 390,311.2 397.8,311.2"/>
+
+  <!-- full framework -->
+  <polyline fill="none" stroke="#1565c0" stroke-width="2.6"
+    points="87.8,275.2 95.5,311.2 103.3,302.4 111,302.4 118.8,302.4 126.5,275.2 134.3,293.6 142,266.4 149.8,293.6 157.5,311.2 165.3,284.8 173,293.6 180.8,302.4 188.5,311.2 196.3,284.8 204,293.6 211.8,293.6 219.5,320 227.3,311.2 235,293.6 242.8,293.6 250.5,302.4 258.3,311.2 266,302.4 273.8,311.2 281.5,311.2 289.3,302.4 297,311.2 304.8,311.2 312.5,311.2 320.3,302.4 328,311.2 335.8,302.4 343.5,293.6 351.3,293.6 359,302.4 366.8,293.6 374.5,311.2 382.3,302.4 390,311.2 397.8,293.6 405.5,302.4 413.3,293.6 421,293.6 428.8,293.6 436.5,293.6 444.3,284.8 452,293.6"/>
+
+  <!-- early stopping markers -->
+  <circle cx="87.8" cy="240" r="5" fill="#ffffff" stroke="#9e9e9e" stroke-width="2.4"/>
+  <circle cx="87.8" cy="231.2" r="5" fill="#ffffff" stroke="#90caf9" stroke-width="2.4"/>
+  <circle cx="142" cy="266.4" r="5.5" fill="#ffffff" stroke="#1565c0" stroke-width="2.6"/>
+  <circle cx="669" cy="165.2" r="5.5" fill="#ffffff" stroke="#2e7d32" stroke-width="2.6"/>
+
+  <!-- annotation -->
+  <g stroke="#c62828" stroke-width="1.4" stroke-dasharray="4 3">
+    <line x1="150" y1="266.4" x2="230" y2="120"/>
+  </g>
+  <text x="236" y="116" font-size="11.5" font-weight="600" fill="#c62828">federated arms peak in the first ~8 rounds,</text>
+  <text x="236" y="132" font-size="11.5" fill="#c62828">then drift down — early stopping keeps the peak</text>
+
+  <text x="560" y="140" font-size="11.5" fill="#2e7d32">centralized keeps improving to epoch ~61</text>
+
+  <!-- legend -->
+  <g font-size="11.5">
+    <line x1="90" y1="458" x2="120" y2="458" stroke="#2e7d32" stroke-width="2.4"/><text x="126" y="462" fill="#555">centralized</text>
+    <line x1="210" y1="458" x2="240" y2="458" stroke="#9e9e9e" stroke-width="2"/><text x="246" y="462" fill="#555">FedAvg</text>
+    <line x1="315" y1="458" x2="345" y2="458" stroke="#90caf9" stroke-width="2"/><text x="351" y="462" fill="#555">subgraph</text>
+    <line x1="430" y1="458" x2="460" y2="458" stroke="#1565c0" stroke-width="2.6"/><text x="466" y="462" fill="#555">full framework</text>
+    <circle cx="600" cy="458" r="5" fill="#ffffff" stroke="#555" stroke-width="2"/><text x="612" y="462" fill="#555">selected checkpoint</text>
+  </g>
+  <text x="80" y="478" font-size="10.5" fill="#666666">Source: experiments/phase4/phase4_federated_comparison_20260913_085150/*/seed_42/metrics.jsonl — 21 selection sessions, so single steps move the curve by ~0.011.</text>
+</svg>
