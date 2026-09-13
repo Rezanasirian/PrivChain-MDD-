@@ -1,0 +1,167 @@
+{
+  "mechanisms": {
+    "membership_inference": "per-modality DP-SGD training at the swept epsilon (Poisson sampling, Opacus RDP accounting)",
+    "reidentification": "DP release of the embedding: clipped to embedding_clip_norm, then the Gaussian mechanism at the swept epsilon"
+  },
+  "embedding_clip_norm": 1.0,
+  "num_subjects": 141,
+  "chance_accuracy": 0.0070921985815602835,
+  "delta": 1e-05,
+  "reidentification": {
+    "audio": [
+      {
+        "target_epsilon": 0.5,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 2.0,
+        "success_rate": 0.0070921985815602835
+      },
+      {
+        "target_epsilon": 8.0,
+        "success_rate": 0.0070921985815602835
+      },
+      {
+        "target_epsilon": 32.0,
+        "success_rate": 0.01182033096926714
+      },
+      {
+        "target_epsilon": 128.0,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 512.0,
+        "success_rate": 0.014184397163120567
+      }
+    ],
+    "video": [
+      {
+        "target_epsilon": 0.5,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 2.0,
+        "success_rate": 0.0070921985815602835
+      },
+      {
+        "target_epsilon": 8.0,
+        "success_rate": 0.0070921985815602835
+      },
+      {
+        "target_epsilon": 32.0,
+        "success_rate": 0.0070921985815602835
+      },
+      {
+        "target_epsilon": 128.0,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 512.0,
+        "success_rate": 0.037825059101654845
+      }
+    ],
+    "text": [
+      {
+        "target_epsilon": 0.5,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 2.0,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 8.0,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 32.0,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 128.0,
+        "success_rate": 0.009456264775413711
+      },
+      {
+        "target_epsilon": 512.0,
+        "success_rate": 0.009456264775413711
+      }
+    ]
+  },
+  "non_private_reference": {
+    "reidentification": {
+      "audio": 0.1276595744680851,
+      "video": 0.15130023640661938,
+      "text": 0.028368794326241134
+    },
+    "membership_inference": {
+      "auc": 0.5622435020519836,
+      "accuracy": 0.6333333333333333,
+      "advantage": 0.12448700410396718,
+      "direction": 1.0
+    }
+  },
+  "adaptive_allocation": {
+    "mode": "inverse_risk",
+    "per_modality": {
+      "audio": {
+        "epsilon": 2.555115811328099,
+        "reidentification_risk": 1.0,
+        "success_rate": 0.0070921985815602835
+      },
+      "video": {
+        "epsilon": 2.6341400116784532,
+        "reidentification_risk": 0.97,
+        "success_rate": 0.0070921985815602835
+      },
+      "text": {
+        "epsilon": 8.810744176993447,
+        "reidentification_risk": 0.29,
+        "success_rate": 0.009456264775413711
+      }
+    }
+  },
+  "membership_inference": [
+    {
+      "target_epsilon": 0.5,
+      "auc": 0.4637482900136799,
+      "accuracy": 0.7,
+      "advantage": -0.0725034199726402,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 2.0,
+      "auc": 0.46238030095759236,
+      "accuracy": 0.7,
+      "advantage": -0.07523939808481528,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 8.0,
+      "auc": 0.46238030095759236,
+      "accuracy": 0.7,
+      "advantage": -0.07523939808481528,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 32.0,
+      "auc": 0.46101231190150477,
+      "accuracy": 0.7,
+      "advantage": -0.07797537619699046,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 128.0,
+      "auc": 0.46101231190150477,
+      "accuracy": 0.7,
+      "advantage": -0.07797537619699046,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 512.0,
+      "auc": 0.46101231190150477,
+      "accuracy": 0.7,
+      "advantage": -0.07797537619699046,
+      "direction": 1.0
+    }
+  ]
+}

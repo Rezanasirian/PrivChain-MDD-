@@ -1,0 +1,355 @@
+{
+  "mechanisms": {
+    "membership_inference": "per-modality DP-SGD training at the swept epsilon (Poisson sampling, Opacus RDP accounting)",
+    "reidentification": "DP release of the embedding: clipped to embedding_clip_norm, then the Gaussian mechanism at the swept epsilon"
+  },
+  "seeds": [
+    42,
+    7
+  ],
+  "membership_split": "balanced",
+  "mia_only": true,
+  "num_members": 16,
+  "num_nonmembers": 16,
+  "embedding_clip_norm": 1.0,
+  "num_subjects": 32,
+  "chance_accuracy": 0.03125,
+  "delta": 1e-05,
+  "reidentification": {
+    "audio": [],
+    "video": [],
+    "text": []
+  },
+  "non_private_reference": {
+    "reidentification": {},
+    "membership_inference": {
+      "auc": 0.671875,
+      "accuracy": 0.6875,
+      "advantage": 0.34375,
+      "direction": 1.0
+    }
+  },
+  "adaptive_allocation": {
+    "mode": "inverse_risk",
+    "per_modality": {}
+  },
+  "membership_inference": [
+    {
+      "target_epsilon": 0.5,
+      "auc": 0.34375,
+      "accuracy": 0.4375,
+      "advantage": -0.3125,
+      "direction": -1.0
+    },
+    {
+      "target_epsilon": 2.0,
+      "auc": 0.34375,
+      "accuracy": 0.4375,
+      "advantage": -0.3125,
+      "direction": -1.0
+    },
+    {
+      "target_epsilon": 8.0,
+      "auc": 0.34375,
+      "accuracy": 0.4375,
+      "advantage": -0.3125,
+      "direction": -1.0
+    },
+    {
+      "target_epsilon": 32.0,
+      "auc": 0.34375,
+      "accuracy": 0.4375,
+      "advantage": -0.3125,
+      "direction": -1.0
+    },
+    {
+      "target_epsilon": 128.0,
+      "auc": 0.34375,
+      "accuracy": 0.4375,
+      "advantage": -0.3125,
+      "direction": -1.0
+    },
+    {
+      "target_epsilon": 512.0,
+      "auc": 0.34375,
+      "accuracy": 0.4375,
+      "advantage": -0.3125,
+      "direction": -1.0
+    }
+  ],
+  "membership_inference_summary": {
+    "per_epsilon": [
+      {
+        "target_epsilon": 0.5,
+        "num_seeds": 2.0,
+        "accuracy_mean": 0.5,
+        "accuracy_std": 0.08838834764831845,
+        "accuracy_ci95_low": 0.3775,
+        "accuracy_ci95_high": 0.6224999999999999,
+        "advantage_mean": -0.09375,
+        "advantage_std": 0.30935921676911454,
+        "advantage_ci95_low": -0.5225,
+        "advantage_ci95_high": 0.33499999999999996,
+        "auc_mean": 0.453125,
+        "auc_std": 0.15467960838455727,
+        "auc_ci95_low": 0.23875000000000002,
+        "auc_ci95_high": 0.6675,
+        "direction_mean": 0.0,
+        "direction_std": 1.4142135623730951,
+        "direction_ci95_low": -1.9599999999999997,
+        "direction_ci95_high": 1.9599999999999997
+      },
+      {
+        "target_epsilon": 2.0,
+        "num_seeds": 2.0,
+        "accuracy_mean": 0.4375,
+        "accuracy_std": 0.0,
+        "accuracy_ci95_low": 0.4375,
+        "accuracy_ci95_high": 0.4375,
+        "advantage_mean": -0.09375,
+        "advantage_std": 0.30935921676911454,
+        "advantage_ci95_low": -0.5225,
+        "advantage_ci95_high": 0.33499999999999996,
+        "auc_mean": 0.453125,
+        "auc_std": 0.15467960838455727,
+        "auc_ci95_low": 0.23875000000000002,
+        "auc_ci95_high": 0.6675,
+        "direction_mean": 0.0,
+        "direction_std": 1.4142135623730951,
+        "direction_ci95_low": -1.9599999999999997,
+        "direction_ci95_high": 1.9599999999999997
+      },
+      {
+        "target_epsilon": 8.0,
+        "num_seeds": 2.0,
+        "accuracy_mean": 0.4375,
+        "accuracy_std": 0.0,
+        "accuracy_ci95_low": 0.4375,
+        "accuracy_ci95_high": 0.4375,
+        "advantage_mean": -0.09375,
+        "advantage_std": 0.30935921676911454,
+        "advantage_ci95_low": -0.5225,
+        "advantage_ci95_high": 0.33499999999999996,
+        "auc_mean": 0.453125,
+        "auc_std": 0.15467960838455727,
+        "auc_ci95_low": 0.23875000000000002,
+        "auc_ci95_high": 0.6675,
+        "direction_mean": 0.0,
+        "direction_std": 1.4142135623730951,
+        "direction_ci95_low": -1.9599999999999997,
+        "direction_ci95_high": 1.9599999999999997
+      },
+      {
+        "target_epsilon": 32.0,
+        "num_seeds": 2.0,
+        "accuracy_mean": 0.4375,
+        "accuracy_std": 0.0,
+        "accuracy_ci95_low": 0.4375,
+        "accuracy_ci95_high": 0.4375,
+        "advantage_mean": -0.09375,
+        "advantage_std": 0.30935921676911454,
+        "advantage_ci95_low": -0.5225,
+        "advantage_ci95_high": 0.33499999999999996,
+        "auc_mean": 0.453125,
+        "auc_std": 0.15467960838455727,
+        "auc_ci95_low": 0.23875000000000002,
+        "auc_ci95_high": 0.6675,
+        "direction_mean": 0.0,
+        "direction_std": 1.4142135623730951,
+        "direction_ci95_low": -1.9599999999999997,
+        "direction_ci95_high": 1.9599999999999997
+      },
+      {
+        "target_epsilon": 128.0,
+        "num_seeds": 2.0,
+        "accuracy_mean": 0.4375,
+        "accuracy_std": 0.0,
+        "accuracy_ci95_low": 0.4375,
+        "accuracy_ci95_high": 0.4375,
+        "advantage_mean": -0.09375,
+        "advantage_std": 0.30935921676911454,
+        "advantage_ci95_low": -0.5225,
+        "advantage_ci95_high": 0.33499999999999996,
+        "auc_mean": 0.453125,
+        "auc_std": 0.15467960838455727,
+        "auc_ci95_low": 0.23875000000000002,
+        "auc_ci95_high": 0.6675,
+        "direction_mean": 0.0,
+        "direction_std": 1.4142135623730951,
+        "direction_ci95_low": -1.9599999999999997,
+        "direction_ci95_high": 1.9599999999999997
+      },
+      {
+        "target_epsilon": 512.0,
+        "num_seeds": 2.0,
+        "accuracy_mean": 0.4375,
+        "accuracy_std": 0.0,
+        "accuracy_ci95_low": 0.4375,
+        "accuracy_ci95_high": 0.4375,
+        "advantage_mean": -0.09375,
+        "advantage_std": 0.30935921676911454,
+        "advantage_ci95_low": -0.5225,
+        "advantage_ci95_high": 0.33499999999999996,
+        "auc_mean": 0.453125,
+        "auc_std": 0.15467960838455727,
+        "auc_ci95_low": 0.23875000000000002,
+        "auc_ci95_high": 0.6675,
+        "direction_mean": 0.0,
+        "direction_std": 1.4142135623730951,
+        "direction_ci95_low": -1.9599999999999997,
+        "direction_ci95_high": 1.9599999999999997
+      }
+    ],
+    "non_private_reference": {
+      "num_seeds": 2.0,
+      "accuracy_mean": 0.625,
+      "accuracy_std": 0.08838834764831845,
+      "accuracy_ci95_low": 0.5025000000000001,
+      "accuracy_ci95_high": 0.7474999999999999,
+      "advantage_mean": 0.203125,
+      "advantage_std": 0.1988737822087165,
+      "advantage_ci95_low": -0.07249999999999995,
+      "advantage_ci95_high": 0.47874999999999995,
+      "auc_mean": 0.6015625,
+      "auc_std": 0.09943689110435824,
+      "auc_ci95_low": 0.46375,
+      "auc_ci95_high": 0.739375,
+      "direction_mean": 0.0,
+      "direction_std": 1.4142135623730951,
+      "direction_ci95_low": -1.9599999999999997,
+      "direction_ci95_high": 1.9599999999999997
+    }
+  },
+  "per_seed": [
+    {
+      "seed": 42,
+      "num_members": 16,
+      "num_nonmembers": 16,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.5625,
+          "accuracy": 0.5625,
+          "advantage": 0.125,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.5625,
+          "accuracy": 0.4375,
+          "advantage": 0.125,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.5625,
+          "accuracy": 0.4375,
+          "advantage": 0.125,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.5625,
+          "accuracy": 0.4375,
+          "advantage": 0.125,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.5625,
+          "accuracy": 0.4375,
+          "advantage": 0.125,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.5625,
+          "accuracy": 0.4375,
+          "advantage": 0.125,
+          "direction": 1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.53125,
+          "accuracy": 0.5625,
+          "advantage": 0.0625,
+          "direction": -1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 7,
+      "num_members": 16,
+      "num_nonmembers": 16,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.34375,
+          "accuracy": 0.4375,
+          "advantage": -0.3125,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.34375,
+          "accuracy": 0.4375,
+          "advantage": -0.3125,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.34375,
+          "accuracy": 0.4375,
+          "advantage": -0.3125,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.34375,
+          "accuracy": 0.4375,
+          "advantage": -0.3125,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.34375,
+          "accuracy": 0.4375,
+          "advantage": -0.3125,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.34375,
+          "accuracy": 0.4375,
+          "advantage": -0.3125,
+          "direction": -1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.671875,
+          "accuracy": 0.6875,
+          "advantage": 0.34375,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    }
+  ]
+}

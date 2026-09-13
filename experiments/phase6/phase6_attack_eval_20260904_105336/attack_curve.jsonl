@@ -1,0 +1,6 @@
+{"target_epsilon": 0.5, "reid_audio": 0.009456264775413711, "reid_video": 0.009456264775413711, "reid_text": 0.009456264775413711}
+{"target_epsilon": 2.0, "reid_audio": 0.0070921985815602835, "reid_video": 0.0070921985815602835, "reid_text": 0.009456264775413711}
+{"target_epsilon": 8.0, "reid_audio": 0.0070921985815602835, "reid_video": 0.0070921985815602835, "reid_text": 0.009456264775413711}
+{"target_epsilon": 32.0, "reid_audio": 0.01182033096926714, "reid_video": 0.0070921985815602835, "reid_text": 0.009456264775413711}
+{"target_epsilon": 128.0, "reid_audio": 0.009456264775413711, "reid_video": 0.009456264775413711, "reid_text": 0.009456264775413711}
+{"target_epsilon": 512.0, "reid_audio": 0.014184397163120567, "reid_video": 0.037825059101654845, "reid_text": 0.009456264775413711}

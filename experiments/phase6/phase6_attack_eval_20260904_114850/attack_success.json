@@ -1,0 +1,883 @@
+{
+  "mechanisms": {
+    "membership_inference": "per-modality DP-SGD training at the swept epsilon (Poisson sampling, Opacus RDP accounting)",
+    "reidentification": "DP release of the embedding: clipped to embedding_clip_norm, then the Gaussian mechanism at the swept epsilon"
+  },
+  "seeds": [
+    42,
+    7,
+    2024,
+    11,
+    19,
+    31,
+    73,
+    101,
+    137,
+    211
+  ],
+  "membership_split": "balanced",
+  "mia_only": true,
+  "num_members": 71,
+  "num_nonmembers": 70,
+  "embedding_clip_norm": 1.0,
+  "num_subjects": 141,
+  "chance_accuracy": 0.0070921985815602835,
+  "delta": 1e-05,
+  "reidentification": {
+    "audio": [],
+    "video": [],
+    "text": []
+  },
+  "non_private_reference": {
+    "reidentification": {},
+    "membership_inference": {
+      "auc": 0.5493877551020409,
+      "accuracy": 0.5428571428571428,
+      "advantage": 0.0987755102040817,
+      "direction": 1.0
+    }
+  },
+  "adaptive_allocation": {
+    "mode": "inverse_risk",
+    "per_modality": {}
+  },
+  "membership_inference": [
+    {
+      "target_epsilon": 0.5,
+      "auc": 0.47591836734693876,
+      "accuracy": 0.5142857142857142,
+      "advantage": -0.04816326530612247,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 2.0,
+      "auc": 0.4726530612244898,
+      "accuracy": 0.5142857142857142,
+      "advantage": -0.0546938775510204,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 8.0,
+      "auc": 0.4726530612244898,
+      "accuracy": 0.5142857142857142,
+      "advantage": -0.0546938775510204,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 32.0,
+      "auc": 0.4726530612244898,
+      "accuracy": 0.5142857142857142,
+      "advantage": -0.0546938775510204,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 128.0,
+      "auc": 0.4726530612244898,
+      "accuracy": 0.5142857142857142,
+      "advantage": -0.0546938775510204,
+      "direction": 1.0
+    },
+    {
+      "target_epsilon": 512.0,
+      "auc": 0.4726530612244898,
+      "accuracy": 0.5142857142857142,
+      "advantage": -0.0546938775510204,
+      "direction": 1.0
+    }
+  ],
+  "membership_inference_summary": {
+    "per_epsilon": [
+      {
+        "target_epsilon": 0.5,
+        "num_seeds": 10.0,
+        "accuracy_mean": 0.5085714285714286,
+        "accuracy_std": 0.044262666813799055,
+        "accuracy_ci95_low": 0.48113714345225694,
+        "accuracy_ci95_high": 0.5360057136906001,
+        "advantage_mean": 0.0035918367346938875,
+        "advantage_std": 0.10813661589301285,
+        "advantage_ci95_low": -0.06343193218350407,
+        "advantage_ci95_high": 0.07061560565289185,
+        "auc_mean": 0.5017959183673469,
+        "auc_std": 0.054068307946506425,
+        "auc_ci95_low": 0.46828403390824797,
+        "auc_ci95_high": 0.535307802826446,
+        "direction_mean": -0.2,
+        "direction_std": 1.0327955589886444,
+        "direction_ci95_low": -0.840133319447337,
+        "direction_ci95_high": 0.4401333194473371
+      },
+      {
+        "target_epsilon": 2.0,
+        "num_seeds": 10.0,
+        "accuracy_mean": 0.5071428571428571,
+        "accuracy_std": 0.04164965639175214,
+        "accuracy_ci95_low": 0.481328132662437,
+        "accuracy_ci95_high": 0.5329575816232772,
+        "advantage_mean": -0.010285714285714297,
+        "advantage_std": 0.1075261774954211,
+        "advantage_ci95_low": -0.07693112956522002,
+        "advantage_ci95_high": 0.05635970099379142,
+        "auc_mean": 0.49485714285714283,
+        "auc_std": 0.05376308874771055,
+        "auc_ci95_low": 0.46153443521738996,
+        "auc_ci95_high": 0.5281798504968956,
+        "direction_mean": 0.0,
+        "direction_std": 1.0540925533894598,
+        "direction_ci95_low": -0.6533333333333333,
+        "direction_ci95_high": 0.6533333333333333
+      },
+      {
+        "target_epsilon": 8.0,
+        "num_seeds": 10.0,
+        "accuracy_mean": 0.5071428571428571,
+        "accuracy_std": 0.04164965639175214,
+        "accuracy_ci95_low": 0.481328132662437,
+        "accuracy_ci95_high": 0.5329575816232772,
+        "advantage_mean": -0.010448979591836749,
+        "advantage_std": 0.10713613195608793,
+        "advantage_ci95_low": -0.07685264214142808,
+        "advantage_ci95_high": 0.05595468295775458,
+        "auc_mean": 0.49477551020408156,
+        "auc_std": 0.05356806597804395,
+        "auc_ci95_low": 0.4615736789292859,
+        "auc_ci95_high": 0.5279773414788772,
+        "direction_mean": 0.0,
+        "direction_std": 1.0540925533894598,
+        "direction_ci95_low": -0.6533333333333333,
+        "direction_ci95_high": 0.6533333333333333
+      },
+      {
+        "target_epsilon": 32.0,
+        "num_seeds": 10.0,
+        "accuracy_mean": 0.5085714285714286,
+        "accuracy_std": 0.0410740164816149,
+        "accuracy_ci95_low": 0.4831134894037216,
+        "accuracy_ci95_high": 0.5340293677391355,
+        "advantage_mean": -0.010285714285714297,
+        "advantage_std": 0.1072476196603446,
+        "advantage_ci95_low": -0.07675847763031028,
+        "advantage_ci95_high": 0.05618704905888168,
+        "auc_mean": 0.49485714285714283,
+        "auc_std": 0.0536238098301723,
+        "auc_ci95_low": 0.46162076118484485,
+        "auc_ci95_high": 0.5280935245294408,
+        "direction_mean": 0.0,
+        "direction_std": 1.0540925533894598,
+        "direction_ci95_low": -0.6533333333333333,
+        "direction_ci95_high": 0.6533333333333333
+      },
+      {
+        "target_epsilon": 128.0,
+        "num_seeds": 10.0,
+        "accuracy_mean": 0.5085714285714286,
+        "accuracy_std": 0.0410740164816149,
+        "accuracy_ci95_low": 0.4831134894037216,
+        "accuracy_ci95_high": 0.5340293677391355,
+        "advantage_mean": -0.009959183673469396,
+        "advantage_std": 0.10725700862166641,
+        "advantage_ci95_low": -0.07643776635658285,
+        "advantage_ci95_high": 0.056519399009644054,
+        "auc_mean": 0.4950204081632653,
+        "auc_std": 0.05362850431083321,
+        "auc_ci95_low": 0.4617811168217086,
+        "auc_ci95_high": 0.528259699504822,
+        "direction_mean": 0.0,
+        "direction_std": 1.0540925533894598,
+        "direction_ci95_low": -0.6533333333333333,
+        "direction_ci95_high": 0.6533333333333333
+      },
+      {
+        "target_epsilon": 512.0,
+        "num_seeds": 10.0,
+        "accuracy_mean": 0.5085714285714286,
+        "accuracy_std": 0.0410740164816149,
+        "accuracy_ci95_low": 0.4831134894037216,
+        "accuracy_ci95_high": 0.5340293677391355,
+        "advantage_mean": -0.010122448979591848,
+        "advantage_std": 0.10706589180338101,
+        "advantage_ci95_low": -0.0764825762314958,
+        "advantage_ci95_high": 0.05623767827231212,
+        "auc_mean": 0.4949387755102041,
+        "auc_std": 0.0535329459016905,
+        "auc_ci95_low": 0.4617587118842521,
+        "auc_ci95_high": 0.5281188391361561,
+        "direction_mean": 0.0,
+        "direction_std": 1.0540925533894598,
+        "direction_ci95_low": -0.6533333333333333,
+        "direction_ci95_high": 0.6533333333333333
+      }
+    ],
+    "non_private_reference": {
+      "num_seeds": 10.0,
+      "accuracy_mean": 0.4957142857142857,
+      "accuracy_std": 0.05431494618136712,
+      "accuracy_ci95_low": 0.46204953329345905,
+      "accuracy_ci95_high": 0.5293790381351124,
+      "advantage_mean": -0.027265306122448985,
+      "advantage_std": 0.14602649530707557,
+      "advantage_ci95_low": -0.11777346560728955,
+      "advantage_ci95_high": 0.06324285336239158,
+      "auc_mean": 0.4863673469387755,
+      "auc_std": 0.07301324765353778,
+      "auc_ci95_low": 0.4411132671963552,
+      "auc_ci95_high": 0.5316214266811957,
+      "direction_mean": 0.6,
+      "direction_std": 0.8432740427115679,
+      "direction_ci95_low": 0.07733333333333325,
+      "direction_ci95_high": 1.1226666666666667
+    }
+  },
+  "per_seed": [
+    {
+      "seed": 42,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.5436734693877551,
+          "accuracy": 0.5285714285714286,
+          "advantage": 0.08734693877551014,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.5436734693877551,
+          "accuracy": 0.5285714285714286,
+          "advantage": 0.08734693877551014,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.5428571428571428,
+          "accuracy": 0.5285714285714286,
+          "advantage": 0.08571428571428563,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.5428571428571428,
+          "accuracy": 0.5285714285714286,
+          "advantage": 0.08571428571428563,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.5428571428571428,
+          "accuracy": 0.5285714285714286,
+          "advantage": 0.08571428571428563,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.5428571428571428,
+          "accuracy": 0.5285714285714286,
+          "advantage": 0.08571428571428563,
+          "direction": -1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.4963265306122449,
+          "accuracy": 0.5,
+          "advantage": -0.007346938775510181,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 7,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.44571428571428573,
+          "accuracy": 0.4857142857142857,
+          "advantage": -0.10857142857142854,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.4448979591836735,
+          "accuracy": 0.4857142857142857,
+          "advantage": -0.11020408163265305,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.4448979591836735,
+          "accuracy": 0.4857142857142857,
+          "advantage": -0.11020408163265305,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.4448979591836735,
+          "accuracy": 0.5,
+          "advantage": -0.11020408163265305,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.4448979591836735,
+          "accuracy": 0.5,
+          "advantage": -0.11020408163265305,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.4448979591836735,
+          "accuracy": 0.5,
+          "advantage": -0.11020408163265305,
+          "direction": 1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.43918367346938775,
+          "accuracy": 0.42857142857142855,
+          "advantage": -0.1216326530612245,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 2024,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.49714285714285716,
+          "accuracy": 0.4714285714285714,
+          "advantage": -0.005714285714285672,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.49714285714285716,
+          "accuracy": 0.5,
+          "advantage": -0.005714285714285672,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.4963265306122449,
+          "accuracy": 0.5,
+          "advantage": -0.007346938775510181,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.49551020408163265,
+          "accuracy": 0.5,
+          "advantage": -0.00897959183673469,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.49714285714285716,
+          "accuracy": 0.5,
+          "advantage": -0.005714285714285672,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.49714285714285716,
+          "accuracy": 0.5,
+          "advantage": -0.005714285714285672,
+          "direction": -1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.4236734693877551,
+          "accuracy": 0.4857142857142857,
+          "advantage": -0.15265306122448985,
+          "direction": -1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 11,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.40408163265306124,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.19183673469387752,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.403265306122449,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.19346938775510203,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.403265306122449,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.19346938775510203,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.403265306122449,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.19346938775510203,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.403265306122449,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.19346938775510203,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.403265306122449,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.19346938775510203,
+          "direction": -1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.5551020408163265,
+          "accuracy": 0.5428571428571428,
+          "advantage": 0.11020408163265305,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 19,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.0546938775510204,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.4710204081632653,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.05795918367346942,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.47183673469387755,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.05632653061224491,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.0546938775510204,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.0546938775510204,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.45714285714285713,
+          "advantage": -0.0546938775510204,
+          "direction": -1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.5910204081632653,
+          "accuracy": 0.5142857142857142,
+          "advantage": 0.18204081632653057,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 31,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.553469387755102,
+          "accuracy": 0.5142857142857142,
+          "advantage": 0.10693877551020403,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.5510204081632653,
+          "accuracy": 0.5142857142857142,
+          "advantage": 0.1020408163265305,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.5510204081632653,
+          "accuracy": 0.5142857142857142,
+          "advantage": 0.1020408163265305,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.5518367346938775,
+          "accuracy": 0.5142857142857142,
+          "advantage": 0.10367346938775501,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.5518367346938775,
+          "accuracy": 0.5142857142857142,
+          "advantage": 0.10367346938775501,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.5510204081632653,
+          "accuracy": 0.5142857142857142,
+          "advantage": 0.1020408163265305,
+          "direction": 1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.3461224489795918,
+          "accuracy": 0.4142857142857143,
+          "advantage": -0.30775510204081635,
+          "direction": -1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 73,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.5314285714285715,
+          "accuracy": 0.5,
+          "advantage": 0.06285714285714294,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.47020408163265304,
+          "accuracy": 0.4714285714285714,
+          "advantage": -0.059591836734693926,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.4710204081632653,
+          "accuracy": 0.4714285714285714,
+          "advantage": -0.05795918367346942,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.4710204081632653,
+          "accuracy": 0.4714285714285714,
+          "advantage": -0.05795918367346942,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.4710204081632653,
+          "accuracy": 0.4714285714285714,
+          "advantage": -0.05795918367346942,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.4710204081632653,
+          "accuracy": 0.4714285714285714,
+          "advantage": -0.05795918367346942,
+          "direction": 1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.4636734693877551,
+          "accuracy": 0.42857142857142855,
+          "advantage": -0.07265306122448978,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 101,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.5836734693877551,
+          "accuracy": 0.5857142857142857,
+          "advantage": 0.1673469387755102,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.5820408163265306,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.1640816326530612,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.5820408163265306,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.1640816326530612,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.5820408163265306,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.1640816326530612,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.5820408163265306,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.1640816326530612,
+          "direction": -1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.5820408163265306,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.1640816326530612,
+          "direction": -1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.47183673469387755,
+          "accuracy": 0.5571428571428572,
+          "advantage": -0.05632653061224491,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 137,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.5102040816326531,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.020408163265306145,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.5126530612244898,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.025306122448979673,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.5118367346938776,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.023673469387755164,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.5118367346938776,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.023673469387755164,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.5118367346938776,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.023673469387755164,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.5118367346938776,
+          "accuracy": 0.5714285714285714,
+          "advantage": 0.023673469387755164,
+          "direction": 1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.5273469387755102,
+          "accuracy": 0.5428571428571428,
+          "advantage": 0.0546938775510204,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    },
+    {
+      "seed": 211,
+      "num_members": 71,
+      "num_nonmembers": 70,
+      "reidentification": {
+        "audio": [],
+        "video": [],
+        "text": []
+      },
+      "curve": [],
+      "membership_inference": [
+        {
+          "target_epsilon": 0.5,
+          "auc": 0.47591836734693876,
+          "accuracy": 0.5142857142857142,
+          "advantage": -0.04816326530612247,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 2.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.5142857142857142,
+          "advantage": -0.0546938775510204,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 8.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.5142857142857142,
+          "advantage": -0.0546938775510204,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 32.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.5142857142857142,
+          "advantage": -0.0546938775510204,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 128.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.5142857142857142,
+          "advantage": -0.0546938775510204,
+          "direction": 1.0
+        },
+        {
+          "target_epsilon": 512.0,
+          "auc": 0.4726530612244898,
+          "accuracy": 0.5142857142857142,
+          "advantage": -0.0546938775510204,
+          "direction": 1.0
+        }
+      ],
+      "non_private_reference": {
+        "reidentification": {},
+        "membership_inference": {
+          "auc": 0.5493877551020409,
+          "accuracy": 0.5428571428571428,
+          "advantage": 0.0987755102040817,
+          "direction": 1.0
+        }
+      },
+      "adaptive_allocation": {}
+    }
+  ]
+}
