@@ -77,3 +77,6 @@ Thumbs.db
 
 # ─── Fabric local network (generated: MSP material, TLS keys, ledger data) ───
 .fabric/
+
+# ─── Weights & Biases local run cache (regenerated; never a source of truth) ───
+wandb/
