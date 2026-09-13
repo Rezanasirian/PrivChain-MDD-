@@ -1,0 +1,77 @@
+{
+  "participants": 47,
+  "positives": 14,
+  "seeds": 3,
+  "comparisons": {
+    "centralized_minus_fedavg": {
+      "difference": 0.2987012987012987,
+      "low": 0.12138993316624903,
+      "high": 0.48080808080808063,
+      "p_two_sided": 0.0,
+      "significant": 1.0
+    },
+    "centralized_minus_personalized": {
+      "difference": 0.24675324675324672,
+      "low": 0.0880357142857143,
+      "high": 0.4208467741935484,
+      "p_two_sided": 0.001,
+      "significant": 1.0
+    },
+    "centralized_minus_proposed": {
+      "difference": 0.10606060606060608,
+      "low": -0.0345020999115827,
+      "high": 0.24765029088558485,
+      "p_two_sided": 0.15,
+      "significant": 0.0
+    },
+    "centralized_minus_proposed_no_reputation": {
+      "difference": 0.12337662337662336,
+      "low": -0.02144729262672811,
+      "high": 0.27014778325123134,
+      "p_two_sided": 0.1,
+      "significant": 0.0
+    },
+    "fedavg_minus_personalized": {
+      "difference": -0.051948051948051965,
+      "low": -0.10418154761904766,
+      "high": -0.008064516129032251,
+      "p_two_sided": 0.015,
+      "significant": 1.0
+    },
+    "fedavg_minus_proposed": {
+      "difference": -0.1926406926406926,
+      "low": -0.303030303030303,
+      "high": -0.10281153993855609,
+      "p_two_sided": 0.0,
+      "significant": 1.0
+    },
+    "fedavg_minus_proposed_no_reputation": {
+      "difference": -0.17532467532467533,
+      "low": -0.2763649083115026,
+      "high": -0.09003094606542884,
+      "p_two_sided": 0.0,
+      "significant": 1.0
+    },
+    "personalized_minus_proposed": {
+      "difference": -0.14069264069264065,
+      "low": -0.22581739891986571,
+      "high": -0.07058764231499054,
+      "p_two_sided": 0.0,
+      "significant": 1.0
+    },
+    "personalized_minus_proposed_no_reputation": {
+      "difference": -0.12337662337662336,
+      "low": -0.20130017041781748,
+      "high": -0.06060606060606066,
+      "p_two_sided": 0.0,
+      "significant": 1.0
+    },
+    "proposed_minus_proposed_no_reputation": {
+      "difference": 0.017316017316017285,
+      "low": 0.002377989657401419,
+      "high": 0.038461538461538436,
+      "p_two_sided": 0.029,
+      "significant": 1.0
+    }
+  }
+}
