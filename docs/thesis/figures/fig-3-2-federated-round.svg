@@ -1,102 +1,102 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520" font-family="Segoe UI, Tahoma, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520" font-family="Vazirmatn, Tahoma, 'Segoe UI', sans-serif">
   <rect width="760" height="520" fill="#ffffff"/>
-  <text x="380" y="26" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">One federated round: capability-aware aggregation with on-chain audit</text>
+  <text x="380" y="26" text-anchor="middle" direction="rtl" font-size="16" font-weight="600" fill="#1a1a1a">یک دور فدرال: تجمیع آگاه از قابلیت با حسابرسی روی زنجیره</text>
 
-  <!-- lifelines -->
+  <!-- خطوط عمر: راست به چپ -->
   <g font-size="12" font-weight="600">
-    <rect x="40" y="46" width="130" height="30" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
-    <text x="105" y="66" text-anchor="middle" fill="#1b5e20">Clients i ∈ S</text>
+    <rect x="590" y="46" width="130" height="30" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="655" y="66" text-anchor="middle" direction="rtl" fill="#1b5e20">کلاینت‌ها</text>
 
-    <rect x="240" y="46" width="150" height="30" rx="4" fill="#e3f2fd" stroke="#1565c0"/>
-    <text x="315" y="66" text-anchor="middle" fill="#0d47a1">Coordinator</text>
+    <rect x="370" y="46" width="150" height="30" rx="4" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="445" y="66" text-anchor="middle" direction="rtl" fill="#0d47a1">هماهنگ‌کننده</text>
 
-    <rect x="460" y="46" width="130" height="30" rx="4" fill="#f3e5f5" stroke="#8e24aa"/>
-    <text x="525" y="66" text-anchor="middle" fill="#6a1b9a">Smart contract</text>
+    <rect x="170" y="46" width="130" height="30" rx="4" fill="#f3e5f5" stroke="#8e24aa"/>
+    <text x="235" y="66" text-anchor="middle" direction="rtl" fill="#6a1b9a">قرارداد هوشمند</text>
 
-    <rect x="630" y="46" width="90" height="30" rx="4" fill="#eceff1" stroke="#546e7a"/>
-    <text x="675" y="66" text-anchor="middle" fill="#37474f">Ledger</text>
+    <rect x="40" y="46" width="90" height="30" rx="4" fill="#eceff1" stroke="#546e7a"/>
+    <text x="85" y="66" text-anchor="middle" direction="rtl" fill="#37474f">دفتر کل</text>
   </g>
   <g stroke="#cfd8dc" stroke-width="1.5" stroke-dasharray="4 4">
-    <line x1="105" y1="76" x2="105" y2="470"/>
-    <line x1="315" y1="76" x2="315" y2="470"/>
-    <line x1="525" y1="76" x2="525" y2="470"/>
-    <line x1="675" y1="76" x2="675" y2="470"/>
+    <line x1="655" y1="76" x2="655" y2="470"/>
+    <line x1="445" y1="76" x2="445" y2="470"/>
+    <line x1="235" y1="76" x2="235" y2="470"/>
+    <line x1="85" y1="76" x2="85" y2="470"/>
   </g>
 
   <defs>
     <marker id="a1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#455a64"/></marker>
   </defs>
 
-  <!-- step 0: register (once) -->
+  <!-- ۰ ثبت‌نام -->
   <g stroke="#8e24aa" stroke-width="1.6" marker-end="url(#a1)">
-    <line x1="105" y1="100" x2="520" y2="100"/>
+    <line x1="655" y1="100" x2="240" y2="100"/>
   </g>
-  <text x="300" y="94" font-size="11" fill="#6a1b9a" text-anchor="middle">0. RegisterClient(c_i) — declared once, before training</text>
+  <text x="450" y="94" font-size="11" fill="#6a1b9a" text-anchor="middle" direction="rtl">۰. ثبت کلاینت با بردار قابلیت — یک بار، پیش از آموزش</text>
 
-  <!-- step 1: build subgraphs -->
-  <rect x="248" y="116" width="134" height="34" rx="4" fill="#ffffff" stroke="#1565c0"/>
-  <text x="315" y="137" font-size="11" fill="#0d47a1" text-anchor="middle">1. build S_m from c_i</text>
+  <!-- ۱ ساخت زیرگراف -->
+  <rect x="378" y="116" width="134" height="34" rx="4" fill="#ffffff" stroke="#1565c0"/>
+  <text x="445" y="137" font-size="11" fill="#0d47a1" text-anchor="middle" direction="rtl">۱. ساخت زیرگراف هر وجه</text>
 
-  <!-- step 2: broadcast -->
+  <!-- ۲ پخش -->
   <g stroke="#455a64" stroke-width="1.6" marker-end="url(#a1)">
-    <line x1="310" y1="168" x2="110" y2="168"/>
+    <line x1="450" y1="168" x2="650" y2="168"/>
   </g>
-  <text x="210" y="162" font-size="11" fill="#37474f" text-anchor="middle">2. broadcast θ^t for the groups each client holds</text>
+  <text x="550" y="162" font-size="11" fill="#37474f" text-anchor="middle" direction="rtl">۲. ارسال مدل سراسری برای گروه‌هایی که هر کلاینت دارد</text>
 
-  <!-- step 3: local train box -->
-  <rect x="40" y="184" width="180" height="86" rx="5" fill="#e8f5e9" stroke="#66bb6a"/>
-  <text x="130" y="202" font-size="11.5" font-weight="600" fill="#1b5e20" text-anchor="middle">3. local training</text>
-  <text x="130" y="220" font-size="10.5" fill="#2e7d32" text-anchor="middle">supervised loss + λ·KD, eq. (3-17)</text>
-  <text x="130" y="236" font-size="10.5" fill="#2e7d32" text-anchor="middle">per-group clipping, eq. (3-6)</text>
-  <text x="130" y="252" font-size="10.5" fill="#c62828" text-anchor="middle">per-group Gaussian noise, eq. (3-7)</text>
-  <text x="130" y="266" font-size="10" fill="#558b2f" text-anchor="middle">raw sessions never leave the client</text>
+  <!-- ۳ آموزش محلی -->
+  <rect x="500" y="184" width="222" height="86" rx="5" fill="#e8f5e9" stroke="#66bb6a"/>
+  <text x="611" y="202" font-size="11.5" font-weight="600" fill="#1b5e20" text-anchor="middle" direction="rtl">۳. آموزش محلی</text>
+  <text x="611" y="220" font-size="10" fill="#2e7d32" text-anchor="middle" direction="rtl">زیان نظارتی + تقطیر، رابطهٔ (۳-۱۷)</text>
+  <text x="611" y="236" font-size="10" fill="#2e7d32" text-anchor="middle" direction="rtl">برش به تفکیک گروه، رابطهٔ (۳-۶)</text>
+  <text x="611" y="252" font-size="10" fill="#c62828" text-anchor="middle" direction="rtl">نویز گوسی به تفکیک گروه، رابطهٔ (۳-۷)</text>
+  <text x="611" y="266" font-size="9.5" fill="#558b2f" text-anchor="middle" direction="rtl">جلسه‌های خام هرگز از کلاینت خارج نمی‌شوند</text>
 
-  <!-- step 4: upload -->
+  <!-- ۴ ارسال -->
   <g stroke="#2e7d32" stroke-width="1.8" marker-end="url(#a1)">
-    <line x1="110" y1="288" x2="310" y2="288"/>
+    <line x1="650" y1="288" x2="450" y2="288"/>
   </g>
-  <text x="210" y="282" font-size="11" fill="#1b5e20" text-anchor="middle">4. upload Δ_{i,g} — only for groups client i actually has</text>
+  <text x="550" y="282" font-size="11" fill="#1b5e20" text-anchor="middle" direction="rtl">۴. ارسال به‌روزرسانی — فقط برای گروه‌هایی که کلاینت واقعاً دارد</text>
 
-  <!-- step 5: aggregate -->
-  <rect x="240" y="304" width="150" height="72" rx="5" fill="#e3f2fd" stroke="#42a5f5"/>
-  <text x="315" y="322" font-size="11.5" font-weight="600" fill="#0d47a1" text-anchor="middle">5. aggregate</text>
-  <text x="315" y="339" font-size="10.5" fill="#1565c0" text-anchor="middle">ρ_{i,g} update, eq. (3-15)</text>
-  <text x="315" y="355" font-size="10.5" fill="#1565c0" text-anchor="middle">subgraph average, eq. (3-12)</text>
-  <text x="315" y="370" font-size="10.5" fill="#c62828" text-anchor="middle">S_m = ∅ ⇒ θ_m untouched (3-13)</text>
+  <!-- ۵ تجمیع -->
+  <rect x="342" y="304" width="208" height="72" rx="5" fill="#e3f2fd" stroke="#42a5f5"/>
+  <text x="446" y="322" font-size="11.5" font-weight="600" fill="#0d47a1" text-anchor="middle" direction="rtl">۵. تجمیع</text>
+  <text x="446" y="339" font-size="10.5" fill="#1565c0" text-anchor="middle" direction="rtl">به‌روزرسانی شهرت، رابطهٔ (۳-۱۵)</text>
+  <text x="446" y="355" font-size="10.5" fill="#1565c0" text-anchor="middle" direction="rtl">میانگین زیرگرافی، رابطهٔ (۳-۱۲)</text>
+  <text x="446" y="370" font-size="10" fill="#c62828" text-anchor="middle" direction="rtl">زیرگراف خالی ← رمزگذار دست‌نخورده (۳-۱۳)</text>
 
-  <!-- step 6: log to chain -->
+  <!-- ۶ ثبت روی زنجیره -->
   <g stroke="#8e24aa" stroke-width="1.6" marker-end="url(#a1)">
-    <line x1="320" y1="394" x2="520" y2="394"/>
+    <line x1="440" y1="394" x2="240" y2="394"/>
   </g>
-  <text x="420" y="388" font-size="11" fill="#6a1b9a" text-anchor="middle">6. LogPrivacyBudget · UpdateReputation · PublishSubgraph</text>
+  <text x="340" y="388" font-size="11" fill="#6a1b9a" text-anchor="middle" direction="rtl">۶. ثبت بودجه، شهرت و زیرگراف این دور</text>
 
-  <!-- step 7: commit -->
+  <!-- ۷ تثبیت -->
   <g stroke="#546e7a" stroke-width="1.6" marker-end="url(#a1)">
-    <line x1="530" y1="420" x2="670" y2="420"/>
+    <line x1="230" y1="420" x2="90" y2="420"/>
   </g>
-  <text x="600" y="414" font-size="11" fill="#37474f" text-anchor="middle">7. commit (PBFT-class consensus)</text>
+  <text x="160" y="414" font-size="11" fill="#37474f" text-anchor="middle" direction="rtl">۷. تثبیت (اجماع از خانوادهٔ PBFT)</text>
 
-  <!-- step 8: next round -->
+  <!-- ۸ دور بعد -->
   <g stroke="#455a64" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a1)">
-    <path d="M310,446 L120,446" fill="none"/>
+    <path d="M450,446 L640,446" fill="none"/>
   </g>
-  <text x="215" y="440" font-size="11" fill="#37474f" text-anchor="middle">8. next round, until early stopping on the selection split</text>
+  <text x="545" y="437" font-size="11" fill="#37474f" text-anchor="middle" direction="rtl">۸. دور بعد، تا توقف زودهنگام روی بخش انتخاب</text>
 
-  <!-- side note -->
-  <rect x="410" y="150" width="310" height="200" rx="6" fill="#fafafa" stroke="#e0e0e0"/>
-  <text x="426" y="172" font-size="12" font-weight="600" fill="#333333">What each client sends</text>
-  <g font-size="11" fill="#444444">
-    <text x="426" y="194">c = [1,1,1] → audio, video, text, shared</text>
-    <text x="426" y="214">c = [1,0,1] → audio, text, shared</text>
-    <text x="426" y="234">c = [1,0,0] → audio, shared</text>
-    <text x="426" y="254">c = [0,0,1] → text, shared</text>
+  <!-- کادر توضیح -->
+  <rect x="40" y="150" width="288" height="200" rx="6" fill="#fafafa" stroke="#e0e0e0"/>
+  <text x="314" y="172" font-size="12" font-weight="600" fill="#333333" direction="rtl" text-anchor="start">هر کلاینت چه چیزی می‌فرستد</text>
+  <g font-size="11" fill="#444444" direction="rtl" text-anchor="start">
+    <text x="314" y="194">[۱,۱,۱] ← صوت، ویدئو، متن، مشترک</text>
+    <text x="314" y="214">[۱,۰,۱] ← صوت، متن، مشترک</text>
+    <text x="314" y="234">[۱,۰,۰] ← صوت، مشترک</text>
+    <text x="314" y="254">[۰,۰,۱] ← متن، مشترک</text>
   </g>
-  <line x1="426" y1="268" x2="704" y2="268" stroke="#e0e0e0"/>
-  <text x="426" y="288" font-size="11" fill="#c62828">A client reports no σ for a group it does not hold:</text>
-  <text x="426" y="306" font-size="11" fill="#c62828">a text-only client never claims an audio mechanism.</text>
-  <text x="426" y="328" font-size="11" fill="#666666">This is what makes the ledger's budget rows</text>
-  <text x="426" y="344" font-size="11" fill="#666666">auditable rather than merely present.</text>
+  <line x1="56" y1="268" x2="334" y2="268" stroke="#e0e0e0"/>
+  <text x="314" y="288" font-size="11" fill="#c62828" direction="rtl" text-anchor="start">کلاینت برای گروهی که ندارد، σ گزارش نمی‌کند:</text>
+  <text x="314" y="306" font-size="11" fill="#c62828" direction="rtl" text-anchor="start">کلاینت فقط‌متن هرگز سازوکار صوتی ادعا نمی‌کند.</text>
+  <text x="314" y="328" font-size="11" fill="#666666" direction="rtl" text-anchor="start">همین است که ردیف‌های بودجه در دفتر کل را</text>
+  <text x="314" y="344" font-size="11" fill="#666666" direction="rtl" text-anchor="start">قابل حسابرسی می‌کند، نه صرفاً موجود.</text>
 
-  <text x="40" y="496" font-size="11" fill="#666666">The ledger guarantees the audit trail is immutable. It does not guarantee that any individual update was well-behaved —</text>
-  <text x="40" y="510" font-size="11" fill="#666666">that is what reputation weighting attenuates, as a light prior rather than a proved Byzantine bound.</text>
+  <text x="720" y="496" font-size="11" fill="#666666" direction="rtl" text-anchor="start">دفتر کل تضمین می‌کند ردپای حسابرسی تغییرناپذیر است. تضمین نمی‌کند هر به‌روزرسانی رفتار درستی داشته —</text>
+  <text x="720" y="510" font-size="11" fill="#666666" direction="rtl" text-anchor="start">آن را وزن‌دهی شهرت تضعیف می‌کند، به‌عنوان یک پیشین سبک و نه کران اثبات‌شدهٔ بیزانسی.</text>
 </svg>

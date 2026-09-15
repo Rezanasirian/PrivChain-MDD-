@@ -1,94 +1,85 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440" font-family="Segoe UI, Tahoma, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440" font-family="Vazirmatn, Tahoma, 'Segoe UI', sans-serif">
   <rect width="760" height="440" fill="#ffffff"/>
-  <text x="380" y="26" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Corpus, label balance, and how the train split is distributed across clients</text>
+  <text x="380" y="26" text-anchor="middle" direction="rtl" font-size="16" font-weight="600" fill="#1a1a1a">پیکره، توازن برچسب، و توزیع بخش آموزش میان کلاینت‌ها</text>
 
-  <!-- TOP: splits with label balance -->
-  <text x="60" y="64" font-size="13" font-weight="600" fill="#333">Official AVEC2017 splits — 188 participants used (participant 440 excluded, ADR-0010)</text>
+  <text x="700" y="64" font-size="13" font-weight="600" fill="#333" direction="rtl" text-anchor="start">بخش‌بندی رسمی AVEC2017‏؛ ۱۸۸ شرکت‌کننده (شرکت‌کنندهٔ ۴۴۰ کنار گذاشته شد)</text>
 
   <!-- train -->
-  <text x="130" y="96" font-size="12" font-weight="600" fill="#1b5e20" text-anchor="middle">train — 107</text>
-  <rect x="60" y="104" width="140" height="32" fill="#c8e6c9" stroke="#2e7d32"/>
-  <rect x="60" y="104" width="40.6" height="32" fill="#2e7d32"/>
-  <text x="80" y="125" font-size="11" fill="#ffffff" text-anchor="middle">31</text>
-  <text x="150" y="125" font-size="11" fill="#1b5e20" text-anchor="middle">76</text>
-  <text x="130" y="152" font-size="10.5" fill="#666" text-anchor="middle">positive rate 0.29</text>
+  <text x="630" y="96" font-size="12" font-weight="600" fill="#1b5e20" text-anchor="middle" direction="rtl">train — ۱۰۷</text>
+  <rect x="560" y="104" width="140" height="32" fill="#c8e6c9" stroke="#2e7d32"/>
+  <rect x="659.4" y="104" width="40.6" height="32" fill="#2e7d32"/>
+  <text x="680" y="125" font-size="11" fill="#ffffff" text-anchor="middle" direction="rtl">۳۱</text>
+  <text x="610" y="125" font-size="11" fill="#1b5e20" text-anchor="middle" direction="rtl">۷۶</text>
+  <text x="630" y="152" font-size="10.5" fill="#666" text-anchor="middle" direction="rtl">نرخ مثبت ۰٫۲۹</text>
 
   <!-- dev -->
-  <text x="290" y="96" font-size="12" font-weight="600" fill="#0d47a1" text-anchor="middle">dev — 34</text>
-  <rect x="234" y="104" width="112" height="32" fill="#bbdefb" stroke="#1565c0"/>
-  <rect x="234" y="104" width="39.5" height="32" fill="#1565c0"/>
-  <text x="254" y="125" font-size="11" fill="#ffffff" text-anchor="middle">12</text>
-  <text x="310" y="125" font-size="11" fill="#0d47a1" text-anchor="middle">22</text>
-  <text x="290" y="152" font-size="10.5" fill="#666" text-anchor="middle">positive rate 0.35</text>
+  <text x="470" y="96" font-size="12" font-weight="600" fill="#0d47a1" text-anchor="middle" direction="rtl">dev — ۳۴</text>
+  <rect x="414" y="104" width="112" height="32" fill="#bbdefb" stroke="#1565c0"/>
+  <rect x="486.5" y="104" width="39.5" height="32" fill="#1565c0"/>
+  <text x="506" y="125" font-size="11" fill="#ffffff" text-anchor="middle" direction="rtl">۱۲</text>
+  <text x="450" y="125" font-size="11" fill="#0d47a1" text-anchor="middle" direction="rtl">۲۲</text>
+  <text x="470" y="152" font-size="10.5" fill="#666" text-anchor="middle" direction="rtl">نرخ مثبت ۰٫۳۵</text>
 
   <!-- test -->
-  <text x="450" y="96" font-size="12" font-weight="600" fill="#b71c1c" text-anchor="middle">official test — 47</text>
-  <rect x="380" y="104" width="140" height="32" fill="#ffcdd2" stroke="#c62828"/>
-  <rect x="380" y="104" width="41.7" height="32" fill="#c62828"/>
-  <text x="400" y="125" font-size="11" fill="#ffffff" text-anchor="middle">14</text>
-  <text x="470" y="125" font-size="11" fill="#b71c1c" text-anchor="middle">33</text>
-  <text x="450" y="152" font-size="10.5" fill="#666" text-anchor="middle">positive rate 0.30</text>
+  <text x="310" y="96" font-size="12" font-weight="600" fill="#b71c1c" text-anchor="middle" direction="rtl">test رسمی — ۴۷</text>
+  <rect x="240" y="104" width="140" height="32" fill="#ffcdd2" stroke="#c62828"/>
+  <rect x="338.3" y="104" width="41.7" height="32" fill="#c62828"/>
+  <text x="359" y="125" font-size="11" fill="#ffffff" text-anchor="middle" direction="rtl">۱۴</text>
+  <text x="290" y="125" font-size="11" fill="#b71c1c" text-anchor="middle" direction="rtl">۳۳</text>
+  <text x="310" y="152" font-size="10.5" fill="#666" text-anchor="middle" direction="rtl">نرخ مثبت ۰٫۳۰</text>
 
-  <!-- legend -->
-  <rect x="566" y="104" width="16" height="14" fill="#2e7d32"/>
-  <text x="588" y="116" font-size="11" fill="#555">PHQ-8 ≥ 10 (depressed)</text>
-  <rect x="566" y="124" width="16" height="14" fill="#c8e6c9" stroke="#2e7d32"/>
-  <text x="588" y="136" font-size="11" fill="#555">PHQ-8 &lt; 10</text>
-  <text x="566" y="158" font-size="10.5" fill="#c62828">class imbalance is why macro-F1</text>
-  <text x="566" y="172" font-size="10.5" fill="#c62828">is reported beside F1</text>
+  <!-- راهنما -->
+  <rect x="178" y="104" width="16" height="14" fill="#2e7d32"/>
+  <text x="172" y="116" font-size="11" fill="#555" direction="rtl" text-anchor="start">افسرده (PHQ-8 ≥ ۱۰)</text>
+  <rect x="178" y="124" width="16" height="14" fill="#c8e6c9" stroke="#2e7d32"/>
+  <text x="172" y="136" font-size="11" fill="#555" direction="rtl" text-anchor="start">غیرافسرده</text>
+  <text x="194" y="158" font-size="10.5" fill="#c62828" direction="rtl" text-anchor="start">به دلیل همین عدم توازن،</text>
+  <text x="194" y="172" font-size="10.5" fill="#c62828" direction="rtl" text-anchor="start">macro-F1 کنار F1 گزارش می‌شود</text>
 
-  <!-- divider -->
   <line x1="60" y1="188" x2="700" y2="188" stroke="#e0e0e0"/>
 
-  <!-- BOTTOM: client partition -->
-  <text x="60" y="212" font-size="13" font-weight="600" fill="#333">The 107 training participants are split across 10 simulated clients with heterogeneous modality access</text>
+  <text x="700" y="212" font-size="13" font-weight="600" fill="#333" direction="rtl" text-anchor="start">۱۰۷ شرکت‌کنندهٔ آموزش میان ده کلاینت شبیه‌سازی‌شده با دسترسی ناهمگون به وجوه توزیع می‌شوند</text>
 
-  <!-- four pattern groups -->
   <g font-size="11">
-    <!-- full: 4 clients -->
-    <rect x="60" y="228" width="150" height="118" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
-    <text x="135" y="250" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20">full — c = [1,1,1]</text>
-    <text x="135" y="268" text-anchor="middle" fill="#2e7d32">4 clients, ~36 sessions</text>
+    <rect x="550" y="228" width="150" height="118" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="625" y="250" text-anchor="middle" direction="rtl" font-size="12" font-weight="600" fill="#1b5e20">کامل — [۱,۱,۱]</text>
+    <text x="625" y="268" text-anchor="middle" direction="rtl" fill="#2e7d32">۴ کلاینت، حدود ۳۶ جلسه</text>
     <g fill="#66bb6a">
-      <circle cx="90" cy="292" r="11"/><circle cx="120" cy="292" r="11"/><circle cx="150" cy="292" r="11"/><circle cx="180" cy="292" r="11"/>
+      <circle cx="580" cy="292" r="11"/><circle cx="610" cy="292" r="11"/><circle cx="640" cy="292" r="11"/><circle cx="670" cy="292" r="11"/>
     </g>
-    <text x="135" y="326" text-anchor="middle" font-size="10.5" fill="#555">contributes to all four</text>
-    <text x="135" y="340" text-anchor="middle" font-size="10.5" fill="#555">parameter groups</text>
+    <text x="625" y="326" text-anchor="middle" direction="rtl" font-size="10.5" fill="#555">در هر چهار گروه پارامتر</text>
+    <text x="625" y="340" text-anchor="middle" direction="rtl" font-size="10.5" fill="#555">مشارکت می‌کند</text>
 
-    <!-- audio+text: 3 clients -->
-    <rect x="224" y="228" width="150" height="118" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
-    <text x="299" y="250" text-anchor="middle" font-size="12" font-weight="600" fill="#0d47a1">audio+text — [1,0,1]</text>
-    <text x="299" y="268" text-anchor="middle" fill="#1565c0">3 clients, ~26 sessions</text>
+    <rect x="386" y="228" width="150" height="118" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="461" y="250" text-anchor="middle" direction="rtl" font-size="12" font-weight="600" fill="#0d47a1">صوت+متن — [۱,۰,۱]</text>
+    <text x="461" y="268" text-anchor="middle" direction="rtl" fill="#1565c0">۳ کلاینت، حدود ۲۶ جلسه</text>
     <g fill="#42a5f5">
-      <circle cx="266" cy="292" r="11"/><circle cx="296" cy="292" r="11"/><circle cx="326" cy="292" r="11"/>
+      <circle cx="431" cy="292" r="11"/><circle cx="461" cy="292" r="11"/><circle cx="491" cy="292" r="11"/>
     </g>
-    <text x="299" y="326" text-anchor="middle" font-size="10.5" fill="#555">never touches the</text>
-    <text x="299" y="340" text-anchor="middle" font-size="10.5" fill="#555">video encoder</text>
+    <text x="461" y="326" text-anchor="middle" direction="rtl" font-size="10.5" fill="#555">هرگز به رمزگذار ویدئو</text>
+    <text x="461" y="340" text-anchor="middle" direction="rtl" font-size="10.5" fill="#555">دست نمی‌زند</text>
 
-    <!-- audio only: 2 clients -->
-    <rect x="388" y="228" width="150" height="118" rx="6" fill="#fff3e0" stroke="#ef6c00"/>
-    <text x="463" y="250" text-anchor="middle" font-size="12" font-weight="600" fill="#e65100">audio only — [1,0,0]</text>
-    <text x="463" y="268" text-anchor="middle" fill="#ef6c00">2 clients, ~17 sessions</text>
+    <rect x="222" y="228" width="150" height="118" rx="6" fill="#fff3e0" stroke="#ef6c00"/>
+    <text x="297" y="250" text-anchor="middle" direction="rtl" font-size="12" font-weight="600" fill="#e65100">فقط صوت — [۱,۰,۰]</text>
+    <text x="297" y="268" text-anchor="middle" direction="rtl" fill="#ef6c00">۲ کلاینت، حدود ۱۷ جلسه</text>
     <g fill="#ffa726">
-      <circle cx="448" cy="292" r="11"/><circle cx="478" cy="292" r="11"/>
+      <circle cx="282" cy="292" r="11"/><circle cx="312" cy="292" r="11"/>
     </g>
-    <text x="463" y="326" text-anchor="middle" font-size="10.5" font-weight="600" fill="#c62828">the group cross-modal</text>
-    <text x="463" y="340" text-anchor="middle" font-size="10.5" font-weight="600" fill="#c62828">distillation targets</text>
+    <text x="297" y="326" text-anchor="middle" direction="rtl" font-size="10.5" font-weight="600" fill="#c62828">گروه هدف تقطیر</text>
+    <text x="297" y="340" text-anchor="middle" direction="rtl" font-size="10.5" font-weight="600" fill="#c62828">بین‌وجهی</text>
 
-    <!-- text only: 1 client -->
-    <rect x="552" y="228" width="148" height="118" rx="6" fill="#f3e5f5" stroke="#8e24aa"/>
-    <text x="626" y="250" text-anchor="middle" font-size="12" font-weight="600" fill="#6a1b9a">text only — [0,0,1]</text>
-    <text x="626" y="268" text-anchor="middle" fill="#8e24aa">1 client, ~8 sessions</text>
+    <rect x="60" y="228" width="148" height="118" rx="6" fill="#f3e5f5" stroke="#8e24aa"/>
+    <text x="134" y="250" text-anchor="middle" direction="rtl" font-size="12" font-weight="600" fill="#6a1b9a">فقط متن — [۰,۰,۱]</text>
+    <text x="134" y="268" text-anchor="middle" direction="rtl" fill="#8e24aa">۱ کلاینت، حدود ۸ جلسه</text>
     <g fill="#ab47bc">
-      <circle cx="626" cy="292" r="11"/>
+      <circle cx="134" cy="292" r="11"/>
     </g>
-    <text x="626" y="326" text-anchor="middle" font-size="10.5" fill="#555">reports no σ for audio</text>
-    <text x="626" y="340" text-anchor="middle" font-size="10.5" fill="#555">or video mechanisms</text>
+    <text x="134" y="326" text-anchor="middle" direction="rtl" font-size="10.5" fill="#555">برای سازوکار صوت یا ویدئو</text>
+    <text x="134" y="340" text-anchor="middle" direction="rtl" font-size="10.5" fill="#555">هیچ σ گزارش نمی‌کند</text>
   </g>
 
-  <!-- note -->
   <rect x="60" y="362" width="640" height="58" rx="6" fill="#fafafa" stroke="#e0e0e0"/>
-  <text x="76" y="382" font-size="11.5" fill="#444"><tspan font-weight="600">A design choice, not an observation.</tspan> This distribution models the heterogeneity described in section 1-3 — a</text>
-  <text x="76" y="399" font-size="11.5" fill="#444">telepsychiatry app without video bandwidth, a ward without structured transcripts, a community worker with notes</text>
-  <text x="76" y="414" font-size="11.5" fill="#444">only. It is a simulation parameter and is listed among the limitations of section 5-2-4.</text>
+  <text x="684" y="382" font-size="11.5" fill="#444" direction="rtl" text-anchor="start"><tspan font-weight="600">یک انتخاب طراحی است، نه یک مشاهده.</tspan> این توزیع ناهمگونی توصیف‌شده در بخش ۱-۳ را مدل می‌کند — اپلیکیشنی</text>
+  <text x="684" y="399" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">بدون پهنای باند ویدئو، بخشی بدون رونوشت ساختاریافته، مددکاری فقط با یادداشت. این یک پارامتر شبیه‌سازی است</text>
+  <text x="684" y="414" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">و در محدودیت‌های بخش ۵-۲-۴ فهرست شده است.</text>
 </svg>

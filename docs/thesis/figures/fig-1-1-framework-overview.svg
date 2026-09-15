@@ -1,92 +1,85 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500" font-family="Segoe UI, Tahoma, sans-serif">
-  <rect width="760" height="500" fill="#ffffff"/>
-  <text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">PrivChain-MDD: three-layer architecture</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="528" viewBox="0 0 760 528" font-family="Vazirmatn, Tahoma, 'Segoe UI', sans-serif">
+  <rect width="760" height="520" fill="#ffffff"/>
+  <text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a" direction="rtl">معماری سه‌لایهٔ چارچوب PrivChain-MDD</text>
 
-  <!-- LAYER 3: ledger -->
+  <!-- لایهٔ ۳: حسابرسی -->
   <rect x="40" y="50" width="680" height="96" rx="8" fill="#f3e5f5" stroke="#8e24aa" stroke-width="1.5"/>
-  <text x="56" y="72" font-size="13" font-weight="600" fill="#6a1b9a">Audit layer — Hyperledger Fabric (permissioned)</text>
+  <text x="704" y="72" font-size="13" font-weight="600" fill="#6a1b9a" direction="rtl" text-anchor="start">لایهٔ حسابرسی — Hyperledger Fabric (شبکهٔ مجاز)</text>
   <g font-size="11.5" fill="#4a148c">
-    <rect x="60" y="84" width="150" height="46" rx="5" fill="#ffffff" stroke="#ce93d8"/>
-    <text x="135" y="103" text-anchor="middle" font-weight="600">RegisterClient</text>
-    <text x="135" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2">capability vector c_i</text>
-
-    <rect x="226" y="84" width="150" height="46" rx="5" fill="#ffffff" stroke="#ce93d8"/>
-    <text x="301" y="103" text-anchor="middle" font-weight="600">LogPrivacyBudget</text>
-    <text x="301" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2">ε per group, per round</text>
+    <rect x="558" y="84" width="142" height="46" rx="5" fill="#ffffff" stroke="#ce93d8"/>
+    <text x="629" y="103" text-anchor="middle" font-weight="600">RegisterClient</text>
+    <text x="629" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2" direction="rtl">بردار قابلیت وجهی</text>
 
     <rect x="392" y="84" width="150" height="46" rx="5" fill="#ffffff" stroke="#ce93d8"/>
-    <text x="467" y="103" text-anchor="middle" font-weight="600">UpdateReputation</text>
-    <text x="467" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2">ρ_{i,g}</text>
+    <text x="467" y="103" text-anchor="middle" font-weight="600">LogPrivacyBudget</text>
+    <text x="467" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2" direction="rtl">ε هر گروه، در هر دور</text>
 
-    <rect x="558" y="84" width="142" height="46" rx="5" fill="#ffffff" stroke="#ce93d8"/>
-    <text x="629" y="103" text-anchor="middle" font-weight="600">PublishSubgraph</text>
-    <text x="629" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2">S_m membership</text>
+    <rect x="226" y="84" width="150" height="46" rx="5" fill="#ffffff" stroke="#ce93d8"/>
+    <text x="301" y="103" text-anchor="middle" font-weight="600">UpdateReputation</text>
+    <text x="301" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2" direction="rtl">شهرت هر کلاینت</text>
+
+    <rect x="60" y="84" width="150" height="46" rx="5" fill="#ffffff" stroke="#ce93d8"/>
+    <text x="135" y="103" text-anchor="middle" font-weight="600">PublishSubgraph</text>
+    <text x="135" y="120" text-anchor="middle" font-size="10.5" fill="#7b1fa2" direction="rtl">اعضای زیرگراف هر وجه</text>
   </g>
 
-  <!-- LAYER 2: federation -->
-  <rect x="40" y="166" width="680" height="118" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
-  <text x="56" y="188" font-size="13" font-weight="600" fill="#0d47a1">Federation layer — capability-aware aggregation (Flower)</text>
+  <!-- پیکان فدراسیون ← حسابرسی -->
+  <line x1="380" y1="182" x2="380" y2="152" stroke="#8e24aa" stroke-width="1.8" marker-end="url(#arrowPurple)"/>
+  <text x="392" y="170" font-size="10.5" fill="#6a1b9a" direction="rtl" text-anchor="end">ردپای حسابرسی تغییرناپذیر در هر دور</text>
 
-  <rect x="70" y="200" width="190" height="66" rx="5" fill="#ffffff" stroke="#90caf9"/>
-  <text x="165" y="220" text-anchor="middle" font-size="12" font-weight="600" fill="#0d47a1">Subgraph aggregation</text>
-  <text x="165" y="238" text-anchor="middle" font-size="10.5" fill="#1565c0">θ_m averaged over S_m only</text>
-  <text x="165" y="255" text-anchor="middle" font-size="10.5" fill="#c62828">S_m = ∅ ⇒ θ_m kept</text>
+  <!-- لایهٔ ۲: فدراسیون -->
+  <rect x="40" y="184" width="680" height="118" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="704" y="206" font-size="13" font-weight="600" fill="#0d47a1" direction="rtl" text-anchor="start">لایهٔ فدراسیون — تجمیع آگاه از قابلیت وجهی (Flower)</text>
 
-  <rect x="285" y="200" width="190" height="66" rx="5" fill="#ffffff" stroke="#90caf9"/>
-  <text x="380" y="220" text-anchor="middle" font-size="12" font-weight="600" fill="#0d47a1">Reputation weighting</text>
-  <text x="380" y="238" text-anchor="middle" font-size="10.5" fill="#1565c0">volume + consensus consistency</text>
-  <text x="380" y="255" text-anchor="middle" font-size="10.5" fill="#1565c0">EMA-smoothed across rounds</text>
+  <rect x="500" y="218" width="190" height="66" rx="5" fill="#ffffff" stroke="#90caf9"/>
+  <text x="595" y="238" text-anchor="middle" font-size="12" font-weight="600" fill="#0d47a1" direction="rtl">تجمیع زیرگرافی</text>
+  <text x="595" y="256" text-anchor="middle" font-size="10.5" fill="#1565c0" direction="rtl">میانگین هر رمزگذار فقط روی دارندگان آن وجه</text>
+  <text x="595" y="273" text-anchor="middle" font-size="10.5" fill="#c62828" direction="rtl">زیرگراف خالی ← رمزگذار دست‌نخورده</text>
 
-  <rect x="500" y="200" width="190" height="66" rx="5" fill="#ffffff" stroke="#90caf9"/>
-  <text x="595" y="220" text-anchor="middle" font-size="12" font-weight="600" fill="#0d47a1">Cross-modal distillation</text>
-  <text x="595" y="238" text-anchor="middle" font-size="10.5" fill="#1565c0">data-free synthetic anchors</text>
-  <text x="595" y="255" text-anchor="middle" font-size="10.5" fill="#1565c0">teacher full mask / student c_i</text>
+  <rect x="285" y="218" width="190" height="66" rx="5" fill="#ffffff" stroke="#90caf9"/>
+  <text x="380" y="238" text-anchor="middle" font-size="12" font-weight="600" fill="#0d47a1" direction="rtl">وزن‌دهی مبتنی بر شهرت</text>
+  <text x="380" y="256" text-anchor="middle" font-size="10.5" fill="#1565c0" direction="rtl">حجم داده + سازگاری با اجماع</text>
+  <text x="380" y="273" text-anchor="middle" font-size="10.5" fill="#1565c0" direction="rtl">هموارشده با EMA در طول دورها</text>
 
-  <!-- LAYER 1: clients -->
-  <rect x="40" y="304" width="680" height="150" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5"/>
-  <text x="56" y="326" font-size="13" font-weight="600" fill="#1b5e20">Client layer — local training with per-group DP-SGD (PyTorch + Opacus)</text>
+  <rect x="70" y="218" width="190" height="66" rx="5" fill="#ffffff" stroke="#90caf9"/>
+  <text x="165" y="238" text-anchor="middle" font-size="12" font-weight="600" fill="#0d47a1" direction="rtl">تقطیر بین‌وجهی</text>
+  <text x="165" y="256" text-anchor="middle" font-size="10.5" fill="#1565c0" direction="rtl">لنگرهای مصنوعی بدون داده</text>
+  <text x="165" y="273" text-anchor="middle" font-size="10.5" fill="#1565c0" direction="rtl">معلم با ماسک کامل، دانش‌آموز با ماسک خود</text>
 
-  <!-- four client cards -->
+  <!-- پیکان کلاینت ← فدراسیون -->
+  <line x1="380" y1="338" x2="380" y2="308" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#arrowGreen)"/>
+  <text x="366" y="318" font-size="10.5" fill="#2e7d32" direction="rtl" text-anchor="start">به‌روزرسانی‌های برش‌خورده و نویزی‌شده به تفکیک گروه</text>
+  <text x="366" y="333" font-size="10.5" fill="#2e7d32" direction="rtl" text-anchor="start">دادهٔ خام هرگز از کلاینت خارج نمی‌شود</text>
+
+  <!-- لایهٔ ۱: کلاینت‌ها -->
+  <rect x="40" y="340" width="680" height="150" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="704" y="362" font-size="13" font-weight="600" fill="#1b5e20" direction="rtl" text-anchor="start">لایهٔ کلاینت — آموزش محلی با DP-SGD به تفکیک گروه (PyTorch + Opacus)</text>
+
   <g font-size="11">
-    <rect x="70" y="338" width="150" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
-    <text x="145" y="357" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20">Research clinic</text>
-    <text x="145" y="375" text-anchor="middle" fill="#2e7d32">c = [1, 1, 1]</text>
-    <text x="145" y="396" text-anchor="middle" font-size="10.5" fill="#555">audio · video · text</text>
-    <text x="145" y="420" text-anchor="middle" font-size="10.5" fill="#c62828">4 parameter groups</text>
+    <rect x="550" y="374" width="150" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
+    <text x="625" y="393" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20" direction="rtl">کلینیک پژوهشی</text>
+    <text x="625" y="411" text-anchor="middle" fill="#2e7d32">c = [۱, ۱, ۱]</text>
+    <text x="625" y="432" text-anchor="middle" font-size="10.5" fill="#555" direction="rtl">صوت · ویدئو · متن</text>
+    <text x="625" y="456" text-anchor="middle" font-size="10.5" fill="#c62828" direction="rtl">۴ گروه پارامتر</text>
 
-    <rect x="235" y="338" width="150" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
-    <text x="310" y="357" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20">Telepsychiatry app</text>
-    <text x="310" y="375" text-anchor="middle" fill="#2e7d32">c = [1, 0, 1]</text>
-    <text x="310" y="396" text-anchor="middle" font-size="10.5" fill="#555">audio · text</text>
-    <text x="310" y="420" text-anchor="middle" font-size="10.5" fill="#c62828">3 parameter groups</text>
+    <rect x="385" y="374" width="150" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
+    <text x="460" y="393" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20" direction="rtl">اپلیکیشن تله‌روان‌پزشکی</text>
+    <text x="460" y="411" text-anchor="middle" fill="#2e7d32">c = [۱, ۰, ۱]</text>
+    <text x="460" y="432" text-anchor="middle" font-size="10.5" fill="#555" direction="rtl">صوت · متن</text>
+    <text x="460" y="456" text-anchor="middle" font-size="10.5" fill="#c62828" direction="rtl">۳ گروه پارامتر</text>
 
-    <rect x="400" y="338" width="150" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
-    <text x="475" y="357" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20">Inpatient ward</text>
-    <text x="475" y="375" text-anchor="middle" fill="#2e7d32">c = [1, 0, 0]</text>
-    <text x="475" y="396" text-anchor="middle" font-size="10.5" fill="#555">audio only</text>
-    <text x="475" y="420" text-anchor="middle" font-size="10.5" fill="#c62828">2 parameter groups</text>
+    <rect x="220" y="374" width="150" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
+    <text x="295" y="393" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20" direction="rtl">بخش بستری</text>
+    <text x="295" y="411" text-anchor="middle" fill="#2e7d32">c = [۱, ۰, ۰]</text>
+    <text x="295" y="432" text-anchor="middle" font-size="10.5" fill="#555" direction="rtl">فقط صوت</text>
+    <text x="295" y="456" text-anchor="middle" font-size="10.5" fill="#c62828" direction="rtl">۲ گروه پارامتر</text>
 
-    <rect x="565" y="338" width="135" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
-    <text x="632" y="357" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20">Community worker</text>
-    <text x="632" y="375" text-anchor="middle" fill="#2e7d32">c = [0, 0, 1]</text>
-    <text x="632" y="396" text-anchor="middle" font-size="10.5" fill="#555">text only</text>
-    <text x="632" y="420" text-anchor="middle" font-size="10.5" fill="#c62828">2 parameter groups</text>
+    <rect x="60" y="374" width="145" height="100" rx="5" fill="#ffffff" stroke="#a5d6a7"/>
+    <text x="132" y="393" text-anchor="middle" font-size="12" font-weight="600" fill="#1b5e20" direction="rtl">مددکار سلامت روان</text>
+    <text x="132" y="411" text-anchor="middle" fill="#2e7d32">c = [۰, ۰, ۱]</text>
+    <text x="132" y="432" text-anchor="middle" font-size="10.5" fill="#555" direction="rtl">فقط متن</text>
+    <text x="132" y="456" text-anchor="middle" font-size="10.5" fill="#c62828" direction="rtl">۲ گروه پارامتر</text>
   </g>
-
-  <!-- arrows client -> federation -->
-  <g stroke="#2e7d32" stroke-width="1.8" fill="none" marker-end="url(#arrowGreen)">
-    <line x1="145" y1="338" x2="145" y2="290"/>
-    <line x1="310" y1="338" x2="310" y2="290"/>
-    <line x1="475" y1="338" x2="475" y2="290"/>
-    <line x1="632" y1="338" x2="632" y2="290"/>
-  </g>
-  <text x="388" y="300" font-size="10.5" fill="#2e7d32" text-anchor="middle">noised, clipped per-group updates — raw data never leaves</text>
-
-  <!-- arrows federation -> ledger -->
-  <g stroke="#8e24aa" stroke-width="1.8" fill="none" marker-end="url(#arrowPurple)">
-    <line x1="380" y1="166" x2="380" y2="152"/>
-  </g>
-  <text x="392" y="162" font-size="10.5" fill="#6a1b9a">immutable audit trail per round</text>
 
   <defs>
     <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
@@ -97,6 +90,6 @@
     </marker>
   </defs>
 
-  <text x="40" y="480" font-size="11" fill="#666666">The two contributions map onto two layers: per-group noise allocation lives in the client layer; capability-aware aggregation in the federation layer.</text>
-  <text x="40" y="494" font-size="11" fill="#666666">The audit layer makes both verifiable after the fact; it does not make either of them correct.</text>
+  <text x="720" y="506" font-size="10.5" fill="#666666" direction="rtl" text-anchor="start">دو نوآوری در دو لایهٔ متفاوت قرار دارند: تخصیص نویز به تفکیک گروه در لایهٔ کلاینت، و تجمیع آگاه از قابلیت در لایهٔ فدراسیون.</text>
+  <text x="720" y="518" font-size="10.5" fill="#666666" direction="rtl" text-anchor="start">لایهٔ حسابرسی هر دو را پس از اجرا راستی‌آزمایی‌پذیر می‌کند؛ درستی هیچ‌کدام را تضمین نمی‌کند.</text>
 </svg>

@@ -1,96 +1,90 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440" font-family="Segoe UI, Tahoma, sans-serif">
-  <rect width="760" height="440" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="450" viewBox="0 0 760 450" font-family="Vazirmatn, Tahoma, 'Segoe UI', sans-serif">
+  <rect width="760" height="450" fill="#ffffff"/>
 
-  <text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Paired participant-level differences on the official test split</text>
-  <text x="380" y="48" text-anchor="middle" font-size="12" fill="#666666">47 participants (14 positive), scores averaged across 3 seeds before resampling</text>
+  <text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a" direction="rtl">اختلاف‌های جفتی سطح شرکت‌کننده روی بخش آزمون رسمی</text>
+  <text x="380" y="48" text-anchor="middle" font-size="12" fill="#666666" direction="rtl">۴۷ شرکت‌کننده (۱۴ مثبت)؛ امتیاز هر فرد پیش از بازنمونه‌گیری روی ۳ seed میانگین گرفته شده است</text>
 
-  <!-- x axis: -0.10 (x=300) to +0.35 (x=700) => 888.9 px per 1.0 ; zero at x=388.9 -->
-  <g stroke="#cccccc" stroke-width="1">
-    <line x1="300" y1="360" x2="710" y2="360"/>
-  </g>
+  <!-- محور: −۰٫۱۰ در x=۱۳۰ تا +۰٫۳۵ در x=۵۶۰ ؛ صفر در x=۲۲۵٫۶ -->
+  <line x1="130" y1="360" x2="560" y2="360" stroke="#cccccc" stroke-width="1"/>
   <g stroke="#eeeeee" stroke-width="1">
-    <line x1="300" y1="70" x2="300" y2="360"/>
-    <line x1="389" y1="70" x2="389" y2="360"/>
-    <line x1="478" y1="70" x2="478" y2="360"/>
-    <line x1="567" y1="70" x2="567" y2="360"/>
-    <line x1="656" y1="70" x2="656" y2="360"/>
+    <line x1="130" y1="70" x2="130" y2="360"/>
+    <line x1="321.1" y1="70" x2="321.1" y2="360"/>
+    <line x1="416.7" y1="70" x2="416.7" y2="360"/>
+    <line x1="512.2" y1="70" x2="512.2" y2="360"/>
   </g>
   <g font-size="12" fill="#555555" text-anchor="middle">
-    <text x="300" y="380">−0.10</text>
-    <text x="389" y="380">0.00</text>
-    <text x="478" y="380">+0.10</text>
-    <text x="567" y="380">+0.20</text>
-    <text x="656" y="380">+0.30</text>
+    <text x="130" y="380">−۰٫۱۰</text>
+    <text x="225.6" y="380">۰٫۰۰</text>
+    <text x="321.1" y="380">+۰٫۱۰</text>
+    <text x="416.7" y="380">+۰٫۲۰</text>
+    <text x="512.2" y="380">+۰٫۳۰</text>
   </g>
-  <text x="500" y="402" font-size="13" fill="#333333" text-anchor="middle">Δ ROC-AUC (95% bootstrap CI)</text>
+  <text x="345" y="402" font-size="13" fill="#333333" text-anchor="middle" direction="rtl">Δ ROC-AUC (بازهٔ اطمینان ۹۵٪ بوت‌استرپ)</text>
 
-  <!-- zero reference -->
-  <line x1="389" y1="70" x2="389" y2="360" stroke="#c62828" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <line x1="225.6" y1="70" x2="225.6" y2="360" stroke="#c62828" stroke-width="1.8" stroke-dasharray="6 4"/>
 
-  <!-- rows: y = 90,130,170,210,250,290,330 -->
-  <!-- 1 centralized - fedavg  +0.299 [0.121,0.481] -->
-  <text x="290" y="95" font-size="12.5" fill="#222222" text-anchor="end">Centralized − FedAvg</text>
-  <line x1="496.5" y1="90" x2="816" y2="90" stroke="#2e7d32" stroke-width="2"/>
-  <line x1="496.5" y1="84" x2="496.5" y2="96" stroke="#2e7d32" stroke-width="2"/>
-  <circle cx="654.7" cy="90" r="5" fill="#2e7d32"/>
-  <text x="722" y="94" font-size="11.5" font-weight="600" fill="#2e7d32">+0.299</text>
+  <!-- ستون برچسب در راست (x=۷۴۰)، ستون مقدار در چپ (x=۱۱۸) -->
 
-  <!-- 2 centralized - personalized +0.247 [0.088,0.421] -->
-  <text x="290" y="135" font-size="12.5" fill="#222222" text-anchor="end">Centralized − Personalized</text>
-  <line x1="467.2" y1="130" x2="763.2" y2="130" stroke="#2e7d32" stroke-width="2"/>
-  <line x1="467.2" y1="124" x2="467.2" y2="136" stroke="#2e7d32" stroke-width="2"/>
-  <circle cx="608.6" cy="130" r="5" fill="#2e7d32"/>
-  <text x="722" y="134" font-size="11.5" font-weight="600" fill="#2e7d32">+0.247</text>
+  <!-- ۱ -->
+  <text x="740" y="95" font-size="12.5" fill="#222222" direction="rtl" text-anchor="start">متمرکز − FedAvg</text>
+  <line x1="341.2" y1="90" x2="560" y2="90" stroke="#2e7d32" stroke-width="2"/>
+  <line x1="341.2" y1="84" x2="341.2" y2="96" stroke="#2e7d32" stroke-width="2"/>
+  <circle cx="511.3" cy="90" r="5" fill="#2e7d32"/>
+  <text x="118" y="94" font-size="11.5" font-weight="600" fill="#2e7d32" text-anchor="end">+۰٫۲۹۹</text>
 
-  <!-- 3 proposed - fedavg +0.193 [0.103,0.303] -->
-  <text x="290" y="175" font-size="12.5" font-weight="600" fill="#222222" text-anchor="end">Proposed − FedAvg</text>
-  <line x1="480.5" y1="170" x2="658.3" y2="170" stroke="#1565c0" stroke-width="2.4"/>
-  <line x1="480.5" y1="163" x2="480.5" y2="177" stroke="#1565c0" stroke-width="2.4"/>
-  <line x1="658.3" y1="163" x2="658.3" y2="177" stroke="#1565c0" stroke-width="2.4"/>
-  <circle cx="560.6" cy="170" r="6" fill="#1565c0"/>
-  <text x="722" y="174" font-size="11.5" font-weight="600" fill="#1565c0">+0.193</text>
+  <!-- ۲ -->
+  <text x="740" y="135" font-size="12.5" fill="#222222" direction="rtl" text-anchor="start">متمرکز − شخصی‌سازی‌شده</text>
+  <line x1="309.7" y1="130" x2="560" y2="130" stroke="#2e7d32" stroke-width="2"/>
+  <line x1="309.7" y1="124" x2="309.7" y2="136" stroke="#2e7d32" stroke-width="2"/>
+  <circle cx="461.6" cy="130" r="5" fill="#2e7d32"/>
+  <text x="118" y="134" font-size="11.5" font-weight="600" fill="#2e7d32" text-anchor="end">+۰٫۲۴۷</text>
 
-  <!-- 4 proposed - personalized +0.141 [0.071,0.226] -->
-  <text x="290" y="215" font-size="12.5" fill="#222222" text-anchor="end">Proposed − Personalized</text>
-  <line x1="452.1" y1="210" x2="589.9" y2="210" stroke="#1565c0" stroke-width="2"/>
-  <line x1="452.1" y1="204" x2="452.1" y2="216" stroke="#1565c0" stroke-width="2"/>
-  <line x1="589.9" y1="204" x2="589.9" y2="216" stroke="#1565c0" stroke-width="2"/>
-  <circle cx="514.3" cy="210" r="5" fill="#1565c0"/>
-  <text x="722" y="214" font-size="11.5" font-weight="600" fill="#1565c0">+0.141</text>
+  <!-- ۳ -->
+  <text x="740" y="175" font-size="12.5" font-weight="600" fill="#222222" direction="rtl" text-anchor="start">پیشنهادی − FedAvg</text>
+  <line x1="324" y1="170" x2="515.1" y2="170" stroke="#1565c0" stroke-width="2.4"/>
+  <line x1="324" y1="163" x2="324" y2="177" stroke="#1565c0" stroke-width="2.4"/>
+  <line x1="515.1" y1="163" x2="515.1" y2="177" stroke="#1565c0" stroke-width="2.4"/>
+  <circle cx="410" cy="170" r="6" fill="#1565c0"/>
+  <text x="118" y="174" font-size="11.5" font-weight="600" fill="#1565c0" text-anchor="end">+۰٫۱۹۳</text>
 
-  <!-- 5 centralized - proposed +0.106 [-0.035,0.248]  NOT significant -->
-  <text x="290" y="255" font-size="12.5" font-weight="600" fill="#222222" text-anchor="end">Centralized − Proposed</text>
-  <line x1="357.8" y1="250" x2="609.3" y2="250" stroke="#ef6c00" stroke-width="2.4"/>
-  <line x1="357.8" y1="243" x2="357.8" y2="257" stroke="#ef6c00" stroke-width="2.4"/>
-  <line x1="609.3" y1="243" x2="609.3" y2="257" stroke="#ef6c00" stroke-width="2.4"/>
-  <circle cx="483.2" cy="250" r="6" fill="#ffffff" stroke="#ef6c00" stroke-width="2.6"/>
-  <text x="722" y="254" font-size="11.5" font-weight="600" fill="#ef6c00">+0.106</text>
+  <!-- ۴ -->
+  <text x="740" y="215" font-size="12.5" fill="#222222" direction="rtl" text-anchor="start">پیشنهادی − شخصی‌سازی‌شده</text>
+  <line x1="293.4" y1="210" x2="441.5" y2="210" stroke="#1565c0" stroke-width="2"/>
+  <line x1="293.4" y1="204" x2="293.4" y2="216" stroke="#1565c0" stroke-width="2"/>
+  <line x1="441.5" y1="204" x2="441.5" y2="216" stroke="#1565c0" stroke-width="2"/>
+  <circle cx="360.3" cy="210" r="5" fill="#1565c0"/>
+  <text x="118" y="214" font-size="11.5" font-weight="600" fill="#1565c0" text-anchor="end">+۰٫۱۴۱</text>
 
-  <!-- 6 proposed - no reputation +0.017 [0.002,0.038] -->
-  <text x="290" y="295" font-size="12.5" fill="#222222" text-anchor="end">Proposed − (no reputation)</text>
-  <line x1="390.8" y1="290" x2="422.8" y2="290" stroke="#1565c0" stroke-width="2"/>
-  <line x1="390.8" y1="284" x2="390.8" y2="296" stroke="#1565c0" stroke-width="2"/>
-  <line x1="422.8" y1="284" x2="422.8" y2="296" stroke="#1565c0" stroke-width="2"/>
-  <circle cx="404.1" cy="290" r="5" fill="#1565c0"/>
-  <text x="722" y="294" font-size="11.5" font-weight="600" fill="#1565c0">+0.017</text>
+  <!-- ۵ -->
+  <text x="740" y="255" font-size="12.5" font-weight="600" fill="#222222" direction="rtl" text-anchor="start">متمرکز − پیشنهادی</text>
+  <line x1="192.1" y1="250" x2="462.5" y2="250" stroke="#ef6c00" stroke-width="2.4"/>
+  <line x1="192.1" y1="243" x2="192.1" y2="257" stroke="#ef6c00" stroke-width="2.4"/>
+  <line x1="462.5" y1="243" x2="462.5" y2="257" stroke="#ef6c00" stroke-width="2.4"/>
+  <circle cx="326.9" cy="250" r="6" fill="#ffffff" stroke="#ef6c00" stroke-width="2.6"/>
+  <text x="118" y="254" font-size="11.5" font-weight="600" fill="#ef6c00" text-anchor="end">+۰٫۱۰۶</text>
 
-  <!-- 7 adaptive - uniform DP +0.008 [-0.064,0.091] -->
-  <text x="290" y="335" font-size="12.5" fill="#222222" text-anchor="end">DP adaptive − uniform</text>
-  <line x1="332.1" y1="330" x2="469.9" y2="330" stroke="#9e9e9e" stroke-width="2"/>
-  <line x1="332.1" y1="324" x2="332.1" y2="336" stroke="#9e9e9e" stroke-width="2"/>
-  <line x1="469.9" y1="324" x2="469.9" y2="336" stroke="#9e9e9e" stroke-width="2"/>
-  <circle cx="396.1" cy="330" r="5" fill="#ffffff" stroke="#9e9e9e" stroke-width="2.4"/>
-  <text x="722" y="334" font-size="11.5" fill="#9e9e9e">+0.008</text>
+  <!-- ۶ -->
+  <text x="740" y="295" font-size="12.5" fill="#222222" direction="rtl" text-anchor="start">پیشنهادی − پیشنهادی بدون شهرت</text>
+  <line x1="227.5" y1="290" x2="261.9" y2="290" stroke="#1565c0" stroke-width="2"/>
+  <line x1="227.5" y1="284" x2="227.5" y2="296" stroke="#1565c0" stroke-width="2"/>
+  <line x1="261.9" y1="284" x2="261.9" y2="296" stroke="#1565c0" stroke-width="2"/>
+  <circle cx="241.8" cy="290" r="5" fill="#1565c0"/>
+  <text x="118" y="294" font-size="11.5" font-weight="600" fill="#1565c0" text-anchor="end">+۰٫۰۱۷</text>
 
-  <!-- clip note for row 1/2 whose CI exceeds plot -->
-  <text x="712" y="66" font-size="10.5" fill="#888888" text-anchor="end">rows 1–2: upper CI extends beyond axis</text>
+  <!-- ۷ -->
+  <text x="740" y="335" font-size="12.5" fill="#222222" direction="rtl" text-anchor="start">DP تطبیقی − DP یکنواخت</text>
+  <line x1="160" y1="330" x2="308.1" y2="330" stroke="#9e9e9e" stroke-width="2"/>
+  <line x1="160" y1="324" x2="160" y2="336" stroke="#9e9e9e" stroke-width="2"/>
+  <line x1="308.1" y1="324" x2="308.1" y2="336" stroke="#9e9e9e" stroke-width="2"/>
+  <circle cx="228.8" cy="330" r="5" fill="#ffffff" stroke="#9e9e9e" stroke-width="2.4"/>
+  <text x="118" y="334" font-size="11.5" fill="#9e9e9e" text-anchor="end">+۰٫۰۰۸</text>
 
-  <!-- legend -->
-  <g font-size="11.5">
-    <circle cx="312" cy="424" r="5" fill="#1565c0"/>
-    <text x="324" y="428" fill="#555555">CI excludes zero</text>
-    <circle cx="460" cy="424" r="5" fill="#ffffff" stroke="#ef6c00" stroke-width="2.4"/>
-    <text x="472" y="428" fill="#555555">CI includes zero</text>
-  </g>
-  <text x="300" y="440" font-size="10.5" fill="#666666">Source: official_test_paired.json and phase3 allocation_comparison.json</text>
+  <text x="560" y="66" font-size="10.5" fill="#888888" direction="rtl" text-anchor="start">ردیف‌های ۱ و ۲: کران بالای بازه از محور خارج می‌شود</text>
+
+  <!-- راهنما -->
+  <circle cx="740" cy="428" r="5" fill="#1565c0"/>
+  <text x="730" y="432" font-size="11.5" fill="#555555" direction="rtl" text-anchor="start">بازه صفر را حذف می‌کند (معنادار)</text>
+  <circle cx="500" cy="428" r="5" fill="#ffffff" stroke="#ef6c00" stroke-width="2.4"/>
+  <text x="490" y="432" font-size="11.5" fill="#555555" direction="rtl" text-anchor="start">بازه شامل صفر است (معنادار نیست)</text>
+  <text x="118" y="444" font-size="10.5" fill="#666666" text-anchor="end" direction="rtl">منبع: official_test_paired.json و allocation_comparison.json</text>
 </svg>

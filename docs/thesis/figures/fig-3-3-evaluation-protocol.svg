@@ -1,47 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480" font-family="Segoe UI, Tahoma, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480" font-family="Vazirmatn, Tahoma, 'Segoe UI', sans-serif">
   <rect width="760" height="480" fill="#ffffff"/>
-  <text x="380" y="26" text-anchor="middle" font-size="16" font-weight="600" fill="#1a1a1a">Three-level evaluation protocol and the split each level may touch</text>
+  <text x="380" y="26" text-anchor="middle" direction="rtl" font-size="16" font-weight="600" fill="#1a1a1a">پروتکل سه‌سطحی ارزیابی و بخشی که هر سطح مجاز به لمس آن است</text>
 
-  <!-- corpus bar -->
-  <text x="40" y="60" font-size="12" font-weight="600" fill="#333">DAIC-WOZ, official AVEC2017 split — 188 participants</text>
-  <rect x="40" y="70" width="316" height="34" fill="#c8e6c9" stroke="#2e7d32"/>
-  <text x="198" y="92" text-anchor="middle" font-size="12" fill="#1b5e20">train — 107</text>
-  <rect x="356" y="70" width="100" height="34" fill="#bbdefb" stroke="#1565c0"/>
-  <text x="406" y="92" text-anchor="middle" font-size="12" fill="#0d47a1">dev — 34</text>
-  <rect x="456" y="70" width="139" height="34" fill="#ffcdd2" stroke="#c62828"/>
-  <text x="525" y="92" text-anchor="middle" font-size="12" fill="#b71c1c">official test — 47</text>
+  <text x="720" y="60" font-size="12" font-weight="600" fill="#333" direction="rtl" text-anchor="start">پیکرهٔ DAIC-WOZ‏ با بخش‌بندی رسمی AVEC2017‏؛ ۱۸۸ شرکت‌کننده</text>
+  <rect x="404" y="70" width="316" height="34" fill="#c8e6c9" stroke="#2e7d32"/>
+  <text x="562" y="92" text-anchor="middle" direction="rtl" font-size="12" fill="#1b5e20">train — ۱۰۷</text>
+  <rect x="304" y="70" width="100" height="34" fill="#bbdefb" stroke="#1565c0"/>
+  <text x="354" y="92" text-anchor="middle" direction="rtl" font-size="12" fill="#0d47a1">dev — ۳۴</text>
+  <rect x="165" y="70" width="139" height="34" fill="#ffcdd2" stroke="#c62828"/>
+  <text x="234" y="92" text-anchor="middle" direction="rtl" font-size="12" fill="#b71c1c">test رسمی — ۴۷</text>
 
-  <!-- LEVEL 1 -->
+  <!-- سطح ۱ -->
   <rect x="40" y="128" width="670" height="96" rx="6" fill="#f1f8e9" stroke="#7cb342" stroke-width="1.5"/>
-  <text x="58" y="150" font-size="13" font-weight="600" fill="#33691e">Level 1 — inner cross-validation, train split only</text>
-  <text x="58" y="170" font-size="11.5" fill="#444">5 folds × 3 seeds over the pooled train split. A selection split is carved out of each fold's training half; early</text>
-  <text x="58" y="186" font-size="11.5" fill="#444">stopping and the decision threshold are set on it alone. Out-of-fold predictions are pooled for paired bootstrap.</text>
-  <text x="58" y="208" font-size="11.5" font-weight="600" fill="#33691e">Every preprocessing and optimizer decision is made here — and nowhere else.</text>
-  <rect x="595" y="140" width="100" height="34" rx="4" fill="#c8e6c9" stroke="#2e7d32"/>
-  <text x="645" y="162" text-anchor="middle" font-size="11.5" fill="#1b5e20">train only</text>
-  <text x="645" y="200" text-anchor="middle" font-size="10.5" fill="#c62828">dev, test: untouched</text>
+  <text x="692" y="150" font-size="13" font-weight="600" fill="#33691e" direction="rtl" text-anchor="start">سطح ۱ — اعتبارسنجی متقاطع درونی، فقط بخش train</text>
+  <text x="692" y="170" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">۵ fold × ۳ seed روی بخش آموزش. از نیمهٔ آموزشی هر fold یک بخش انتخاب جدا می‌شود؛ توقف زودهنگام</text>
+  <text x="692" y="186" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">و آستانهٔ تصمیم فقط روی همان تعیین می‌شوند. پیش‌بینی‌های خارج از fold برای bootstrap جفتی تجمیع می‌شوند.</text>
+  <text x="692" y="208" font-size="11.5" font-weight="600" fill="#33691e" direction="rtl" text-anchor="start">همهٔ تصمیم‌های پیش‌پردازش و بهینه‌سازی اینجا گرفته می‌شوند — و هیچ‌جای دیگر.</text>
+  <rect x="55" y="140" width="100" height="34" rx="4" fill="#c8e6c9" stroke="#2e7d32"/>
+  <text x="105" y="162" text-anchor="middle" direction="rtl" font-size="11.5" fill="#1b5e20">فقط train</text>
+  <text x="105" y="200" text-anchor="middle" direction="rtl" font-size="10.5" fill="#c62828">dev و test: دست‌نخورده</text>
 
-  <!-- LEVEL 2 -->
+  <!-- سطح ۲ -->
   <rect x="40" y="242" width="670" height="90" rx="6" fill="#e3f2fd" stroke="#42a5f5" stroke-width="1.5"/>
-  <text x="58" y="264" font-size="13" font-weight="600" fill="#0d47a1">Level 2 — one read of the official dev split</text>
-  <text x="58" y="284" font-size="11.5" fill="#444">Federated arms compared on 34 sessions at a threshold chosen on the selection split, with a paired bootstrap</text>
-  <text x="58" y="300" font-size="11.5" fill="#444">against FedAvg and a per-capability breakdown. Reported in section 4-2-7-a.</text>
-  <text x="58" y="322" font-size="11.5" font-weight="600" fill="#0d47a1">No result from this level may change a hyperparameter.</text>
-  <rect x="595" y="254" width="100" height="34" rx="4" fill="#bbdefb" stroke="#1565c0"/>
-  <text x="645" y="276" text-anchor="middle" font-size="11.5" fill="#0d47a1">+ dev</text>
-  <text x="645" y="312" text-anchor="middle" font-size="10.5" fill="#c62828">test: untouched</text>
+  <text x="692" y="264" font-size="13" font-weight="600" fill="#0d47a1" direction="rtl" text-anchor="start">سطح ۲ — یک بار خواندن بخش dev رسمی</text>
+  <text x="692" y="284" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">بازوهای فدرال روی ۳۴ جلسه با آستانهٔ انتخاب‌شده در بخش انتخاب مقایسه می‌شوند، با bootstrap جفتی</text>
+  <text x="692" y="300" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">در برابر FedAvg و تفکیک بر حسب الگوی دسترسی. گزارش‌شده در بخش ۴-۲-۷ بند الف.</text>
+  <text x="692" y="322" font-size="11.5" font-weight="600" fill="#0d47a1" direction="rtl" text-anchor="start">هیچ نتیجه‌ای از این سطح نمی‌تواند هیچ ابرپارامتری را تغییر دهد.</text>
+  <rect x="55" y="254" width="100" height="34" rx="4" fill="#bbdefb" stroke="#1565c0"/>
+  <text x="105" y="276" text-anchor="middle" direction="rtl" font-size="11.5" fill="#0d47a1">+ dev</text>
+  <text x="105" y="312" text-anchor="middle" direction="rtl" font-size="10.5" fill="#c62828">test: دست‌نخورده</text>
 
-  <!-- LOCK -->
+  <!-- قفل -->
   <rect x="140" y="348" width="470" height="38" rx="19" fill="#fff3e0" stroke="#ef6c00" stroke-width="2"/>
-  <text x="375" y="372" text-anchor="middle" font-size="12.5" font-weight="600" fill="#e65100">PRE-REGISTRATION LOCKED — configs frozen, every prior exposure disclosed</text>
+  <text x="375" y="372" text-anchor="middle" direction="rtl" font-size="12.5" font-weight="600" fill="#e65100">قفل پیش‌ثبت — پیکربندی‌ها منجمد، همهٔ مواجهه‌های پیشین افشاشده</text>
 
-  <!-- LEVEL 3 -->
+  <!-- سطح ۳ -->
   <rect x="40" y="400" width="670" height="60" rx="6" fill="#ffebee" stroke="#e53935" stroke-width="1.5"/>
-  <text x="58" y="422" font-size="13" font-weight="600" fill="#b71c1c">Level 3 — one read of the official test split, per method, at the end</text>
-  <text x="58" y="442" font-size="11.5" fill="#444">All five methods × 3 seeds, no feedback, no selective reruns. Participant-level predictions persisted so the paired</text>
-  <text x="58" y="456" font-size="11.5" fill="#444">comparison needs no second read. After this point, no hyperparameter can be chosen without contaminating the split.</text>
+  <text x="692" y="422" font-size="13" font-weight="600" fill="#b71c1c" direction="rtl" text-anchor="start">سطح ۳ — یک بار خواندن بخش test رسمی، برای هر روش، در پایان</text>
+  <text x="692" y="442" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">هر پنج روش × ۳ seed، بدون بازخورد، بدون اجرای مجدد گزینشی. پیش‌بینی سطح شرکت‌کننده ذخیره می‌شود تا</text>
+  <text x="692" y="456" font-size="11.5" fill="#444" direction="rtl" text-anchor="start">مقایسهٔ جفتی به خواندن دوم نیاز نداشته باشد. پس از این نقطه هیچ ابرپارامتری بدون آلودگی بخش قابل انتخاب نیست.</text>
 
-  <!-- arrows -->
   <g stroke="#757575" stroke-width="2" fill="none" marker-end="url(#a2)">
     <line x1="375" y1="224" x2="375" y2="238"/>
     <line x1="375" y1="332" x2="375" y2="344"/>
